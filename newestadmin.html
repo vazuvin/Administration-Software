@@ -72,6 +72,7 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
 .badge.administrator{background:#e8d0a0;color:#553300;}
 .badge.superadmin{background:#e8c0c0;color:#550000;}
 .badge.senioradmin{background:#e8d4a0;color:#4a2800;}
+.badge.softwaremanager{background:#1a1a2e;color:#00d4ff;border-color:#00d4ff;}
 .badge.appeal-open{background:#d0e8ff;color:#003366;border-color:#6699cc;}
 .badge.appeal-approved{background:#c8e0c8;color:#003300;border-color:#669966;}
 .badge.appeal-denied{background:#f0c0c0;color:#660000;border-color:#cc6666;}
@@ -262,6 +263,10 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
           <span class="sb-link" id="nav-alerts">&#9658; Site-Wide Alerts</span>
           <span class="sb-link" id="nav-adminlog">&#9658; Administrator</span>
         </div>
+        <div class="sb-section" id="sb-machine-section">
+          <div class="sb-title" style="color:#00aacc;">Machine Management</div>
+          <span class="sb-link" id="nav-siteconfig">&#9658; Configuration</span>
+        </div>
       </div>
       <div class="content" id="content"><div style="padding:10px;color:#444;font-style:italic;">Loading data...</div></div>
     </div>
@@ -304,17 +309,69 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
   </div>
 </div>
 
+<!-- ACCOUNT WIPED POPUP -->
+<div class="overlay" id="wipedOverlay">
+  <div class="susp-popup">
+    <div class="titlebar" style="background:#880000;">
+      <div class="titlebar-title">Account Wiped</div>
+      <div class="win-btns"><div class="wcb">&#10005;</div></div>
+    </div>
+    <div style="padding:14px 16px 12px;">
+      <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;">
+        <div style="font-size:28px;flex-shrink:0;">&#9888;</div>
+        <div>
+          <div style="font-size:13px;font-weight:bold;color:#880000;margin-bottom:4px;">Account Wiped</div>
+          <div style="font-size:11px;color:#000;line-height:1.6;">Your staff account no longer exists in this system. It may have been removed during a data wipe or administrative action. Please contact a system administrator.</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:center;">
+        <button class="win98-btn ok-btn" id="wipedOKBtn">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RESET NOTICE POPUP (shown once on first login after factory reset) -->
+<div class="overlay" id="resetNoticeOverlay">
+  <div class="dialog" style="width:400px;">
+    <div class="titlebar" style="background:#880000;">
+      <div class="titlebar-title">🔴 System Reset Notice</div>
+      <div class="win-btns"><div class="wcb" id="resetNoticeClose">&#10005;</div></div>
+    </div>
+    <div style="padding:12px 14px 12px;">
+      <div style="background:#fde8e8;border:1px solid #cc6666;padding:8px;margin-bottom:10px;font-size:11px;color:#880000;font-weight:bold;line-height:1.6;">
+        This system was recently factory reset. All previous data has been permanently erased.
+      </div>
+      <div style="margin-bottom:8px;"><div style="font-size:11px;font-weight:bold;color:#000;margin-bottom:4px;">Reset Reason:</div>
+        <div id="resetNoticeReason" style="font-size:11px;color:#000;background:#f4f0e8;border:1px solid #c0bcb4;padding:6px;min-height:30px;line-height:1.6;"></div>
+      </div>
+      <div style="margin-bottom:4px;"><div style="font-size:11px;font-weight:bold;color:#000;margin-bottom:4px;">Reset By / Date:</div>
+        <div id="resetNoticeBy" style="font-size:11px;color:#000;"></div>
+      </div>
+      <div style="font-size:10px;color:#808080;margin:8px 0 10px;">This notice will not appear again after you close it.</div>
+      <div style="display:flex;justify-content:center;">
+        <button class="btn" id="resetNoticeOK" style="width:100px;">Acknowledge</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- FACTORY RESET POPUP -->
 <div class="overlay" id="factoryResetOverlay">
-  <div class="dialog" style="width:380px;">
+  <div class="dialog" style="width:400px;">
     <div class="titlebar" style="background:#880000;">
       <div class="titlebar-title">🔴 Factory Reset — Final Confirmation</div>
       <div class="win-btns"><div class="wcb" id="factoryResetClose">&#10005;</div></div>
     </div>
     <div style="padding:12px 14px 12px;">
       <div style="background:#fde8e8;border:1px solid #cc6666;padding:8px;margin-bottom:10px;font-size:11px;color:#880000;font-weight:bold;line-height:1.6;">
-        ⚠ This will permanently delete ALL data including every user, every staff member except rpatoff, all logs, alerts, messages, and requests. This CANNOT be undone.
+        ⚠ This will permanently delete ALL data including every user, every staff member except rpatoff and SOFTWARE MANAGER accounts, all logs, alerts, messages, and requests. This CANNOT be undone.
       </div>
+      <div style="margin-bottom:5px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;font-weight:bold;">Reason for Reset:</label>
+        <textarea id="fr-reason" style="width:100%;height:50px;" placeholder="Explain why this reset is being performed..."></textarea></div>
+      <div style="margin-bottom:5px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;font-weight:bold;">Additional Notes (optional):</label>
+        <input type="text" id="fr-notes" style="width:100%;" placeholder="Any additional context..."/></div>
+      <hr style="border:none;border-top:1px solid #c0bcb4;margin:8px 0;">
       <div style="margin-bottom:5px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;font-weight:bold;">Primary Code:</label>
         <input type="password" id="fr-code1" style="width:100%;" placeholder="Enter primary code"/></div>
       <div style="margin-bottom:5px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;font-weight:bold;">Secondary Code:</label>
@@ -423,24 +480,25 @@ const OPERATOR_CODE = '3655125652373';
 const DEFAULT_PERMS = {
   canViewUserAdmin:'TRIAL MODERATOR', canModerateUsers:'MODERATOR',
   canViewStaff:'SUPER ADMINISTRATOR', canManageStaff:'SUPER ADMINISTRATOR',
-  canSuspendStaff:'ADMINISTRATOR', canTerminateStaff:'SENIOR ADMINISTRATOR',
+  canSuspendStaff:'ADMINISTRATOR', canTerminateStaff:'SUPER ADMINISTRATOR',
   canViewModLog:'MODERATOR', canViewRevokeLogs:'MODERATOR',
   canViewSuspendLogs:'ADMINISTRATOR', canViewTerminateLogs:'ADMINISTRATOR',
   canViewLoginLog:'ADMINISTRATOR', canViewContentModeration:'MODERATOR',
   canViewStaffActivity:'ADMINISTRATOR',
   canSubmitAppeals:'MODERATOR', canViewAppealLog:'MODERATOR', canReviewAppeals:'ADMINISTRATOR',
-  canViewStaffProfile:'ADMINISTRATOR', canChangeStaffLevel:'SUPER ADMINISTRATOR', canChangeStaffPassword:'SENIOR ADMINISTRATOR',
+  canViewStaffProfile:'ADMINISTRATOR', canChangeStaffLevel:'SUPER ADMINISTRATOR', canChangeStaffPassword:'SUPER ADMINISTRATOR',
   canExportLogs:'SUPER ADMINISTRATOR', canViewCustomFields:'TRIAL MODERATOR', canManageCustomFields:'SUPER ADMINISTRATOR',
   canBulkAction:'ADMINISTRATOR', canSendStaffMessage:'MODERATOR',
-  canViewUserConfig:'ADMINISTRATOR', canManageUserConfig:'SENIOR ADMINISTRATOR',
+  canViewUserConfig:'ADMINISTRATOR', canManageUserConfig:'SUPER ADMINISTRATOR',
   canViewRequests:'ADMINISTRATOR',
 };
 
 const DEFAULT_REP_POINTS = { 'Remind':1, 'Warn':2, 'Ban 1 Day':3, 'Ban 3 Days':3, 'Ban 7 Days':5, 'Ban 14 Days':5, 'Suspend':4, 'Ban Permanent':10 };
 
 const DEFAULT_APPEAL_PRESETS = ['Hacked Account','False Ban','Misunderstanding','Exploited by Another','No Warning Given','Other'];
-const LEVEL_RANK = {'TRIAL MODERATOR':1,'MODERATOR':2,'ADMINISTRATOR':3,'SENIOR ADMINISTRATOR':4,'SUPER ADMINISTRATOR':5};
-const LEVEL_LIST = ['TRIAL MODERATOR','MODERATOR','ADMINISTRATOR','SENIOR ADMINISTRATOR','SUPER ADMINISTRATOR'];
+const LEVEL_RANK = {'TRIAL MODERATOR':1,'MODERATOR':2,'ADMINISTRATOR':3,'SUPER ADMINISTRATOR':4,'SOFTWARE MANAGER':5};
+const LEVEL_LIST = ['TRIAL MODERATOR','MODERATOR','ADMINISTRATOR','SUPER ADMINISTRATOR'];
+// SOFTWARE MANAGER is intentionally excluded from LEVEL_LIST — only assignable via Firebase directly
 
 let ME='', MY_LEVEL='', currentPassword='';
 let page='home', dlgCallback=null, opCallback=null;
@@ -457,6 +515,7 @@ let NOTIF_PREFS={};
 let STAFF_MESSAGES={};
 let MOD_REQUESTS={};
 let SITE_ALERTS={};
+let SITE_CONFIG={};
 let DASHBOARD_LOG_CONFIG={modlog:true,loginlog:true,appeals:false};
 let lastRefreshed=null;
 
@@ -504,9 +563,10 @@ const ALL_NOTIF_EVENTS=[
 function today(){ return new Date().toLocaleDateString(); }
 function nowStr(){ return new Date().toLocaleString(); }
 function rankOf(l){ return LEVEL_RANK[l]||0; }
-function canDo(k){ return rankOf(MY_LEVEL)>=rankOf(PERMS[k]||'SUPER ADMINISTRATOR'); }
-function isSuperAdmin(){ return MY_LEVEL==='SUPER ADMINISTRATOR'; }
-function isSeniorAdmin(){ return rankOf(MY_LEVEL)>=rankOf('SENIOR ADMINISTRATOR'); }
+function isSoftwareManager(){ return MY_LEVEL==='SOFTWARE MANAGER'; }
+function isSuperAdmin(){ return MY_LEVEL==='SUPER ADMINISTRATOR'||isSoftwareManager(); }
+// SOFTWARE MANAGER bypasses all permission checks
+function canDo(k){ return isSoftwareManager()||rankOf(MY_LEVEL)>=rankOf(PERMS[k]||'SUPER ADMINISTRATOR'); }
 
 function statusBadge(s){
   if(s==='active') return '<span class="ok">OK</span>';
@@ -515,7 +575,7 @@ function statusBadge(s){
   return s;
 }
 function levelBadge(l){
-  const cls=l==='TRIAL MODERATOR'?'intern':l==='MODERATOR'?'moderator':l==='ADMINISTRATOR'?'administrator':l==='SENIOR ADMINISTRATOR'?'senioradmin':'superadmin';
+  const cls=l==='TRIAL MODERATOR'?'intern':l==='MODERATOR'?'moderator':l==='ADMINISTRATOR'?'administrator':l==='SOFTWARE MANAGER'?'softwaremanager':'superadmin';
   return `<span class="badge ${cls}">${l}</span>`;
 }
 function userBadges(u){
@@ -709,11 +769,12 @@ function updateAnnouncements(){
 
 function updateSidebar(){
   const show=(id,cond)=>{ const el=document.getElementById(id); if(el) el.style.display=cond?'':'none'; };
-  const showSection=(id,cond)=>{ const el=document.getElementById(id); if(el) el.style.display=cond?'':'none'; };
+  const showSec=(id,cond)=>{ const el=document.getElementById(id); if(el) el.style.display=cond?'':'none'; };
   show('nav-home', true);
-  showSection('sb-staff-section', canDo('canViewStaff'));
-  showSection('sb-content-section', canDo('canViewContentModeration'));
-  showSection('sb-config-section', true);
+  showSec('sb-staff-section', canDo('canViewStaff'));
+  showSec('sb-content-section', canDo('canViewContentModeration'));
+  showSec('sb-config-section', true);
+  showSec('sb-machine-section', isSoftwareManager());
   show('nav-moderate', canDo('canModerateUsers'));
   show('nav-modlog', canDo('canViewModLog'));
   show('nav-revokelog', canDo('canViewRevokeLogs'));
@@ -764,6 +825,7 @@ function render(){
   else if(page==='auditlog'){ isSuperAdmin()?renderAuditLog(c):c.innerHTML=denied; }
   else if(page==='announcements') renderAlerts(c);
   else if(page==='adminlog'){ isSuperAdmin()?renderAdminLog(c):c.innerHTML=denied; }
+  else if(page==='siteconfig'){ isSoftwareManager()?renderSiteConfig(c):c.innerHTML=denied; }
 }
 
 // ── OPERATOR CODE ──
@@ -801,6 +863,117 @@ function bindDeleteLogBtns(c){
       );
     };
   });
+}
+
+// ── SITE CONFIG ──
+const SITE_CONFIG_DEFAULTS = {
+  loginTitle: 'Enter System password',
+  loginDesc: 'Please enter your user name and password to log on in Operation System.',
+  topbarTitle: 'Administration Panel',
+  sectionHome: 'Home',
+  sectionUserMgmt: 'User Management',
+  sectionContentMod: 'Content Moderation',
+  sectionStaff: 'Staff',
+  sectionLogs: 'Logs',
+  sectionConfig: 'Configuration',
+  dashboardWelcome: 'Dashboard',
+};
+
+function applySiteConfig(){
+  const cfg={...SITE_CONFIG_DEFAULTS,...SITE_CONFIG};
+  // Login screen
+  const loginTitle=document.querySelector('.login-popup .titlebar-title');
+  if(loginTitle) loginTitle.textContent=cfg.loginTitle;
+  const loginDesc=document.querySelector('.login-desc');
+  if(loginDesc) loginDesc.textContent=cfg.loginDesc;
+  // Sidebar section titles
+  const sectionMap={
+    sectionHome:'.sb-section:nth-child(1) .sb-title',
+  };
+  // Use IDs for sidebar sections for reliability
+  document.querySelectorAll('.sb-title').forEach((el,i)=>{
+    const keys=['sectionHome','sectionUserMgmt','sectionContentMod','sectionStaff','sectionLogs','sectionConfig'];
+    if(keys[i]&&cfg[keys[i]]) el.textContent=cfg[keys[i]];
+  });
+}
+
+function renderSiteConfig(c){
+  const cfg={...SITE_CONFIG_DEFAULTS,...SITE_CONFIG};
+  const fields=[
+    {key:'loginTitle',label:'Login Window Title',placeholder:'Enter System password'},
+    {key:'loginDesc',label:'Login Description Text',placeholder:'Please enter your user name...'},
+    {key:'topbarTitle',label:'Topbar Title',placeholder:'Administration Panel'},
+    {key:'sectionHome',label:'Sidebar: Home Section Name',placeholder:'Home'},
+    {key:'sectionUserMgmt',label:'Sidebar: User Management Name',placeholder:'User Management'},
+    {key:'sectionContentMod',label:'Sidebar: Content Moderation Name',placeholder:'Content Moderation'},
+    {key:'sectionStaff',label:'Sidebar: Staff Section Name',placeholder:'Staff'},
+    {key:'sectionLogs',label:'Sidebar: Logs Section Name',placeholder:'Logs'},
+    {key:'sectionConfig',label:'Sidebar: Configuration Name',placeholder:'Configuration'},
+  ];
+  c.innerHTML=`
+  <div class="ptitle" style="background:#004466;">Machine Management &mdash; Configuration</div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:280px;">
+      <div class="sbox" style="border:2px solid #0066aa;"><div class="stitle" style="background:#004466;color:#fff;">Site Text Configuration</div><div class="sbody">
+        <div style="font-size:11px;color:#555;margin-bottom:8px;">Edit the visible text of any part of the panel. Changes save to Firebase and apply immediately for all users.</div>
+        ${fields.map(f=>`
+          <div style="margin-bottom:6px;">
+            <label style="font-size:11px;color:#000;display:block;margin-bottom:2px;font-weight:bold;">${f.label}:</label>
+            <input type="text" id="sc-${f.key}" style="width:100%;" value="${(cfg[f.key]||'').replace(/"/g,'&quot;')}" placeholder="${f.placeholder}"/>
+          </div>`).join('')}
+        <div style="display:flex;gap:5px;margin-top:8px;">
+          <button class="btn" id="btn-savesc">Save All Changes</button>
+          <button class="btn" id="btn-resetsc">Reset to Defaults</button>
+        </div>
+        <div id="scMsg" style="font-size:11px;margin-top:4px;color:#006600;"></div>
+      </div></div>
+    </div>
+    <div style="flex:1;min-width:200px;">
+      <div class="sbox" style="border:2px solid #0066aa;"><div class="stitle" style="background:#004466;color:#fff;">Current Values</div><div class="sbody">
+        <div style="font-size:11px;color:#555;margin-bottom:6px;">Live snapshot of what each field currently shows.</div>
+        ${fields.map(f=>`
+          <div style="margin-bottom:4px;display:flex;gap:6px;font-size:11px;">
+            <span style="color:#808080;flex-shrink:0;width:140px;">${f.label}:</span>
+            <span style="color:#000;font-style:italic;">${cfg[f.key]||f.placeholder}</span>
+          </div>`).join('')}
+      </div></div>
+      <div class="sbox" style="border:2px solid #0066aa;"><div class="stitle" style="background:#004466;color:#fff;">Access Info</div><div class="sbody">
+        <div style="font-size:11px;color:#000;line-height:1.7;">
+          <div>&#9658; Only <span class="badge softwaremanager">SOFTWARE MANAGER</span> accounts can access this page.</div>
+          <div style="margin-top:5px;">&#9658; SOFTWARE MANAGER is assigned directly in Firebase Realtime Database — it cannot be granted or revoked from inside the panel.</div>
+          <div style="margin-top:5px;">&#9658; SOFTWARE MANAGER bypasses all permission checks and cannot be suspended, terminated, or have their level changed via the panel.</div>
+        </div>
+      </div></div>
+    </div>
+  </div>`;
+
+  document.getElementById('btn-savesc').onclick=async()=>{
+    const newCfg={};
+    fields.forEach(f=>{
+      const el=document.getElementById('sc-'+f.key);
+      if(el) newCfg[f.key]=el.value.trim()||f.placeholder;
+    });
+    await set(ref(db,'meta/siteConfig'),newCfg);
+    SITE_CONFIG=newCfg;
+    applySiteConfig();
+    // Apply topbar title specially
+    if(newCfg.topbarTitle){
+      const tb=document.getElementById('topbarTitle');
+      if(tb) tb.textContent=`${newCfg.topbarTitle} \u2014 ${ME} [${MY_LEVEL}]`;
+    }
+    auditLog('Site Config Updated',`By ${ME}`);
+    const el=document.getElementById('scMsg');
+    el.textContent='Changes saved and applied!'; setTimeout(()=>{ if(el) el.textContent=''; },2000);
+  };
+  document.getElementById('btn-resetsc').onclick=async()=>{
+    openDialog('Reset Site Config','Reset all site text to factory defaults?','',async()=>{
+      await set(ref(db,'meta/siteConfig'),SITE_CONFIG_DEFAULTS);
+      SITE_CONFIG={...SITE_CONFIG_DEFAULTS};
+      applySiteConfig();
+      auditLog('Site Config Reset','Defaults restored');
+      nav('siteconfig');
+    });
+  };
 }
 
 // ── HOME DASHBOARD ──
@@ -2142,7 +2315,7 @@ function openUserConfigDialog(uid){
 // ── ADMIN LOG ──
 function renderAdminLog(c){
   const sArr=Object.entries(STAFF);
-  const counts={'TRIAL MODERATOR':0,'MODERATOR':0,'ADMINISTRATOR':0,'SENIOR ADMINISTRATOR':0,'SUPER ADMINISTRATOR':0};
+  const counts={'TRIAL MODERATOR':0,'MODERATOR':0,'ADMINISTRATOR':0,'SUPER ADMINISTRATOR':0,'SOFTWARE MANAGER':0};
   sArr.forEach(([,s])=>{ if(counts[s.level]!==undefined) counts[s.level]++; });
   const permKeys=Object.keys(DEFAULT_PERMS);
   const levelOptions=LEVEL_LIST;
@@ -2195,7 +2368,7 @@ function renderAdminLog(c){
       <div class="sbox"><div class="stitle">Staff Level Overview</div><div class="sbody">
         <table class="tbl" style="width:100%;">
           <tr><th>Level</th><th>Rank</th><th>Count</th></tr>
-          ${LEVEL_LIST.map(l=>`<tr><td>${levelBadge(l)}</td><td>${LEVEL_RANK[l]}</td><td>${counts[l]||0}</td></tr>`).join('')}
+          ${[...LEVEL_LIST,'SOFTWARE MANAGER'].map(l=>`<tr><td>${levelBadge(l)}</td><td>${LEVEL_RANK[l]}</td><td>${counts[l]||0}</td></tr>`).join('')}
         </table>
       </div></div>
       <div class="sbox"><div class="stitle">Reputation Point Values</div><div class="sbody">
@@ -2598,6 +2771,8 @@ function openFactoryResetDialog(){
   document.getElementById('fr-code1').value='';
   document.getElementById('fr-code2').value='';
   document.getElementById('fr-code3').value='';
+  document.getElementById('fr-reason').value='';
+  document.getElementById('fr-notes').value='';
   document.getElementById('fr-err').textContent='';
   document.getElementById('factoryResetOverlay').classList.add('show');
   const close=()=>document.getElementById('factoryResetOverlay').classList.remove('show');
@@ -2607,24 +2782,31 @@ function openFactoryResetDialog(){
     const c1=document.getElementById('fr-code1').value.trim();
     const c2=document.getElementById('fr-code2').value.trim();
     const c3=document.getElementById('fr-code3').value.trim();
+    const reason=document.getElementById('fr-reason').value.trim();
+    const notes=document.getElementById('fr-notes').value.trim();
     const errEl=document.getElementById('fr-err');
+    if(!reason){ errEl.textContent='Please provide a reason for the reset.'; return; }
     if(c1!=='5334118'){ errEl.textContent='Primary code incorrect.'; return; }
     if(c2!=='6445229'){ errEl.textContent='Secondary code incorrect.'; return; }
     if(c3!=='Eversol'){ errEl.textContent='Confirmation word incorrect.'; return; }
     close();
-    errEl.textContent='';
-    // Execute factory reset — delete everything except rpatoff staff record
-    const paths=['users','logs/moderation','logs/revoke','logs/suspend','logs/terminate','logs/login','logs/audit','logs/appeals','siteAlerts','modRequests','staffMessages','announcements','meta/banTemplates','meta/customFields','meta/updateLog','meta/permissions','meta/repPoints','meta/appealPresets','meta/dashboardLogConfig','meta/playerCounter'];
+    // Save reset notice BEFORE wiping so it survives
+    const resetTimestamp=Date.now();
+    await set(ref(db,'meta/resetNotice'),{reason,notes,by:ME,date:nowStr(),timestamp:resetTimestamp});
+    // Execute wipe
+    const paths=['users','logs/moderation','logs/revoke','logs/suspend','logs/terminate','logs/login','logs/appeals','siteAlerts','modRequests','staffMessages','announcements','meta/banTemplates','meta/customFields','meta/updateLog','meta/permissions','meta/repPoints','meta/appealPresets','meta/dashboardLogConfig','meta/playerCounter'];
     for(const path of paths) await remove(ref(db,path)).catch(()=>{});
-    // Remove all staff except rpatoff
+    // Erase audit log last
+    await remove(ref(db,'logs/audit')).catch(()=>{});
+    // Remove all staff except rpatoff and SOFTWARE MANAGER accounts
     const staffSnap=await get(ref(db,'staff'));
     if(staffSnap.exists()){
-      for(const key of Object.keys(staffSnap.val())){
-        if(key!=='rpatoff') await remove(ref(db,`staff/${key}`)).catch(()=>{});
+      for(const [key,val] of Object.entries(staffSnap.val())){
+        if(key!=='rpatoff'&&val.level!=='SOFTWARE MANAGER') await remove(ref(db,`staff/${key}`)).catch(()=>{});
       }
     }
-    // Re-log audit entry for the reset itself under rpatoff
-    await push(ref(db,'logs/audit'),{action:'Factory Reset Executed',detail:`All data wiped by ${ME}`,by:ME,date:nowStr()});
+    // Write a fresh audit entry
+    await push(ref(db,'logs/audit'),{action:'Factory Reset Executed',detail:`Reason: ${reason}${notes?' | Notes: '+notes:''}`,by:ME,date:nowStr()});
     alert('Factory reset complete. The system has been wiped.');
     doLogout();
   };
@@ -2706,24 +2888,24 @@ async function saveStaffNote(sid){
   el.style.color='#006600'; el.textContent='Note saved!'; setTimeout(()=>{ if(el) el.textContent=''; },1500);
 }
 
-async function updateStaffPass(sid){
-  const np=document.getElementById('spInput').value.trim();
-  const el=document.getElementById('spMsg');
-  if(!np){ el.style.color='#880000'; el.textContent='Enter a password.'; return; }
-  await update(ref(db,`staff/${sid}`),{password:np});
-  auditLog('Staff Password Updated',`${STAFF[sid]?STAFF[sid].username:sid}`);
-  el.style.color='#006600'; el.textContent='Password updated.';
-  setTimeout(()=>{ if(el) el.textContent=''; },2000);
-}
-
 async function updateStaffLevel(sid){
   const s=STAFF[sid];
+  if(s&&s.level==='SOFTWARE MANAGER'){
+    const el=document.getElementById('spMsg');
+    el.style.color='#880000'; el.textContent='Cannot change SOFTWARE MANAGER level.';
+    setTimeout(()=>{ if(el) el.textContent=''; },2500); return;
+  }
   if(s&&s.username===ME&&!isSuperAdmin()){
     const el=document.getElementById('spMsg');
     el.style.color='#880000'; el.textContent='Cannot change your own level.';
     setTimeout(()=>{ if(el) el.textContent=''; },2000); return;
   }
   const l=document.getElementById('slInput').value;
+  if(l==='SOFTWARE MANAGER'){
+    const el=document.getElementById('spMsg');
+    el.style.color='#880000'; el.textContent='Cannot assign SOFTWARE MANAGER via panel.';
+    setTimeout(()=>{ if(el) el.textContent=''; },2500); return;
+  }
   const oldLevel=s?s.level:'?';
   await update(ref(db,`staff/${sid}`),{level:l});
   auditLog('Staff Level Changed',`${s?s.username:sid}: ${oldLevel} -> ${l}`);
@@ -2732,8 +2914,30 @@ async function updateStaffLevel(sid){
   setTimeout(()=>{ if(el) el.textContent=''; },1500);
 }
 
+async function updateStaffPass(sid){
+  const s=STAFF[sid];
+  if(s&&s.level==='SOFTWARE MANAGER'){
+    const el=document.getElementById('spMsg');
+    el.style.color='#880000'; el.textContent='Cannot change SOFTWARE MANAGER password via panel.';
+    setTimeout(()=>{ if(el) el.textContent=''; },2500); return;
+  }
+  const np=document.getElementById('spInput').value.trim();
+  const el=document.getElementById('spMsg');
+  if(!np){ el.style.color='#880000'; el.textContent='Enter a password.'; return; }
+  await update(ref(db,`staff/${sid}`),{password:np});
+  auditLog('Staff Password Updated',`${s?s.username:sid}`);
+  el.style.color='#006600'; el.textContent='Password updated.';
+  setTimeout(()=>{ if(el) el.textContent=''; },2000);
+}
+
 function promptSuspendStaff(sid, isCurrentlySuspended){
   const s=STAFF[sid]; if(!s) return;
+  if(s.level==='SOFTWARE MANAGER'){
+    openDialog('Action Blocked','<span style="color:#880000;font-weight:bold;">SOFTWARE MANAGER accounts cannot be suspended.</span><br><br>This account has system-level access and is protected from all administrative actions via the panel.','',null);
+    document.getElementById('dlgOK').style.display='none';
+    document.getElementById('dlgCancel').textContent='Close';
+    return;
+  }
   if(isCurrentlySuspended){
     openDialog('Unsuspend Staff',`Unsuspend staff member <b>${s.username}</b>?`,
       `<div style="font-size:11px;color:#000;margin-bottom:3px;">Reason:</div><textarea id="dlgReason" style="width:100%;height:36px;"></textarea>`,
@@ -2769,6 +2973,12 @@ function promptSuspendStaff(sid, isCurrentlySuspended){
 
 function promptTerminateStaff(sid){
   const s=STAFF[sid]; if(!s) return;
+  if(s.level==='SOFTWARE MANAGER'){
+    openDialog('Action Blocked','<span style="color:#880000;font-weight:bold;">SOFTWARE MANAGER accounts cannot be terminated.</span><br><br>This account has system-level access and is protected from all administrative actions via the panel.','',null);
+    document.getElementById('dlgOK').style.display='none';
+    document.getElementById('dlgCancel').textContent='Close';
+    return;
+  }
   openDialog('Terminate Account',`Terminate staff account <b>${s.username}</b>?<br><span style="color:#880000;font-size:11px;">This will permanently remove their access.</span>`,`
     <div style="margin-bottom:4px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;">Reason:</label>
       <select id="termReasonSel" style="width:100%;font-family:inherit;font-size:11px;height:16px;">
@@ -2820,6 +3030,7 @@ document.getElementById('loginPass').onkeydown=e=>{ if(e.key==='Enter') doLogin(
 document.getElementById('loginUser').onkeydown=e=>{ if(e.key==='Enter') doLogin(); };
 document.getElementById('logoutBtn').onclick=doLogout;
 document.getElementById('suspOKBtn').onclick=()=>document.getElementById('suspOverlay').classList.remove('show');
+document.getElementById('wipedOKBtn').onclick=()=>document.getElementById('wipedOverlay').classList.remove('show');
 
 async function doLogin(){
   const u=document.getElementById('loginUser').value.trim();
@@ -2844,8 +3055,12 @@ async function doLogin(){
         document.getElementById('suspPopupMsg').textContent='Your staff account has been permanently terminated by administration. You no longer have access to this system.';
         status.textContent='TERMINATED';
         document.getElementById('suspOverlay').classList.add('show');
-      }else{ status.textContent='INVALID!'; }
-      await push(ref(db,'logs/login'),{username:u,level:'—',date:nowStr(),result:'invalid'});
+      } else {
+        // Account exists in Firebase Auth but not in staff DB — wiped
+        document.getElementById('wipedOverlay').classList.add('show');
+        status.textContent='WIPED';
+      }
+      await push(ref(db,'logs/login'),{username:u,level:'—',date:nowStr(),result:'invalid'}).catch(()=>{});
       return;
     }
     const staffData=staffSnap.val();
@@ -2882,6 +3097,28 @@ async function doLogin(){
     startHeartbeat();
     loadNotifPrefs();
     lastRefreshed=nowStr();
+    // Check if there's a pending reset notice this user hasn't seen
+    const resetSnap=await get(ref(db,'meta/resetNotice'));
+    if(resetSnap.exists()){
+      const rn=resetSnap.val();
+      const seenKey=`resetNoticeSeen_${rn.timestamp||''}`;
+      let seen=false;
+      try{ seen=!!localStorage.getItem(seenKey); }catch(e){}
+      if(!seen){
+        document.getElementById('resetNoticeReason').textContent=rn.reason||(rn.notes?`${rn.reason||''} — ${rn.notes}`:'No reason provided.');
+        if(rn.notes) document.getElementById('resetNoticeReason').textContent+=(rn.notes?`\n\n${rn.notes}`:'');
+        document.getElementById('resetNoticeBy').textContent=`By: ${rn.by||'Unknown'} on ${rn.date||'Unknown'}`;
+        document.getElementById('resetNoticeOverlay').classList.add('show');
+        document.getElementById('resetNoticeOK').onclick=()=>{
+          try{ localStorage.setItem(seenKey,'1'); }catch(e){}
+          document.getElementById('resetNoticeOverlay').classList.remove('show');
+        };
+        document.getElementById('resetNoticeClose').onclick=()=>{
+          try{ localStorage.setItem(seenKey,'1'); }catch(e){}
+          document.getElementById('resetNoticeOverlay').classList.remove('show');
+        };
+      }
+    }
     nav('home');
   }catch(e){ status.textContent='INVALID!'; await push(ref(db,'logs/login'),{username:u,level:'—',date:nowStr(),result:'failed'}).catch(()=>{}); }
 }
@@ -2991,6 +3228,7 @@ function startListeners(){
   onValue(ref(db,'meta/customFields'),snap=>{ CUSTOM_FIELDS=snap.val()||[]; });
   onValue(ref(db,'meta/banTemplates'),snap=>{ BAN_TEMPLATES=snap.val()||[]; });
   onValue(ref(db,'meta/updateLog'),snap=>{ if(snap.exists()) UPDATE_LOG=snap.val(); });
+  onValue(ref(db,'meta/siteConfig'),snap=>{ if(snap.exists()){ SITE_CONFIG=snap.val(); applySiteConfig(); } });
   onValue(ref(db,'meta/dashboardLogConfig'),snap=>{ if(snap.exists()) DASHBOARD_LOG_CONFIG=snap.val(); });
   onValue(ref(db,'staffMessages'),snap=>{
     const prev=Object.keys(STAFF_MESSAGES||{}).length;
@@ -3159,7 +3397,7 @@ function openNotifSettings(){
   document.getElementById('notifSettingsOverlay').classList.add('show');
 }
 
-['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','loginlog','auditlog','alerts','adminlog','home','messaging','requests','userconfig'].forEach(p=>{
+['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','loginlog','auditlog','alerts','adminlog','home','messaging','requests','userconfig','siteconfig'].forEach(p=>{
   const el=document.getElementById('nav-'+p);
   if(el) el.onclick=()=>nav(p);
 });
