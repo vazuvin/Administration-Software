@@ -193,15 +193,15 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
   <div class="dialog">
     <div class="titlebar">
       <div class="titlebar-title">Log Deletion</div>
-      <div class="win-btns"><div class="wcb" onclick="closeOpDialog()">&#10005;</div></div>
+      <div class="win-btns"><div class="wcb" id="opClose">&#10005;</div></div>
     </div>
     <div style="padding:12px 14px 10px;">
       <div style="font-size:11px;color:#000;margin-bottom:4px;line-height:1.5;" id="opWarning">To continue with this action please insert your operator code.</div>
       <input type="password" id="opCodeInput" style="width:100%;margin-bottom:8px;" placeholder="Operator code"/>
       <div id="opErr" style="font-size:11px;color:#880000;margin-bottom:6px;min-height:14px;"></div>
       <div style="display:flex;gap:5px;justify-content:center;">
-        <button class="btn" onclick="submitOpCode()">SUBMIT</button>
-        <button class="btn" onclick="closeOpDialog()">CANCEL</button>
+        <button class="btn" id="opSubmit">SUBMIT</button>
+        <button class="btn" id="opCancel">CANCEL</button>
       </div>
     </div>
   </div>
@@ -347,15 +347,19 @@ function openOpDialog(warningMsg, cb){
   document.getElementById('opErr').textContent='';
   opCallback=cb;
   document.getElementById('opOverlay').classList.add('show');
-  setTimeout(()=>document.getElementById('opCodeInput').focus(),100);
+  setTimeout(()=>{ const el=document.getElementById('opCodeInput'); if(el) el.focus(); },150);
 }
-window.closeOpDialog=function(){document.getElementById('opOverlay').classList.remove('show');opCallback=null;};
-window.submitOpCode=function(){
+function closeOpDialog(){document.getElementById('opOverlay').classList.remove('show');opCallback=null;}
+function submitOpCode(){
   const val=document.getElementById('opCodeInput').value.trim();
   if(val!==OPERATOR_CODE){document.getElementById('opErr').textContent='Incorrect operator code.';return;}
   closeOpDialog();
   if(opCallback) opCallback();
-};
+}
+document.getElementById('opClose').onclick=closeOpDialog;
+document.getElementById('opCancel').onclick=closeOpDialog;
+document.getElementById('opSubmit').onclick=submitOpCode;
+document.getElementById('opCodeInput').onkeydown=e=>{ if(e.key==='Enter') submitOpCode(); };
 
 // ── USER ADMIN ──
 function renderUA(c){
@@ -1062,7 +1066,31 @@ async function doLogin(){
   try{
     await signInWithEmailAndPassword(auth,`${u}@admin.com`,p);
     const staffSnap=await get(ref(db,`staff/${u}`));
-    if(!staffSnap.exists()){status.textContent='INVALID!';await signOut(auth);return;}
+    if(!staffSnap.exists()){
+      // Check terminate log to see if they were terminated
+      const termSnap=await get(ref(db,'logs/terminate'));
+      let termInfo=null;
+      if(termSnap.exists()){
+        const entries=Object.values(termSnap.val());
+        termInfo=entries.find(e=>e.username===u&&e.type==='Staff');
+      }
+      if(termInfo){
+        await signOut(auth);
+        document.getElementById('suspReviewed').textContent=termInfo.date||'Unknown';
+        document.getElementById('suspReason').textContent=termInfo.reason||'No reason provided.';
+        document.getElementById('suspModNote').textContent=termInfo.modNote||'None.';
+        document.getElementById('suspOffItem').textContent=termInfo.offensiveItem||'None.';
+        document.getElementById('suspPopupTitle').textContent='Account Terminated';
+        document.getElementById('suspPopupHeading').textContent='Account Terminated';
+        document.getElementById('suspPopupMsg').textContent='Your staff account has been permanently terminated by administration. You no longer have access to this system.';
+        status.textContent='TERMINATED';
+        document.getElementById('suspOverlay').classList.add('show');
+      } else {
+        status.textContent='INVALID!';
+      }
+      await signOut(auth);
+      return;
+    }
     const staffData=staffSnap.val();
     if(staffData.suspended){
       await signOut(auth);
