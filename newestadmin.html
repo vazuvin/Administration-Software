@@ -93,6 +93,13 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
 .activity-dot.active{background:#006600;}
 .activity-dot.idle{background:#cc8800;}
 .activity-dot.offline{background:#808080;}
+.menu-item{cursor:default;padding:1px 6px;color:#000;user-select:none;}
+.menu-item:hover,.menu-item.open{background:#00007e;color:#fff;}
+.dropdown{display:none;position:absolute;top:100%;left:0;background:#d4d0c8;border-top:1px solid #fff;border-left:1px solid #fff;border-right:1px solid #404040;border-bottom:1px solid #404040;z-index:500;min-width:160px;box-shadow:2px 2px 4px rgba(0,0,0,0.4);}
+.dropdown.show{display:block;}
+.drop-item{padding:2px 16px;font-size:11px;color:#000;cursor:default;white-space:nowrap;}
+.drop-item:hover{background:#00007e;color:#fff;}
+.drop-sep{border-top:1px solid #808080;border-bottom:1px solid #fff;margin:2px 0;}
 </style>
 </head>
 <body>
@@ -156,7 +163,43 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
         <div style="display:flex;gap:2px;"><div class="wcb">_</div><div class="wcb">&#9633;</div><div class="wcb">&#10005;</div></div>
       </div>
     </div>
-    <div class="menubar"><span>File</span><span>View</span><span>Tools</span><span>Help</span></div>
+    <div class="menubar" id="menubar">
+      <div style="position:relative;display:inline-block;">
+        <span id="menu-file" class="menu-item">File</span>
+        <div class="dropdown" id="drop-file">
+          <div class="drop-item" id="menu-logout">Log Out</div>
+          <div class="drop-sep"></div>
+          <div class="drop-item" id="menu-printlog">Print Log (Export)</div>
+        </div>
+      </div>
+      <div style="position:relative;display:inline-block;">
+        <span id="menu-view" class="menu-item">View</span>
+        <div class="dropdown" id="drop-view">
+          <div class="drop-item" id="menu-view-useradmin">User Admin</div>
+          <div class="drop-item" id="menu-view-accounts">All Accounts</div>
+          <div class="drop-item" id="menu-view-staff">Staff Registry</div>
+          <div class="drop-sep"></div>
+          <div class="drop-item" id="menu-view-modlog">Moderation Log</div>
+          <div class="drop-item" id="menu-view-adminlog">Administrator</div>
+        </div>
+      </div>
+      <div style="position:relative;display:inline-block;">
+        <span id="menu-tools" class="menu-item">Tools</span>
+        <div class="dropdown" id="drop-tools">
+          <div class="drop-item" id="menu-altdetect">Alt Detection</div>
+          <div class="drop-item" id="menu-reputation">Reputation System</div>
+          <div class="drop-sep"></div>
+          <div class="drop-item" id="menu-announcements">Announcements</div>
+        </div>
+      </div>
+      <div style="position:relative;display:inline-block;">
+        <span id="menu-help" class="menu-item">Help</span>
+        <div class="dropdown" id="drop-help">
+          <div class="drop-item" id="menu-about">About</div>
+          <div class="drop-item" id="menu-shortcuts">Keyboard Shortcuts</div>
+        </div>
+      </div>
+    </div>
     <div class="announce-bar" id="announceBar"></div>
     <div class="topinfo" id="topinfo">Loading...</div>
     <div class="main">
@@ -264,6 +307,7 @@ const DEFAULT_PERMS = {
   canViewLoginLog:'ADMINISTRATOR', canViewContentModeration:'MODERATOR',
   canViewStaffActivity:'ADMINISTRATOR',
   canSubmitAppeals:'MODERATOR', canViewAppealLog:'MODERATOR', canReviewAppeals:'ADMINISTRATOR',
+  canViewStaffProfile:'ADMINISTRATOR', canChangeStaffLevel:'SUPER ADMINISTRATOR', canChangeStaffPassword:'SUPER ADMINISTRATOR',
 };
 
 const DEFAULT_REP_POINTS = { 'Remind':1, 'Warn':2, 'Ban 1 Day':3, 'Ban 3 Days':3, 'Ban 7 Days':5, 'Ban 14 Days':5, 'Suspend':4, 'Ban Permanent':10 };
@@ -540,7 +584,7 @@ function renderUA(c){
         <div id="fuResult" style="margin-top:4px;"></div>
       </div></div>
       <div class="sbox"><div class="stitle">Appeal Status</div><div class="sbody">
-        <div class="row"><label>Last Appeal:</label><span>${u.appealStatus?`<span class="badge appeal-${(u.appealStatus||'').toLowerCase().replace(' ','-')}">${u.appealStatus}</span>`:'<span style="color:#808080;">None</span>'}</span></div>
+        <div style="display:flex;align-items:center;margin-bottom:2px;font-size:11px;gap:4px;"><span style="color:#000;white-space:nowrap;">Last Appeal:</span>${u.appealStatus?`<span class="badge appeal-${(u.appealStatus||'').toLowerCase().replace(' ','-')}">${u.appealStatus}</span>`:'<span style="color:#808080;">None</span>'}</div>
         ${canDo('canSubmitAppeals')?`
         <div style="margin-top:5px;">
           ${u.punishments&&Object.keys(u.punishments).length>0
@@ -981,6 +1025,7 @@ function renderStaff(c){
       </div></div>`:''}
     </div>
     <div style="width:200px;flex-shrink:0;">
+      ${canDo('canViewStaffProfile')?`
       <div class="sbox"><div class="stitle">Staff Profile &mdash; ${s.username}</div><div class="sbody">
         ${s.avatarUrl?`<div style="display:flex;justify-content:center;margin-bottom:6px;"><div class="avatar-box" style="width:60px;height:60px;">${avatarHTML(s)}</div></div>`:''}
         <div class="row"><label>Username:</label><b>${s.username}</b></div>
@@ -992,16 +1037,18 @@ function renderStaff(c){
         <div style="font-size:11px;margin:3px 0 2px;color:#000;">Notes:</div>
         <textarea id="snTA" style="width:100%;height:40px;">${s.notes||''}</textarea>
         <button class="btn" id="btn-savestaffnote" style="margin-top:2px;">Save Note</button>
+        ${canDo('canChangeStaffPassword')?`
         <div style="font-size:11px;margin:5px 0 2px;color:#000;">Update Password:</div>
         <div style="display:flex;gap:3px;">
           <input type="text" id="spInput" style="width:100px;" placeholder="new password"/>
           <button class="btn" id="btn-setpass">Set</button>
-        </div>
+        </div>`:''}
+        ${canDo('canChangeStaffLevel')?`
         <div style="font-size:11px;margin:4px 0 2px;color:#000;">Change Level:</div>
         <div style="display:flex;gap:3px;">
           <select id="slInput" style="width:128px;"><option>INTERN</option><option>MODERATOR</option><option>ADMINISTRATOR</option><option>SUPER ADMINISTRATOR</option></select>
           <button class="btn" id="btn-setlevel">Set</button>
-        </div>
+        </div>`:''}
         <div id="spMsg" style="font-size:11px;margin-top:2px;"></div>
         ${canSuspend||canTerminate?`
         <hr style="border:none;border-top:1px solid #909090;margin:6px 0;">
@@ -1010,15 +1057,22 @@ function renderStaff(c){
         ${canTerminate?`<button class="btn red" id="btn-terminate" style="width:100%;">Terminate Account</button>`:''}
         `:''}
       </div></div>
+      `:'<div class="sbox"><div class="stitle">Staff Profile</div><div class="sbody"><i style="color:#880000;">You do not have permission to view staff profiles.</i></div></div>'}
     </div>
   </div>`;
   if(canManage){
     document.querySelectorAll('.view-staff-btn').forEach(btn=>{btn.onclick=()=>{ currentStaffId=btn.dataset.sid; nav('staff'); };});
     document.getElementById('btn-addstaff').onclick=addStaff;
   }
-  document.getElementById('btn-savestaffnote').onclick=()=>saveStaffNote(currentStaffId);
-  document.getElementById('btn-setpass').onclick=()=>updateStaffPass(currentStaffId);
-  document.getElementById('btn-setlevel').onclick=()=>updateStaffLevel(currentStaffId);
+  if(canDo('canViewStaffProfile')){
+    const sn=document.getElementById('btn-savestaffnote'); if(sn) sn.onclick=()=>saveStaffNote(currentStaffId);
+  }
+  if(canDo('canChangeStaffPassword')){
+    const sp=document.getElementById('btn-setpass'); if(sp) sp.onclick=()=>updateStaffPass(currentStaffId);
+  }
+  if(canDo('canChangeStaffLevel')){
+    const sl=document.getElementById('btn-setlevel'); if(sl) sl.onclick=()=>updateStaffLevel(currentStaffId);
+  }
   if(canSuspend&&document.getElementById('btn-togglesusp'))
     document.getElementById('btn-togglesusp').onclick=()=>promptSuspendStaff(currentStaffId,s.suspended);
   if(canTerminate&&document.getElementById('btn-terminate'))
@@ -1585,6 +1639,58 @@ function startListeners(){
     if(!snap.exists()) await set(ref(db,'staff/rpatoff'),{username:'rpatoff',level:'SUPER ADMINISTRATOR',joined:today(),notes:'Founder.',suspended:false,password:'6445229',avatarUrl:'',avatarRobloxUser:'',lastActive:'Never',lastAction:'—'});
   }catch(e){}
 })();
+
+// ── MENUBAR ──
+function setupMenus(){
+  const menus=[['file','drop-file'],['view','drop-view'],['tools','drop-tools'],['help','drop-help']];
+  menus.forEach(([name,dropId])=>{
+    const trigger=document.getElementById('menu-'+name);
+    const drop=document.getElementById(dropId);
+    if(!trigger||!drop) return;
+    trigger.onclick=(e)=>{
+      e.stopPropagation();
+      const isOpen=drop.classList.contains('show');
+      document.querySelectorAll('.dropdown').forEach(d=>d.classList.remove('show'));
+      document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('open'));
+      if(!isOpen){ drop.classList.add('show'); trigger.classList.add('open'); }
+    };
+  });
+  document.addEventListener('click',()=>{
+    document.querySelectorAll('.dropdown').forEach(d=>d.classList.remove('show'));
+    document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('open'));
+  });
+  // File menu
+  const mlogout=document.getElementById('menu-logout'); if(mlogout) mlogout.onclick=doLogout;
+  const mprint=document.getElementById('menu-printlog');
+  if(mprint) mprint.onclick=()=>{
+    const logData=JSON.stringify({MOD_LOG,REVOKE_LOG,SUSPEND_LOG,TERMINATE_LOG,LOGIN_LOG},null,2);
+    const blob=new Blob([logData],{type:'application/json'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download=`admin-logs-${today()}.json`; a.click();
+  };
+  // View menu
+  ['useradmin','accounts','staff','modlog','adminlog'].forEach(p=>{
+    const el=document.getElementById('menu-view-'+p); if(el) el.onclick=()=>nav(p);
+  });
+  // Tools menu
+  ['altdetect','reputation','announcements'].forEach(p=>{
+    const el=document.getElementById('menu-'+p); if(el) el.onclick=()=>nav(p);
+  });
+  // Help menu
+  const mabout=document.getElementById('menu-about');
+  if(mabout) mabout.onclick=()=>openDialog('About','Administration Panel<br><br>Version: 2.0<br>Built for your Roblox game.<br>Logged in as: <b>'+ME+'</b> ['+MY_LEVEL+']','',null);
+  const mshort=document.getElementById('menu-shortcuts');
+  if(mshort) mshort.onclick=()=>openDialog('Keyboard Shortcuts',
+    '<b>Enter</b> &mdash; Submit / Confirm<br><b>Escape</b> &mdash; Close dialog<br><br>Navigation shortcuts:<br><b>Alt+U</b> &mdash; User Admin<br><b>Alt+A</b> &mdash; All Accounts<br><b>Alt+S</b> &mdash; Staff Registry<br><b>Alt+M</b> &mdash; Moderation Log','',null);
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){ closeDialog(); closeOpDialog(); }
+    if(e.altKey&&e.key==='u') nav('useradmin');
+    if(e.altKey&&e.key==='a') nav('accounts');
+    if(e.altKey&&e.key==='s') nav('staff');
+    if(e.altKey&&e.key==='m') nav('modlog');
+  });
+}
+setupMenus();
 
 ['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','loginlog','auditlog','announcements','adminlog'].forEach(p=>{
   const el=document.getElementById('nav-'+p);
