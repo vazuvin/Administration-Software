@@ -432,7 +432,7 @@ let SITE_ALERTS={};
 let DASHBOARD_LOG_CONFIG={modlog:true,loginlog:true,appeals:false};
 let lastRefreshed=null;
 
-const UPDATE_LOG=[
+let UPDATE_LOG=[
   {version:'2.3', date:'Current', entries:[
     'Added Site-Wide Alerts (Warning / Critical / Info types) replacing Announcements',
     'Added Staff Messaging — direct messages and all-staff broadcasts',
@@ -2117,7 +2117,35 @@ function renderAdminLog(c){
   <div class="ptitle">Administrator</div>
   <div style="display:flex;gap:6px;flex-wrap:wrap;">
     <div style="flex:1;min-width:200px;">
-      <div class="sbox"><div class="stitle">Dashboard Log Widgets</div><div class="sbody">
+      <div class="sbox"><div class="stitle">Update Log Editor</div><div class="sbody">
+        <div style="font-size:11px;color:#555;margin-bottom:6px;">Manage the changelog shown in the Update Log popup on the dashboard. Each entry is one bullet point.</div>
+        <div id="ulVersionList" style="margin-bottom:6px;">
+          ${UPDATE_LOG.map((v,i)=>`
+            <div style="border:1px solid #b0aca4;background:#e8e4dc;padding:5px 7px;margin-bottom:5px;">
+              <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;flex-wrap:wrap;">
+                <span style="font-size:11px;font-weight:bold;color:#000080;">v${v.version}</span>
+                <span style="font-size:10px;color:#808080;">${v.date}</span>
+                <div style="display:flex;gap:3px;margin-left:auto;">
+                  <button class="btn small edit-ul-btn" data-idx="${i}">Edit</button>
+                  <button class="btn red small del-ul-btn" data-idx="${i}">X</button>
+                </div>
+              </div>
+              <div style="font-size:10px;color:#444;">${v.entries.slice(0,2).map(e=>`&#9658; ${e}`).join('<br>')}${v.entries.length>2?`<br><span style="color:#808080;">+${v.entries.length-2} more...</span>`:''}</div>
+            </div>`).join('')}
+        </div>
+        <hr style="border:none;border-top:1px solid #c0bcb4;margin-bottom:6px;">
+        <div style="font-size:11px;font-weight:bold;color:#000;margin-bottom:4px;">Add New Version</div>
+        <div style="display:flex;gap:5px;margin-bottom:3px;">
+          <div style="flex:1;"><label style="font-size:11px;color:#000;display:block;margin-bottom:1px;">Version:</label>
+            <input type="text" id="ulVersion" style="width:100%;" placeholder="e.g. 2.4"/></div>
+          <div style="flex:1;"><label style="font-size:11px;color:#000;display:block;margin-bottom:1px;">Label:</label>
+            <input type="text" id="ulDate" style="width:100%;" placeholder="e.g. Current"/></div>
+        </div>
+        <div style="margin-bottom:4px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:1px;">Entries (one per line):</label>
+          <textarea id="ulEntries" style="width:100%;height:70px;" placeholder="Fixed login bug&#10;Added new feature&#10;..."></textarea></div>
+        <button class="btn" id="btn-addul">Add Version</button>
+        <div id="ulMsg" style="font-size:11px;margin-top:3px;color:#006600;"></div>
+      </div></div>
         <div style="font-size:11px;color:#555;margin-bottom:6px;">Choose which log panels appear on the Dashboard home page.</div>
         <div style="display:flex;flex-direction:column;gap:5px;">
           <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;">
@@ -2229,6 +2257,59 @@ function renderAdminLog(c){
   document.getElementById('btn-saveperms').onclick=savePerms;
   document.getElementById('btn-saverep').onclick=saveRepPoints;
   document.getElementById('btn-savepresets').onclick=saveAppealPresets;
+
+  // Update Log editor
+  document.getElementById('btn-addul').onclick=async()=>{
+    const version=document.getElementById('ulVersion').value.trim();
+    const date=document.getElementById('ulDate').value.trim();
+    const entries=document.getElementById('ulEntries').value.split('\n').map(l=>l.trim()).filter(l=>l);
+    const msgEl=document.getElementById('ulMsg');
+    if(!version){ msgEl.style.color='#880000'; msgEl.textContent='Version required.'; return; }
+    if(!entries.length){ msgEl.style.color='#880000'; msgEl.textContent='At least one entry required.'; return; }
+    const newLog=[{version,date:date||'Current',entries},...UPDATE_LOG];
+    await set(ref(db,'meta/updateLog'),newLog);
+    UPDATE_LOG=newLog;
+    auditLog('Update Log Modified',`Added version ${version}`);
+    msgEl.style.color='#006600'; msgEl.textContent=`Version ${version} added!`;
+    setTimeout(()=>nav('adminlog'),800);
+  };
+  document.querySelectorAll('.del-ul-btn').forEach(btn=>{
+    btn.onclick=async()=>{
+      const idx=parseInt(btn.dataset.idx);
+      const newLog=[...UPDATE_LOG]; newLog.splice(idx,1);
+      await set(ref(db,'meta/updateLog'),newLog);
+      UPDATE_LOG=newLog;
+      auditLog('Update Log Modified',`Removed version index ${idx}`);
+      nav('adminlog');
+    };
+  });
+  document.querySelectorAll('.edit-ul-btn').forEach(btn=>{
+    btn.onclick=()=>{
+      const idx=parseInt(btn.dataset.idx);
+      const v=UPDATE_LOG[idx]; if(!v) return;
+      openDialog(`Edit Version ${v.version}`,'',`
+        <div style="display:flex;gap:5px;margin-bottom:4px;">
+          <div style="flex:1;"><label style="font-size:11px;color:#000;display:block;margin-bottom:1px;">Version:</label>
+            <input type="text" id="editUlVersion" style="width:100%;" value="${v.version}"/></div>
+          <div style="flex:1;"><label style="font-size:11px;color:#000;display:block;margin-bottom:1px;">Label:</label>
+            <input type="text" id="editUlDate" style="width:100%;" value="${v.date}"/></div>
+        </div>
+        <label style="font-size:11px;color:#000;display:block;margin-bottom:1px;">Entries (one per line):</label>
+        <textarea id="editUlEntries" style="width:100%;height:90px;">${v.entries.join('\n')}</textarea>`,
+        async()=>{
+          const version=document.getElementById('editUlVersion').value.trim()||v.version;
+          const date=document.getElementById('editUlDate').value.trim()||v.date;
+          const entries=document.getElementById('editUlEntries').value.split('\n').map(l=>l.trim()).filter(l=>l);
+          if(!entries.length) return;
+          const newLog=[...UPDATE_LOG];
+          newLog[idx]={version,date,entries};
+          await set(ref(db,'meta/updateLog'),newLog);
+          UPDATE_LOG=newLog;
+          auditLog('Update Log Modified',`Edited version ${version}`);
+        }
+      );
+    };
+  });
   document.getElementById('btn-savedlc').onclick=async()=>{
     const cfg={
       modlog:document.getElementById('dlc-modlog').checked,
@@ -2777,6 +2858,7 @@ function startListeners(){
   get(ref(db,'meta/appealPresets')).then(snap=>{ if(snap.exists()) APPEAL_PRESETS=snap.val(); });
   onValue(ref(db,'meta/customFields'),snap=>{ CUSTOM_FIELDS=snap.val()||[]; });
   onValue(ref(db,'meta/banTemplates'),snap=>{ BAN_TEMPLATES=snap.val()||[]; });
+  onValue(ref(db,'meta/updateLog'),snap=>{ if(snap.exists()) UPDATE_LOG=snap.val(); });
   onValue(ref(db,'meta/dashboardLogConfig'),snap=>{ if(snap.exists()) DASHBOARD_LOG_CONFIG=snap.val(); });
   onValue(ref(db,'staffMessages'),snap=>{
     const prev=Object.keys(STAFF_MESSAGES||{}).length;
@@ -2915,7 +2997,10 @@ function setupMenus(){
   // Update log popup
   document.getElementById('updateLogClose').onclick=()=>document.getElementById('updateLogOverlay').classList.remove('show');
   document.getElementById('updateLogOK').onclick=()=>document.getElementById('updateLogOverlay').classList.remove('show');
-  window.openUpdateLog=function(){
+  window.openUpdateLog=async function(){
+    // Seed Firebase with defaults if never saved before
+    const snap=await get(ref(db,'meta/updateLog'));
+    if(!snap.exists()) await set(ref(db,'meta/updateLog'),UPDATE_LOG);
     const body=document.getElementById('updateLogBody');
     if(body){
       body.innerHTML=UPDATE_LOG.map(v=>`
