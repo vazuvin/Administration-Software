@@ -160,6 +160,20 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
     <div class="topbar">
       <span id="topbarTitle">Administration Panel</span>
       <div class="topbar-right">
+        <div style="position:relative;display:inline-block;">
+          <button class="logout-btn" id="notifBtn" style="width:22px;padding:0;font-size:12px;position:relative;" title="Notifications">&#128276;</button>
+          <span id="notifBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#cc0000;color:#fff;font-size:8px;font-weight:bold;border-radius:50%;width:12px;height:12px;line-height:12px;text-align:center;pointer-events:none;"></span>
+          <div id="notifDropdown" style="display:none;position:absolute;top:100%;right:0;background:#d4d0c8;border-top:1px solid #fff;border-left:1px solid #fff;border-right:1px solid #404040;border-bottom:1px solid #404040;z-index:600;width:260px;box-shadow:2px 2px 4px rgba(0,0,0,0.4);">
+            <div style="background:#000080;color:#fff;font-size:11px;font-weight:bold;padding:2px 6px;display:flex;align-items:center;justify-content:space-between;">
+              <span>Notifications</span>
+              <span id="notifSettingsLink" style="font-size:10px;cursor:pointer;text-decoration:underline;color:#aad4ff;">Settings</span>
+            </div>
+            <div id="notifList" style="max-height:180px;overflow-y:auto;padding:2px 0;font-size:11px;"></div>
+            <div style="border-top:1px solid #808080;padding:3px 6px;display:flex;gap:4px;">
+              <button class="btn small" id="notifClearBtn">Clear All</button>
+            </div>
+          </div>
+        </div>
         <button class="logout-btn" id="logoutBtn">Log Out</button>
         <div style="display:flex;gap:2px;"><div class="wcb">_</div><div class="wcb">&#9633;</div><div class="wcb">&#10005;</div></div>
       </div>
@@ -205,6 +219,10 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
     <div class="topinfo" id="topinfo">Loading...</div>
     <div class="main">
       <div class="sidebar">
+        <div class="sb-section">
+          <div class="sb-title">Home</div>
+          <span class="sb-link" id="nav-home">&#9658; Dashboard</span>
+        </div>
         <div class="sb-section">
           <div class="sb-title">User Management</div>
           <span class="sb-link" id="nav-useradmin">&#9658; User Admin</span>
@@ -278,6 +296,24 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
   </div>
 </div>
 
+<!-- NOTIFICATION SETTINGS POPUP -->
+<div class="overlay" id="notifSettingsOverlay">
+  <div class="dialog" style="width:300px;">
+    <div class="titlebar">
+      <div class="titlebar-title">Notification Settings</div>
+      <div class="win-btns"><div class="wcb" id="notifSettingsClose">&#10005;</div></div>
+    </div>
+    <div style="padding:10px 14px 10px;">
+      <div style="font-size:11px;color:#000;margin-bottom:8px;">Choose which events you want to be notified about. Only categories you have access to are shown.</div>
+      <div id="notifSettingsList" style="margin-bottom:10px;"></div>
+      <div style="display:flex;gap:5px;justify-content:center;">
+        <button class="btn" id="notifSettingsSave">Save</button>
+        <button class="btn" id="notifSettingsCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, set, get, push, remove, update, onValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
@@ -318,7 +354,7 @@ const DEFAULT_APPEAL_PRESETS = ['Hacked Account','False Ban','Misunderstanding',
 const LEVEL_RANK = {'INTERN':1,'MODERATOR':2,'ADMINISTRATOR':3,'SUPER ADMINISTRATOR':4};
 
 let ME='', MY_LEVEL='', currentPassword='';
-let page='useradmin', dlgCallback=null, opCallback=null;
+let page='home', dlgCallback=null, opCallback=null;
 let currentUserId=null, currentStaffId=null;
 let USERS={}, STAFF={}, MOD_LOG={}, REVOKE_LOG={}, SUSPEND_LOG={}, TERMINATE_LOG={}, LOGIN_LOG={}, AUDIT_LOG={}, APPEAL_LOG={};
 let PERMS={...DEFAULT_PERMS};
@@ -326,6 +362,18 @@ let REP_POINTS={...DEFAULT_REP_POINTS};
 let APPEAL_PRESETS=[...DEFAULT_APPEAL_PRESETS];
 let CUSTOM_FIELDS=[];
 let ANNOUNCEMENTS={};
+let BAN_TEMPLATES=[];
+let NOTIFICATIONS=[];
+let NOTIF_PREFS={};
+const ALL_NOTIF_EVENTS=[
+  {key:'newAppeal',label:'New Appeal Submitted',perm:'canViewAppealLog'},
+  {key:'newMod',label:'New Moderation Action',perm:'canViewModLog'},
+  {key:'staffSuspended',label:'Staff Member Suspended',perm:'canViewSuspendLogs'},
+  {key:'staffTerminated',label:'Staff Member Terminated',perm:'canViewTerminateLogs'},
+  {key:'newAnnouncement',label:'New Announcement',perm:null},
+  {key:'altLinked',label:'Alt Account Linked',perm:'canViewContentModeration'},
+  {key:'appealReviewed',label:'Appeal Reviewed',perm:'canViewAppealLog'},
+];
 
 function today(){ return new Date().toLocaleDateString(); }
 function nowStr(){ return new Date().toLocaleString(); }
@@ -335,6 +383,52 @@ function isSuperAdmin(){ return MY_LEVEL==='SUPER ADMINISTRATOR'; }
 
 function auditLog(action, detail){
   push(ref(db,'logs/audit'), {action, detail, by:ME, date:nowStr()});
+}
+
+function pushNotif(eventKey, message){
+  if(!NOTIF_PREFS[eventKey]) return;
+  NOTIFICATIONS.unshift({eventKey,message,time:nowStr(),read:false});
+  if(NOTIFICATIONS.length>50) NOTIFICATIONS.length=50;
+  renderNotifBadge();
+}
+
+function renderNotifBadge(){
+  const unread=NOTIFICATIONS.filter(n=>!n.read).length;
+  const badge=document.getElementById('notifBadge');
+  if(!badge) return;
+  if(unread>0){ badge.style.display='block'; badge.textContent=unread>9?'9+':unread; }
+  else { badge.style.display='none'; }
+}
+
+function renderNotifDropdown(){
+  const list=document.getElementById('notifList');
+  if(!list) return;
+  NOTIFICATIONS.forEach(n=>n.read=true);
+  renderNotifBadge();
+  if(NOTIFICATIONS.length===0){ list.innerHTML='<div style="padding:6px 8px;color:#808080;font-style:italic;">No notifications.</div>'; return; }
+  list.innerHTML=NOTIFICATIONS.map((n,i)=>`
+    <div style="padding:3px 8px;border-bottom:1px solid #c8c4bc;cursor:default;">
+      <div style="font-size:11px;color:#000;">${n.message}</div>
+      <div style="font-size:10px;color:#808080;">${n.time}</div>
+    </div>`).join('');
+}
+
+function saveNotifPrefs(){
+  ALL_NOTIF_EVENTS.forEach(ev=>{
+    const el=document.getElementById('notifpref-'+ev.key);
+    if(el) NOTIF_PREFS[ev.key]=el.checked;
+  });
+  try{ localStorage.setItem('notifPrefs_'+ME, JSON.stringify(NOTIF_PREFS)); }catch(e){}
+}
+
+function loadNotifPrefs(){
+  try{
+    const saved=localStorage.getItem('notifPrefs_'+ME);
+    NOTIF_PREFS=saved?JSON.parse(saved):{};
+    ALL_NOTIF_EVENTS.forEach(ev=>{ if(NOTIF_PREFS[ev.key]===undefined) NOTIF_PREFS[ev.key]=true; });
+  }catch(e){
+    ALL_NOTIF_EVENTS.forEach(ev=>{ NOTIF_PREFS[ev.key]=true; });
+  }
 }
 
 function statusBadge(s){
@@ -452,6 +546,7 @@ function updateAnnouncements(){
 
 function updateSidebar(){
   const show=(id,cond)=>{ const el=document.getElementById(id); if(el) el.style.display=cond?'':'none'; };
+  show('nav-home', true);
   const showSection=(id,cond)=>{ const el=document.getElementById(id); if(el) el.style.display=cond?'':'none'; };
   showSection('sb-staff-section', canDo('canViewStaff'));
   showSection('sb-content-section', canDo('canViewContentModeration'));
@@ -480,7 +575,8 @@ function render(){
   updateTopInfo(); updateSidebar(); updateAnnouncements();
   const c=document.getElementById('content');
   const denied='<div class="ptitle">Access Denied</div><i style="padding:8px;display:block;color:#880000;">You do not have permission to view this page.</i>';
-  if(page==='useradmin'){ canDo('canViewUserAdmin')?renderUA(c):c.innerHTML=denied; }
+  if(page==='home') renderHome(c);
+  else if(page==='useradmin'){ canDo('canViewUserAdmin')?renderUA(c):c.innerHTML=denied; }
   else if(page==='moderate'){ canDo('canModerateUsers')?renderMod(c):c.innerHTML=denied; }
   else if(page==='accounts') renderAccounts(c);
   else if(page==='reputation'){ canDo('canViewContentModeration')?renderReputation(c):c.innerHTML=denied; }
@@ -535,6 +631,132 @@ function bindDeleteLogBtns(c){
   });
 }
 
+// ── HOME DASHBOARD ──
+function renderHome(c){
+  const ua=Object.values(USERS);
+  const totalPlayers=ua.length;
+  const activePlayers=ua.filter(u=>u.status==='active').length;
+  const suspended=ua.filter(u=>u.status==='suspended').length;
+  const banned=ua.filter(u=>u.status==='banned').length;
+  const highRisk=ua.filter(u=>calcReputation(u)>15).length;
+  const staffArr=Object.values(STAFF);
+  const totalStaff=staffArr.length;
+  const suspendedStaff=staffArr.filter(s=>s.suspended).length;
+  const onlineStaff=staffArr.filter(s=>{
+    if(!s.lastActive||s.lastActive==='Never') return false;
+    return (new Date()-new Date(s.lastActive))<300000;
+  }).length;
+  const openAppeals=Object.values(APPEAL_LOG).filter(a=>a.status==='Pending').length;
+  const recentMod=Object.values(MOD_LOG).sort((a,b)=>a.date>b.date?-1:1).slice(0,5);
+  const recentLogins=Object.values(LOGIN_LOG).sort((a,b)=>a.date>b.date?-1:1).slice(0,5);
+
+  // Action breakdown for today
+  const todayStr=today();
+  const todayMod=Object.values(MOD_LOG).filter(e=>e.date===todayStr||e.date&&e.date.startsWith(todayStr));
+  const actionCounts={};
+  todayMod.forEach(e=>{ actionCounts[e.action]=(actionCounts[e.action]||0)+1; });
+
+  // Rep distribution for mini bar chart (SVG inline)
+  const good=ua.filter(u=>calcReputation(u)<=5).length;
+  const caution=ua.filter(u=>{ const r=calcReputation(u); return r>5&&r<=15; }).length;
+  const risk=ua.filter(u=>calcReputation(u)>15).length;
+  const maxBar=Math.max(good,caution,risk,1);
+  const barW=80;
+  function bar(val,color){ return `<rect x="0" y="0" width="${Math.round(val/maxBar*barW)}" height="10" fill="${color}"/>`; }
+
+  c.innerHTML=`
+  <div class="ptitle">Dashboard &mdash; Welcome, ${ME}</div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
+    <div class="sbox" style="flex:1;min-width:130px;"><div class="stitle">Players</div><div class="sbody">
+      <div style="font-size:18px;font-weight:bold;color:#000080;">${totalPlayers}</div>
+      <div style="font-size:11px;margin-top:3px;">
+        <span class="ok">&#9679;</span> Active: <b>${activePlayers}</b><br>
+        <span class="sus">&#9679;</span> Suspended: <b>${suspended}</b><br>
+        <span class="ban">&#9679;</span> Banned: <b>${banned}</b>
+      </div>
+      <div style="margin-top:4px;"><button class="btn small" onclick="nav('accounts')">View All</button></div>
+    </div></div>
+    <div class="sbox" style="flex:1;min-width:130px;"><div class="stitle">Staff</div><div class="sbody">
+      <div style="font-size:18px;font-weight:bold;color:#000080;">${totalStaff}</div>
+      <div style="font-size:11px;margin-top:3px;">
+        <span class="activity-dot active"></span> Online: <b>${onlineStaff}</b><br>
+        <span class="sus">&#9679;</span> Suspended: <b>${suspendedStaff}</b>
+      </div>
+      ${canDo('canViewStaff')?`<div style="margin-top:4px;"><button class="btn small" onclick="nav('activity')">Activity</button></div>`:''}
+    </div></div>
+    <div class="sbox" style="flex:1;min-width:130px;"><div class="stitle">Appeals</div><div class="sbody">
+      <div style="font-size:18px;font-weight:bold;color:${openAppeals>0?'#cc0000':'#006600'};">${openAppeals}</div>
+      <div style="font-size:11px;margin-top:3px;color:#000;">Open / Pending</div>
+      ${canDo('canViewAppealLog')?`<div style="margin-top:4px;"><button class="btn small" onclick="nav('appeals')">View Appeals</button></div>`:''}
+    </div></div>
+    <div class="sbox" style="flex:1;min-width:130px;"><div class="stitle">Risk Players</div><div class="sbody">
+      <div style="font-size:18px;font-weight:bold;color:${highRisk>0?'#cc8800':'#006600'};">${highRisk}</div>
+      <div style="font-size:11px;margin-top:3px;color:#000;">High Risk (rep &gt;15)</div>
+      ${canDo('canViewContentModeration')?`<div style="margin-top:4px;"><button class="btn small" onclick="nav('reputation')">Reputation</button></div>`:''}
+    </div></div>
+  </div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;">
+    <div style="flex:2;min-width:220px;">
+      <div class="sbox"><div class="stitle">Recent Moderation Actions</div><div class="sbody">
+        ${recentMod.length===0?'<i style="color:#444;">No recent actions.</i>':`
+        <div class="tbl-wrap"><table class="tbl" style="width:100%;">
+          <tr><th>User</th><th>Action</th><th>Moderator</th><th>Date</th></tr>
+          ${recentMod.map(r=>`<tr>
+            <td>${r.user==='[WIPED]'?'<span class="wiped">[WIPED]</span>':r.user}</td>
+            <td>${r.action}</td><td>${r.mod}</td><td style="font-size:10px;">${r.date}</td>
+          </tr>`).join('')}
+        </table></div>`}
+      </div></div>
+      <div class="sbox"><div class="stitle">Recent Staff Logins</div><div class="sbody">
+        ${recentLogins.length===0?'<i style="color:#444;">No logins recorded.</i>':`
+        <div class="tbl-wrap"><table class="tbl" style="width:100%;">
+          <tr><th>Username</th><th>Level</th><th>Time</th><th>Result</th></tr>
+          ${recentLogins.map(r=>`<tr>
+            <td><b>${r.username}</b></td><td>${r.level||'—'}</td><td style="font-size:10px;">${r.date}</td>
+            <td>${r.result==='success'?'<span class="ok">OK</span>':'<span class="ban">'+r.result+'</span>'}</td>
+          </tr>`).join('')}
+        </table></div>`}
+      </div></div>
+    </div>
+    <div style="flex:1;min-width:160px;">
+      <div class="sbox"><div class="stitle">Reputation Distribution</div><div class="sbody">
+        <div style="font-size:11px;margin-bottom:5px;color:#000;">All players by standing:</div>
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;">
+          <span style="font-size:11px;width:50px;color:#000;">Good</span>
+          <svg width="${barW}" height="10"><rect x="0" y="0" width="${barW}" height="10" fill="#e0dcd4"/>
+            ${bar(good,'#006600')}</svg>
+          <span style="font-size:11px;color:#000;">${good}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;">
+          <span style="font-size:11px;width:50px;color:#000;">Caution</span>
+          <svg width="${barW}" height="10"><rect x="0" y="0" width="${barW}" height="10" fill="#e0dcd4"/>
+            ${bar(caution,'#cc8800')}</svg>
+          <span style="font-size:11px;color:#000;">${caution}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;">
+          <span style="font-size:11px;width:50px;color:#000;">High Risk</span>
+          <svg width="${barW}" height="10"><rect x="0" y="0" width="${barW}" height="10" fill="#e0dcd4"/>
+            ${bar(risk,'#cc0000')}</svg>
+          <span style="font-size:11px;color:#000;">${risk}</span>
+        </div>
+      </div></div>
+      <div class="sbox"><div class="stitle">Today's Actions</div><div class="sbody">
+        ${Object.keys(actionCounts).length===0?'<i style="color:#444;font-size:11px;">No actions today.</i>':
+          Object.entries(actionCounts).map(([action,count])=>`
+            <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;color:#000;">
+              <span>${action}</span><b>${count}</b>
+            </div>`).join('')}
+      </div></div>
+      <div class="sbox"><div class="stitle">Quick Links</div><div class="sbody" style="display:flex;flex-direction:column;gap:3px;">
+        ${canDo('canModerateUsers')?`<button class="btn small" onclick="nav('moderate')">&#9658; Moderate User</button>`:''}
+        ${canDo('canViewUserAdmin')?`<button class="btn small" onclick="nav('useradmin')">&#9658; User Admin</button>`:''}
+        <button class="btn small" onclick="nav('accounts')">&#9658; All Accounts</button>
+        ${canDo('canViewAppealLog')?`<button class="btn small" onclick="nav('appeals')">&#9658; Appeal Log</button>`:''}
+      </div></div>
+    </div>
+  </div>`;
+}
+
 // ── USER ADMIN ──
 function renderUA(c){
   const uArr=Object.entries(USERS).sort((a,b)=>(a[1].playerId||0)-(b[1].playerId||0));
@@ -557,6 +779,7 @@ function renderUA(c){
             <div class="row"><label>User ID (Roblox):</label><span>${u.robloxId||'—'}</span></div>
             <div class="row"><label>Status:</label>${statusBadge(u.status)}</div>
             <div class="row"><label>Reputation:</label>${repBar(repScore)}</div>
+            <div class="row"><label>&nbsp;</label><button class="btn small" id="btn-rephistory">&#9660; History</button></div>
             <div class="row"><label>System Entry:</label><span>${u.created}</span></div>
             <div class="row"><label>Account Created:</label><span>${u.robloxAccountCreated?`${u.robloxAccountCreated} &mdash; ${accountAge(u.robloxAccountCreated)}`:'<span style="color:#808080;">Not fetched yet</span>'}</span></div>
             ${CUSTOM_FIELDS.length&&canDo('canViewCustomFields')?`<hr style="border:none;border-top:1px solid #c0bcb4;margin:3px 0;">`:''}
@@ -632,6 +855,46 @@ function renderUA(c){
     const muBtn=document.getElementById('btn-manageuser');
     if(muBtn) muBtn.onclick=()=>openManageUser(currentUserId);
   }
+  document.getElementById('btn-rephistory').onclick=()=>openRepHistoryDialog(currentUserId);
+}
+
+function openRepHistoryDialog(uid){
+  const u=USERS[uid]; if(!u) return;
+  const punishments=u.punishments?Object.values(u.punishments):[];
+  if(!punishments.length){
+    openDialog('Reputation History',`No punishments on record for <b>${u.username}</b>.`,'',null);
+    return;
+  }
+  // Build cumulative score over time
+  const sorted=punishments.slice().sort((a,b)=>a.created<b.created?-1:1);
+  let running=0;
+  const points=sorted.map(p=>{ running+=(REP_POINTS[p.action]||0); return {label:p.action+' ('+p.created+')',score:running}; });
+  const maxScore=Math.max(...points.map(p=>p.score),1);
+  const chartW=240, chartH=80, pad=4;
+  const pts=points.map((p,i)=>{
+    const x=pad+Math.round(i/(Math.max(points.length-1,1))*(chartW-pad*2));
+    const y=chartH-pad-Math.round((p.score/maxScore)*(chartH-pad*2));
+    return {x,y,label:p.label,score:p.score};
+  });
+  const polyline=pts.map(p=>`${p.x},${p.y}`).join(' ');
+  const dots=pts.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="3" fill="#cc0000" title="${p.label}: ${p.score}pts"/>`).join('');
+  const svgChart=`<svg width="${chartW}" height="${chartH}" style="border:1px solid #b0aca4;background:#fff;display:block;margin-bottom:5px;">
+    <polyline points="${polyline}" fill="none" stroke="#cc0000" stroke-width="1.5"/>
+    ${dots}
+    <text x="${pad}" y="${chartH-1}" font-size="8" fill="#808080">Start</text>
+    <text x="${chartW-25}" y="${chartH-1}" font-size="8" fill="#808080">Latest</text>
+  </svg>`;
+  const tableRows=sorted.map(p=>`<tr><td>${p.action}</td><td>${p.created}</td><td>+${REP_POINTS[p.action]||0}</td></tr>`).join('');
+  openDialog(`Rep History — ${u.username}`,'',`
+    <div style="font-size:11px;color:#000;margin-bottom:4px;">Cumulative reputation score over time:</div>
+    ${svgChart}
+    <div style="font-size:11px;font-weight:bold;color:#880000;margin-bottom:4px;">Current Score: ${points[points.length-1].score} pts</div>
+    <div class="tbl-wrap"><table class="tbl" style="width:100%;">
+      <tr><th>Action</th><th>Date</th><th>Points</th></tr>
+      ${tableRows}
+    </table></div>`,null);
+  document.getElementById('dlgOK').style.display='none';
+  document.getElementById('dlgCancel').textContent='Close';
 }
 
 function openManageUser(uid){
@@ -779,6 +1042,10 @@ function renderMod(c){
           <select id="mReason" style="width:130px;"><option>-- Select --</option><option>Spam</option><option>Harassment</option><option>Inappropriate Content</option><option>Scam</option><option>Cheating</option><option>Other</option></select>
         </div>
         <div style="font-size:11px;margin-bottom:2px;color:#000;">Message to User:</div>
+        ${BAN_TEMPLATES.length?`<div style="margin-bottom:3px;display:flex;gap:3px;align-items:center;">
+          <select id="mTemplate" style="flex:1;"><option value="">-- Insert Template --</option>${BAN_TEMPLATES.map((t,i)=>`<option value="${i}">${t.name}</option>`).join('')}</select>
+          <button class="btn small" id="btn-usetemplate">Use</button>
+        </div>`:''}
         <textarea id="mMsg" style="width:100%;height:38px;"></textarea>
         <div style="font-size:11px;margin:3px 0 2px;color:#000;">Internal Note:</div>
         <textarea id="mNote" style="width:100%;height:34px;"></textarea>
@@ -802,6 +1069,16 @@ function renderMod(c){
   document.getElementById('btn-modsubmit').onclick=submitMod;
   document.getElementById('btn-modcancel').onclick=()=>nav('useradmin');
   document.getElementById('modUserInput').oninput=e=>checkModUser(e.target.value);
+  if(BAN_TEMPLATES.length){
+    const useBtn=document.getElementById('btn-usetemplate');
+    if(useBtn) useBtn.onclick=()=>{
+      const sel=document.getElementById('mTemplate');
+      const idx=parseInt(sel.value);
+      if(isNaN(idx)) return;
+      const tpl=BAN_TEMPLATES[idx];
+      if(tpl){ document.getElementById('mMsg').value=tpl.message; }
+    };
+  }
 }
 
 // ── ALL ACCOUNTS ──
@@ -809,11 +1086,29 @@ function renderAccounts(c){
   const uArr=Object.entries(USERS).sort((a,b)=>(a[1].playerId||0)-(b[1].playerId||0));
   c.innerHTML=`
   <div class="ptitle">All Accounts</div>
+  ${canDo('canModerateUsers')&&uArr.length>0?`
+  <div class="sbox"><div class="stitle">Bulk Actions</div><div class="sbody">
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+      <span id="bulk-count" style="font-size:11px;color:#808080;">0 selected</span>
+      <select id="bulk-action" style="width:130px;">
+        <option value="">-- Select Action --</option>
+        <option>Warn</option><option>Ban 1 Day</option><option>Ban 3 Days</option><option>Ban 7 Days</option><option>Suspend</option><option>Ban Permanent</option>
+      </select>
+      <select id="bulk-reason" style="width:130px;">
+        <option>-- Select Reason --</option><option>Spam</option><option>Harassment</option><option>Inappropriate Content</option><option>Scam</option><option>Cheating</option><option>Other</option>
+      </select>
+      <button class="btn" id="btn-bulk-apply">Apply to Selected</button>
+      <button class="btn small" id="btn-bulk-selectall">Select All</button>
+      <button class="btn small" id="btn-bulk-clear">Clear</button>
+    </div>
+    <div id="bulk-msg" style="font-size:11px;margin-top:3px;"></div>
+  </div></div>`:''}
   <div class="sbox"><div class="stitle">Player List</div><div class="sbody">
     ${uArr.length===0?'<i style="color:#444;">No players yet.</i>':`
     <div class="tbl-wrap"><table class="tbl">
-      <tr><th>Player ID</th><th>Username</th><th>Roblox ID</th><th>Status</th><th>Rep</th><th>System Entry</th><th>Action</th></tr>
+      <tr>${canDo('canModerateUsers')?'<th><input type="checkbox" id="bulk-check-all" title="Select all"/></th>':''}<th>Player ID</th><th>Username</th><th>Roblox ID</th><th>Status</th><th>Rep</th><th>System Entry</th><th>Action</th></tr>
       ${uArr.map(([uid,u])=>`<tr>
+        ${canDo('canModerateUsers')?`<td><input type="checkbox" class="bulk-cb" data-uid="${uid}"/></td>`:''}
         <td>${u.playerId||'—'}</td><td><b>${u.username}</b></td>
         <td>${u.robloxId||'—'}</td><td>${statusBadge(u.status)}</td>
         <td>${calcReputation(u)} pts</td><td>${u.created}</td>
@@ -842,6 +1137,51 @@ function renderAccounts(c){
   });
   document.getElementById('btn-adduser').onclick=addUser;
   document.getElementById('nuUser').onkeydown=e=>{ if(e.key==='Enter') addUser(); };
+
+  if(canDo('canModerateUsers')&&uArr.length>0){
+    const checkAll=document.getElementById('bulk-check-all');
+    const updateCount=()=>{
+      const sel=document.querySelectorAll('.bulk-cb:checked').length;
+      const el=document.getElementById('bulk-count');
+      if(el) el.textContent=`${sel} selected`;
+    };
+    if(checkAll) checkAll.onclick=()=>{
+      document.querySelectorAll('.bulk-cb').forEach(cb=>cb.checked=checkAll.checked);
+      updateCount();
+    };
+    document.querySelectorAll('.bulk-cb').forEach(cb=>cb.onclick=updateCount);
+    document.getElementById('btn-bulk-selectall').onclick=()=>{
+      document.querySelectorAll('.bulk-cb').forEach(cb=>cb.checked=true);
+      if(checkAll) checkAll.checked=true;
+      updateCount();
+    };
+    document.getElementById('btn-bulk-clear').onclick=()=>{
+      document.querySelectorAll('.bulk-cb').forEach(cb=>cb.checked=false);
+      if(checkAll) checkAll.checked=false;
+      updateCount();
+    };
+    document.getElementById('btn-bulk-apply').onclick=async()=>{
+      const selected=[...document.querySelectorAll('.bulk-cb:checked')].map(cb=>cb.dataset.uid);
+      const action=document.getElementById('bulk-action').value;
+      const reason=document.getElementById('bulk-reason').value;
+      const msgEl=document.getElementById('bulk-msg');
+      if(!selected.length){ msgEl.style.color='#880000'; msgEl.textContent='No users selected.'; return; }
+      if(!action){ msgEl.style.color='#880000'; msgEl.textContent='Select an action.'; return; }
+      openDialog(`Bulk Action: ${action}`,`Apply "${action}" to ${selected.length} player(s)?`,'',async()=>{
+        let done=0;
+        for(const uid of selected){
+          const u=USERS[uid]; if(!u) continue;
+          const newStatus=action==='Suspend'?'suspended':action.startsWith('Ban')?'banned':u.status;
+          await update(ref(db,`users/${uid}`),{status:newStatus});
+          await push(ref(db,`users/${uid}/punishments`),{action,mod:ME,created:today(),expiry:action.includes('Day')?'Varies':'Permanent',note:reason});
+          await push(ref(db,'logs/moderation'),{user:u.username,action,mod:ME,date:today(),reason:reason||'',note:'[Bulk Action]'});
+          done++;
+        }
+        auditLog('Bulk Action',`${action} on ${done} players by ${ME}`);
+        msgEl.style.color='#006600'; msgEl.textContent=`Applied to ${done} player(s).`;
+      });
+    };
+  }
 }
 
 async function addUser(){
@@ -955,6 +1295,7 @@ function openReviewPanel(lid){
       if(r.uid) await update(ref(db,`users/${r.uid}`),{appealStatus:'Approved'});
     }
     auditLog('Appeal Approved',`${r.user} by ${ME}: ${note}`);
+    pushNotif('appealReviewed',`Appeal approved: ${r.user} by ${ME}`);
     document.getElementById('reviewResult').style.color='#006600';
     document.getElementById('reviewResult').textContent='Appeal approved and punishment revoked!';
     setTimeout(()=>closeDialog(),1200);
@@ -966,6 +1307,7 @@ function openReviewPanel(lid){
     await update(ref(db,`logs/appeals/${lid}`),{status:'Denied',reviewedBy:ME,reviewNote:note});
     if(r.uid) await update(ref(db,`users/${r.uid}`),{appealStatus:'Denied'});
     auditLog('Appeal Denied',`${r.user} by ${ME}: ${note}`);
+    pushNotif('appealReviewed',`Appeal denied: ${r.user} by ${ME}`);
     document.getElementById('reviewResult').style.color='#880000';
     document.getElementById('reviewResult').textContent='Appeal denied.';
     setTimeout(()=>closeDialog(),1200);
@@ -1034,7 +1376,7 @@ async function runAltScan(){
       if(!mainEntry) return;
       const [uid,u]=mainEntry;
       const alts=u.alts||[];
-      if(!alts.includes(btn.dataset.alt)){ alts.push(btn.dataset.alt); await update(ref(db,`users/${uid}`),{alts}); auditLog('Alt Account Linked',`${btn.dataset.main} <-> ${btn.dataset.alt}`); }
+      if(!alts.includes(btn.dataset.alt)){ alts.push(btn.dataset.alt); await update(ref(db,`users/${uid}`),{alts}); auditLog('Alt Account Linked',`${btn.dataset.main} <-> ${btn.dataset.alt}`); pushNotif('altLinked',`Alt linked: ${btn.dataset.alt} -> ${btn.dataset.main}`); }
       btn.textContent='Linked!'; btn.disabled=true;
     };
   });
@@ -1158,18 +1500,72 @@ function renderActivity(c){
 
 // ── LOGS ──
 function renderModLog(c){
-  const entries=Object.entries(MOD_LOG).sort((a,b)=>a[1].date>b[1].date?-1:1);
-  const tbl=entries.length===0?'<i style="color:#444;">No moderation actions on record.</i>':`
-  <div class="tbl-wrap"><table class="tbl">
-    <tr><th>User</th><th>Action</th><th>Moderator</th><th>Date</th><th>Reason</th><th>Note</th>${isSuperAdmin()?'<th>Admin</th>':''}</tr>
-    ${entries.map(([lid,r])=>`<tr>
-      <td>${r.user==='[WIPED]'?'<span class="wiped">[WIPED]</span>':r.user}</td>
-      <td>${r.action}</td><td>${r.mod}</td><td>${r.date}</td><td>${r.reason||''}</td><td>${r.note||''}</td>
-      ${isSuperAdmin()?`<td>${deleteLogBtn('logs/moderation',lid)}</td>`:''}
-    </tr>`).join('')}
-  </table></div>`;
-  c.innerHTML=`<div class="ptitle">Moderation Log</div><div class="sbox"><div class="stitle">All Player Moderation Actions</div><div class="sbody">${tbl}</div></div>`;
-  bindDeleteLogBtns(c);
+  const allEntries=Object.entries(MOD_LOG).sort((a,b)=>a[1].date>b[1].date?-1:1);
+  const uniqueMods=[...new Set(allEntries.map(([,r])=>r.mod).filter(Boolean))];
+  const uniqueActions=[...new Set(allEntries.map(([,r])=>r.action).filter(Boolean))];
+  c.innerHTML=`<div class="ptitle">Moderation Log</div>
+  <div class="sbox"><div class="stitle">Filters</div><div class="sbody">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+      <div style="font-size:11px;color:#000;">Moderator:</div>
+      <select id="flt-mod" style="width:110px;">
+        <option value="">All</option>${uniqueMods.map(m=>`<option>${m}</option>`).join('')}
+      </select>
+      <div style="font-size:11px;color:#000;">Action:</div>
+      <select id="flt-action" style="width:110px;">
+        <option value="">All</option>${uniqueActions.map(a=>`<option>${a}</option>`).join('')}
+      </select>
+      <div style="font-size:11px;color:#000;">User:</div>
+      <input type="text" id="flt-user" style="width:90px;" placeholder="username"/>
+      <div style="font-size:11px;color:#000;">From:</div>
+      <input type="date" id="flt-from" style="width:110px;"/>
+      <div style="font-size:11px;color:#000;">To:</div>
+      <input type="date" id="flt-to" style="width:110px;"/>
+      <button class="btn small" id="btn-applyfilter">Apply</button>
+      <button class="btn small" id="btn-clearfilter">Clear</button>
+    </div>
+    <div id="flt-count" style="font-size:10px;color:#808080;margin-top:3px;"></div>
+  </div></div>
+  <div class="sbox"><div class="stitle">All Player Moderation Actions</div><div class="sbody" id="modlog-tbl-body"></div></div>`;
+
+  function applyFilters(){
+    const fMod=document.getElementById('flt-mod').value;
+    const fAction=document.getElementById('flt-action').value;
+    const fUser=document.getElementById('flt-user').value.trim().toLowerCase();
+    const fFrom=document.getElementById('flt-from').value;
+    const fTo=document.getElementById('flt-to').value;
+    let entries=allEntries.filter(([,r])=>{
+      if(fMod && r.mod!==fMod) return false;
+      if(fAction && r.action!==fAction) return false;
+      if(fUser && !(r.user||'').toLowerCase().includes(fUser)) return false;
+      if(fFrom && r.date && r.date < fFrom) return false;
+      if(fTo && r.date && r.date > fTo+'z') return false;
+      return true;
+    });
+    const countEl=document.getElementById('flt-count');
+    if(countEl) countEl.textContent=`Showing ${entries.length} of ${allEntries.length} entries`;
+    const tblBody=document.getElementById('modlog-tbl-body');
+    if(!tblBody) return;
+    tblBody.innerHTML=entries.length===0?'<i style="color:#444;">No matching entries.</i>':`
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>User</th><th>Action</th><th>Moderator</th><th>Date</th><th>Reason</th><th>Note</th>${isSuperAdmin()?'<th>Admin</th>':''}</tr>
+      ${entries.map(([lid,r])=>`<tr>
+        <td>${r.user==='[WIPED]'?'<span class="wiped">[WIPED]</span>':r.user}</td>
+        <td>${r.action}</td><td>${r.mod}</td><td>${r.date}</td><td>${r.reason||''}</td><td>${r.note||''}</td>
+        ${isSuperAdmin()?`<td>${deleteLogBtn('logs/moderation',lid)}</td>`:''}
+      </tr>`).join('')}
+    </table></div>`;
+    bindDeleteLogBtns(tblBody);
+  }
+  applyFilters();
+  document.getElementById('btn-applyfilter').onclick=applyFilters;
+  document.getElementById('btn-clearfilter').onclick=()=>{
+    document.getElementById('flt-mod').value='';
+    document.getElementById('flt-action').value='';
+    document.getElementById('flt-user').value='';
+    document.getElementById('flt-from').value='';
+    document.getElementById('flt-to').value='';
+    applyFilters();
+  };
 }
 
 function renderRevokeLog(c){
@@ -1351,6 +1747,28 @@ function renderAdminLog(c){
         <button class="btn" id="btn-savepresets" style="margin-top:4px;">Save Presets</button>
         <div id="presetsMsg" style="font-size:11px;margin-top:3px;color:#006600;"></div>
       </div></div>
+      <div class="sbox"><div class="stitle">Ban Message Templates</div><div class="sbody">
+        <div style="font-size:11px;color:#555;margin-bottom:5px;">Templates appear in the "Message to User" field on the Moderate page.</div>
+        <div id="tplList" style="margin-bottom:6px;">
+          ${BAN_TEMPLATES.length===0?'<i style="color:#444;font-size:11px;">No templates yet.</i>':
+            BAN_TEMPLATES.map((t,i)=>`
+              <div style="display:flex;gap:4px;align-items:flex-start;margin-bottom:4px;padding:4px;background:#c8c4bc;border:1px solid #a0a0a0;">
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:11px;font-weight:bold;color:#000;">${t.name}</div>
+                  <div style="font-size:10px;color:#444;white-space:pre-wrap;word-break:break-word;">${t.message}</div>
+                </div>
+                <button class="btn red small del-tpl-btn" data-idx="${i}">X</button>
+              </div>`).join('')}
+        </div>
+        <hr style="border:none;border-top:1px solid #c0bcb4;margin-bottom:5px;">
+        <div style="font-size:11px;font-weight:bold;color:#000;margin-bottom:3px;">Add New Template</div>
+        <div style="margin-bottom:3px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:1px;">Template Name:</label>
+          <input type="text" id="tplName" style="width:100%;" placeholder="e.g. Spam Warning"/></div>
+        <div style="margin-bottom:3px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:1px;">Message to User:</label>
+          <textarea id="tplMsg" style="width:100%;height:60px;" placeholder="Your account has been actioned for..."></textarea></div>
+        <button class="btn" id="btn-addtpl">Add Template</button>
+        <div id="tplMsg2" style="font-size:11px;margin-top:3px;color:#006600;"></div>
+      </div></div>
       ${canDo('canManageCustomFields')?`
       <div class="sbox"><div class="stitle">Custom User Fields</div><div class="sbody">
         <div style="font-size:11px;color:#555;margin-bottom:6px;">Add custom fields that appear on every player profile under "Manage User".</div>
@@ -1403,6 +1821,31 @@ function renderAdminLog(c){
   document.getElementById('btn-saveperms').onclick=savePerms;
   document.getElementById('btn-saverep').onclick=saveRepPoints;
   document.getElementById('btn-savepresets').onclick=saveAppealPresets;
+
+  // Ban Templates
+  document.getElementById('btn-addtpl').onclick=async()=>{
+    const name=document.getElementById('tplName').value.trim();
+    const message=document.getElementById('tplMsg').value.trim();
+    const msgEl=document.getElementById('tplMsg2');
+    if(!name){ msgEl.style.color='#880000'; msgEl.textContent='Template name required.'; return; }
+    if(!message){ msgEl.style.color='#880000'; msgEl.textContent='Message required.'; return; }
+    const newTpls=[...BAN_TEMPLATES,{name,message}];
+    await set(ref(db,'meta/banTemplates'),newTpls);
+    BAN_TEMPLATES=newTpls;
+    auditLog('Ban Template Added',name);
+    msgEl.style.color='#006600'; msgEl.textContent=`Template "${name}" saved!`;
+    setTimeout(()=>nav('adminlog'),800);
+  };
+  document.querySelectorAll('.del-tpl-btn').forEach(btn=>{
+    btn.onclick=async()=>{
+      const idx=parseInt(btn.dataset.idx);
+      const newTpls=[...BAN_TEMPLATES]; newTpls.splice(idx,1);
+      await set(ref(db,'meta/banTemplates'),newTpls);
+      BAN_TEMPLATES=newTpls;
+      auditLog('Ban Template Removed',`Index ${idx}`);
+      nav('adminlog');
+    };
+  });
   if(canDo('canManageCustomFields')){
     window.toggleCFOptions=function(val){
       const row=document.getElementById('cfOptionsRow');
@@ -1756,7 +2199,8 @@ async function doLogin(){
     document.getElementById('topbarTitle').textContent=`Administration Panel \u2014 ${ME} [${MY_LEVEL}]`;
     startListeners();
     startHeartbeat();
-    nav('useradmin');
+    loadNotifPrefs();
+    nav('home');
   }catch(e){ status.textContent='INVALID!'; await push(ref(db,'logs/login'),{username:u,level:'—',date:nowStr(),result:'failed'}).catch(()=>{}); }
 }
 
@@ -1802,18 +2246,51 @@ document.addEventListener('click', ()=>updateActivity(), true);
 document.addEventListener('keydown', ()=>updateActivity(), true);
 
 function startListeners(){
-  onValue(ref(db,'users'),snap=>{ USERS=snap.val()||{}; if(page) render(); });
-  onValue(ref(db,'staff'),snap=>{ STAFF=snap.val()||{}; if(page) render(); });
-  onValue(ref(db,'logs/moderation'),snap=>{ MOD_LOG=snap.val()||{}; if(page==='modlog') render(); });
+  let firstUsers=true, firstStaff=true, firstMod=true, firstAppeals=true, firstAnnounce=true, firstSuspend=true, firstTerminate=true;
+  onValue(ref(db,'users'),snap=>{ USERS=snap.val()||{}; if(page) render(); firstUsers=false; });
+  onValue(ref(db,'staff'),snap=>{ STAFF=snap.val()||{}; if(page) render(); firstStaff=false; });
+  onValue(ref(db,'logs/moderation'),snap=>{
+    const prev=Object.keys(MOD_LOG||{}).length;
+    MOD_LOG=snap.val()||{};
+    if(!firstMod && Object.keys(MOD_LOG).length>prev){ const e=Object.values(MOD_LOG).at(-1); pushNotif('newMod',`New mod action: ${e.action} on ${e.user} by ${e.mod}`); }
+    firstMod=false;
+    if(page==='modlog') render();
+  });
   onValue(ref(db,'logs/revoke'),snap=>{ REVOKE_LOG=snap.val()||{}; if(page==='revokelog') render(); });
-  onValue(ref(db,'logs/suspend'),snap=>{ SUSPEND_LOG=snap.val()||{}; if(page==='suspendlog') render(); });
-  onValue(ref(db,'logs/terminate'),snap=>{ TERMINATE_LOG=snap.val()||{}; if(page==='terminatelog') render(); });
+  onValue(ref(db,'logs/suspend'),snap=>{
+    const prev=Object.keys(SUSPEND_LOG||{}).length;
+    SUSPEND_LOG=snap.val()||{};
+    if(!firstMod && Object.keys(SUSPEND_LOG).length>prev){ const e=Object.values(SUSPEND_LOG).at(-1); if(e.action==='Suspend') pushNotif('staffSuspended',`Staff suspended: ${e.username} by ${e.by}`); }
+    if(page==='suspendlog') render();
+  });
+  onValue(ref(db,'logs/terminate'),snap=>{
+    const prev=Object.keys(TERMINATE_LOG||{}).length;
+    TERMINATE_LOG=snap.val()||{};
+    if(!firstTerminate && Object.keys(TERMINATE_LOG).length>prev){ const e=Object.values(TERMINATE_LOG).at(-1); pushNotif('staffTerminated',`Staff terminated: ${e.username} by ${e.by}`); }
+    firstTerminate=false;
+    if(page==='terminatelog') render();
+  });
   onValue(ref(db,'logs/login'),snap=>{ LOGIN_LOG=snap.val()||{}; if(page==='loginlog') render(); });
   onValue(ref(db,'logs/audit'),snap=>{ AUDIT_LOG=snap.val()||{}; if(page==='auditlog') render(); });
-  onValue(ref(db,'logs/appeals'),snap=>{ APPEAL_LOG=snap.val()||{}; if(page==='appeals') render(); });
-  onValue(ref(db,'announcements'),snap=>{ ANNOUNCEMENTS=snap.val()||{}; updateAnnouncements(); if(page==='announcements') render(); });
+  onValue(ref(db,'logs/appeals'),snap=>{
+    const prev=Object.keys(APPEAL_LOG||{}).length;
+    APPEAL_LOG=snap.val()||{};
+    if(!firstAppeals && Object.keys(APPEAL_LOG).length>prev){ const e=Object.values(APPEAL_LOG).at(-1); pushNotif('newAppeal',`New appeal from ${e.user}: ${e.presetReason}`); }
+    firstAppeals=false;
+    if(page==='appeals') render();
+  });
+  onValue(ref(db,'announcements'),snap=>{
+    const prev=Object.values(ANNOUNCEMENTS||{}).filter(a=>a.active).length;
+    ANNOUNCEMENTS=snap.val()||{};
+    const now=Object.values(ANNOUNCEMENTS).filter(a=>a.active).length;
+    if(!firstAnnounce && now>prev){ const e=Object.values(ANNOUNCEMENTS).filter(a=>a.active).at(-1); pushNotif('newAnnouncement',`Announcement from ${e.by}: ${e.message.substring(0,60)}`); }
+    firstAnnounce=false;
+    updateAnnouncements();
+    if(page==='announcements') render();
+  });
   get(ref(db,'meta/appealPresets')).then(snap=>{ if(snap.exists()) APPEAL_PRESETS=snap.val(); });
   onValue(ref(db,'meta/customFields'),snap=>{ CUSTOM_FIELDS=snap.val()||[]; });
+  onValue(ref(db,'meta/banTemplates'),snap=>{ BAN_TEMPLATES=snap.val()||[]; });
 }
 
 (async()=>{
@@ -1873,10 +2350,47 @@ function setupMenus(){
     if(e.altKey&&e.key==='s') nav('staff');
     if(e.altKey&&e.key==='m') nav('modlog');
   });
+
+  // Notification bell
+  const notifBtn=document.getElementById('notifBtn');
+  const notifDrop=document.getElementById('notifDropdown');
+  if(notifBtn&&notifDrop){
+    notifBtn.onclick=(e)=>{
+      e.stopPropagation();
+      const isOpen=notifDrop.style.display==='block';
+      notifDrop.style.display=isOpen?'none':'block';
+      if(!isOpen) renderNotifDropdown();
+    };
+  }
+  document.addEventListener('click',()=>{ const d=document.getElementById('notifDropdown'); if(d) d.style.display='none'; });
+  const notifClear=document.getElementById('notifClearBtn');
+  if(notifClear) notifClear.onclick=(e)=>{ e.stopPropagation(); NOTIFICATIONS=[]; renderNotifBadge(); renderNotifDropdown(); };
+  const notifSettingsLink=document.getElementById('notifSettingsLink');
+  if(notifSettingsLink) notifSettingsLink.onclick=(e)=>{
+    e.stopPropagation();
+    document.getElementById('notifDropdown').style.display='none';
+    openNotifSettings();
+  };
+  document.getElementById('notifSettingsClose').onclick=()=>document.getElementById('notifSettingsOverlay').classList.remove('show');
+  document.getElementById('notifSettingsCancel').onclick=()=>document.getElementById('notifSettingsOverlay').classList.remove('show');
+  document.getElementById('notifSettingsSave').onclick=()=>{ saveNotifPrefs(); document.getElementById('notifSettingsOverlay').classList.remove('show'); };
 }
 setupMenus();
 
-['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','loginlog','auditlog','announcements','adminlog'].forEach(p=>{
+function openNotifSettings(){
+  const avail=ALL_NOTIF_EVENTS.filter(ev=>!ev.perm||canDo(ev.perm));
+  const listEl=document.getElementById('notifSettingsList');
+  if(listEl){
+    listEl.innerHTML=avail.map(ev=>`
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;font-size:11px;">
+        <input type="checkbox" id="notifpref-${ev.key}" ${NOTIF_PREFS[ev.key]!==false?'checked':''}/>
+        <label for="notifpref-${ev.key}" style="color:#000;cursor:pointer;">${ev.label}</label>
+      </div>`).join('');
+  }
+  document.getElementById('notifSettingsOverlay').classList.add('show');
+}
+
+['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','loginlog','auditlog','announcements','adminlog','home'].forEach(p=>{
   const el=document.getElementById('nav-'+p);
   if(el) el.onclick=()=>nav(p);
 });
