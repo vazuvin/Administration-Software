@@ -1037,6 +1037,8 @@ const SITE_CONFIG_DEFAULTS = {
   sectionLogs: 'Logs',
   sectionConfig: 'Configuration',
   dashboardWelcome: 'Dashboard',
+  aboutText: 'Administration Panel — Built for your Roblox game.',
+  wipedAccountTTL: '1440',
 };
 
 function applySiteConfig(){
@@ -1063,12 +1065,14 @@ function renderSiteConfig(c){
     {key:'loginTitle',label:'Login Window Title',placeholder:'Enter System password'},
     {key:'loginDesc',label:'Login Description Text',placeholder:'Please enter your user name...'},
     {key:'topbarTitle',label:'Topbar Title',placeholder:'Administration Panel'},
+    {key:'aboutText',label:'About Page Text (Help > About)',placeholder:'Administration Panel — Built for your Roblox game.'},
     {key:'sectionHome',label:'Sidebar: Home Section Name',placeholder:'Home'},
     {key:'sectionUserMgmt',label:'Sidebar: User Management Name',placeholder:'User Management'},
     {key:'sectionContentMod',label:'Sidebar: Content Moderation Name',placeholder:'Content Moderation'},
     {key:'sectionStaff',label:'Sidebar: Staff Section Name',placeholder:'Staff'},
     {key:'sectionLogs',label:'Sidebar: Logs Section Name',placeholder:'Logs'},
     {key:'sectionConfig',label:'Sidebar: Configuration Name',placeholder:'Configuration'},
+    {key:'wipedAccountTTL',label:'Wiped Account Auto-Delete (minutes, 0 = never)',placeholder:'1440'},
   ];
   c.innerHTML=`
   <div class="ptitle" style="background:#004466;">Machine Management &mdash; Configuration</div>
@@ -1165,7 +1169,7 @@ function renderSiteConfig(c){
     // Remove ALL previous alerts entirely (including never-expiring ones), then post the new one
     await remove(ref(db,'siteAlerts'));
     SITE_ALERTS={};
-    await push(ref(db,'siteAlerts'),{message:`Site status changed to ${newStatus}: ${reason}`,type:alertType,by:ME,date:today(),active:true,expiresAt:0});
+    await push(ref(db,'siteAlerts'),{message:`Site status changed to ${newStatus}: ${reason}`,type:alertType,by:ME,date:nowStr(),active:true,expiresAt:0});
     updateSiteStatusBar(); updateAnnouncements();
     auditLog('Site Status Changed',`${prevStatus} -> ${newStatus}: ${reason}`);
     statusMsgEl.style.color='#006600'; statusMsgEl.textContent='Status updated!';
@@ -1545,12 +1549,25 @@ function openAppealPanel(uid){
         user:u.username, uid, punishId:pid,
         punishAction:p?p.action:'Unknown', punishDate:p?p.created:'Unknown',
         presetReason:preset, reason, submittedBy:ME,
-        status:'Pending', reviewedBy:'', reviewNote:'', date:today()
+        status:'Pending', reviewedBy:'', reviewNote:'', date:nowStr()
       });
       await update(ref(db,`users/${uid}`),{appealStatus:'Pending'});
       auditLog('Appeal Submitted',`${u.username}: ${preset}`);
     }
   );
+}
+
+function getWipeTTL(){
+  const cfg={...SITE_CONFIG_DEFAULTS,...SITE_CONFIG};
+  const ttlMins=parseInt(cfg.wipedAccountTTL);
+  return isNaN(ttlMins)?1440:ttlMins; // default 1 day
+}
+
+async function writeWipedAccount(username, reason, note){
+  const wipedAt=Date.now();
+  const ttlMins=getWipeTTL();
+  const autoDeleteAt=ttlMins>0?wipedAt+ttlMins*60000:0;
+  await set(ref(db,`wipedAccounts/${username}`),{reason:reason||'Account wiped by administrator',note:note||'',by:ME,date:nowStr(),wipedAt,autoDeleteAt});
 }
 
 function generateWipeId(){
@@ -1626,7 +1643,7 @@ async function lookupAndAdd(username){
   const playerId=await getNextPlayerId();
   let info=null;
   try{ info=await fetchRobloxInfo(username); }catch(e){}
-  const newUser={username,robloxUsername:username,robloxId:info?info.robloxId:'',avatarUrl:info?info.avatarUrl:'',displayName:info&&info.displayName?info.displayName:'',robloxAccountCreated:info&&info.accountCreated?info.accountCreated:'',playerId,status:'active',created:today(),notes:'',punishments:{}};
+  const newUser={username,robloxUsername:username,robloxId:info?info.robloxId:'',avatarUrl:info?info.avatarUrl:'',displayName:info&&info.displayName?info.displayName:'',robloxAccountCreated:info&&info.accountCreated?info.accountCreated:'',playerId,status:'active',created:nowStr(),notes:'',punishments:{}};
   if(info&&info.robloxId){
     preview.style.display='flex';
     avatarBox.innerHTML=info.avatarUrl?`<img src="${info.avatarUrl}" width="36" height="36" onerror="this.style.display='none'"/>`:'';
@@ -1803,8 +1820,8 @@ function renderAccounts(c){
           const u=USERS[uid]; if(!u) continue;
           const newStatus=action==='Suspend'?'suspended':action.startsWith('Ban')?'banned':u.status;
           await update(ref(db,`users/${uid}`),{status:newStatus});
-          await push(ref(db,`users/${uid}/punishments`),{action,mod:ME,created:today(),expiry:action.includes('Day')?'Varies':'Permanent',note:noteTag});
-          await push(ref(db,'logs/moderation'),{user:u.username,action,mod:ME,date:today(),reason:reason||'',note:noteTag});
+          await push(ref(db,`users/${uid}/punishments`),{action,mod:ME,created:nowStr(),expiry:action.includes('Day')?'Varies':'Permanent',note:noteTag});
+          await push(ref(db,'logs/moderation'),{user:u.username,action,mod:ME,date:nowStr(),reason:reason||'',note:noteTag});
           done++;
         }
         auditLog('Bulk Action',`${action} on ${done} players by ${ME} — ${noteTag}`);
@@ -1838,7 +1855,7 @@ async function addUser(){
     robloxAccountCreated:info&&info.accountCreated?info.accountCreated:'',
     playerId,
     status:'active',
-    created:today(),
+    created:nowStr(),
     notes:'',
     punishments:{}
   };
@@ -1938,7 +1955,7 @@ function openReviewPanel(lid){
     // Auto-revoke the punishment
     if(r.uid&&r.punishId&&USERS[r.uid]&&USERS[r.uid].punishments&&USERS[r.uid].punishments[r.punishId]){
       const p=USERS[r.uid].punishments[r.punishId];
-      await push(ref(db,'logs/revoke'),{user:r.user,action:p.action,origMod:p.mod,revokedBy:ME,date:today(),note:'[Revoked by Appeal]'});
+      await push(ref(db,'logs/revoke'),{user:r.user,action:p.action,origMod:p.mod,revokedBy:ME,date:nowStr(),note:'[Revoked by Appeal]'});
       await remove(ref(db,`users/${r.uid}/punishments/${r.punishId}`));
       await update(ref(db,`users/${r.uid}`),{status:'active',appealStatus:'Approved'});
     } else {
@@ -2443,7 +2460,7 @@ function renderAlerts(c){
       // Remove all previous alerts before posting new one
       await remove(ref(db,'siteAlerts'));
       SITE_ALERTS={};
-      await push(ref(db,'siteAlerts'),{message:msg,type,by:ME,date:today(),active:true,expiresAt:expiryMins>0?Date.now()+expiryMins*60000:0});
+      await push(ref(db,'siteAlerts'),{message:msg,type,by:ME,date:nowStr(),active:true,expiresAt:expiryMins>0?Date.now()+expiryMins*60000:0});
       auditLog('Site Alert Posted',`[${type}] ${msg.substring(0,50)}`);
       document.getElementById('newAlertMsg').value='';
       const el=document.getElementById('alertMsg');
@@ -2584,8 +2601,8 @@ function openReviewRequest(lid){
       const[uid,u]=entry;
       const newStatus=r.action==='Suspend'?'suspended':r.action.startsWith('Ban')?'banned':u.status;
       await update(ref(db,`users/${uid}`),{status:newStatus});
-      await push(ref(db,`users/${uid}/punishments`),{action:r.action,mod:r.submittedBy,created:today(),expiry:'Varies',note:`[ESC] ${note}`});
-      await push(ref(db,'logs/moderation'),{user:r.targetUser,action:r.action,mod:r.submittedBy,date:today(),reason:r.reason||'',note:`[ESC] ${note}`});
+      await push(ref(db,`users/${uid}/punishments`),{action:r.action,mod:r.submittedBy,created:nowStr(),expiry:'Varies',note:`[ESC] ${note}`});
+      await push(ref(db,'logs/moderation'),{user:r.targetUser,action:r.action,mod:r.submittedBy,date:nowStr(),reason:r.reason||'',note:`[ESC] ${note}`});
     }
     await update(ref(db,`modRequests/${lid}`),{status:'Approved',reviewedBy:ME,reviewNote:note});
     auditLog('Mod Request Approved',`${r.targetUser}: ${r.action} by ${ME}`);
@@ -2648,22 +2665,22 @@ function openUserConfigDialog(uid){
       <div style="flex:1;min-width:130px;">
         <div style="font-size:11px;font-weight:bold;color:#000;margin-bottom:4px;">Access Flags</div>
         <div style="margin-bottom:5px;display:flex;align-items:center;gap:6px;">
-          <input type="checkbox" id="ucfProtected" ${u.protected?'checked':''}/>
+          <input type="checkbox" id="ucfProtected" ${u.protected?'checked':''} ${rankOf(MY_LEVEL)<rankOf(BUILTIN_BADGE_CONFIG.protected.assignLevel||'MODERATOR')&&!isSoftwareManager()?'disabled':''}/>
           <label for="ucfProtected" style="font-size:11px;color:#000;cursor:pointer;"><span style="font-size:10px;font-weight:bold;color:${BUILTIN_BADGE_CONFIG.protected.textColor};background:${BUILTIN_BADGE_CONFIG.protected.bgColor};padding:0 3px;border:1px solid ${BUILTIN_BADGE_CONFIG.protected.borderColor};">${BUILTIN_BADGE_CONFIG.protected.label}</span> <b>Protected User</b></label>
         </div>
         <div style="font-size:10px;color:#808080;margin-bottom:8px;">Protected users require an escalated request before any moderation action can be taken.</div>
         <div style="margin-bottom:5px;display:flex;align-items:center;gap:6px;">
-          <input type="checkbox" id="ucfVip" ${u.vip?'checked':''}/>
+          <input type="checkbox" id="ucfVip" ${u.vip?'checked':''} ${rankOf(MY_LEVEL)<rankOf(BUILTIN_BADGE_CONFIG.vip.assignLevel||'MODERATOR')&&!isSoftwareManager()?'disabled':''}/>
           <label for="ucfVip" style="font-size:11px;color:#000;cursor:pointer;"><span style="font-size:10px;font-weight:bold;color:${BUILTIN_BADGE_CONFIG.vip.textColor};background:${BUILTIN_BADGE_CONFIG.vip.bgColor};padding:0 3px;border:1px solid ${BUILTIN_BADGE_CONFIG.vip.borderColor};">${BUILTIN_BADGE_CONFIG.vip.label}</span> VIP Status</label>
         </div>
         <div style="font-size:10px;color:#808080;margin-bottom:6px;">VIP users trigger a confirmation notice before moderation.</div>
         <div style="margin-bottom:5px;display:flex;align-items:center;gap:6px;">
-          <input type="checkbox" id="ucfWatched" ${u.watched?'checked':''}/>
+          <input type="checkbox" id="ucfWatched" ${u.watched?'checked':''} ${rankOf(MY_LEVEL)<rankOf(BUILTIN_BADGE_CONFIG.watched.assignLevel||'MODERATOR')&&!isSoftwareManager()?'disabled':''}/>
           <label for="ucfWatched" style="font-size:11px;color:#000;cursor:pointer;"><span style="font-size:10px;font-weight:bold;color:${BUILTIN_BADGE_CONFIG.watched.textColor};background:${BUILTIN_BADGE_CONFIG.watched.bgColor};padding:0 3px;border:1px solid ${BUILTIN_BADGE_CONFIG.watched.borderColor};">${BUILTIN_BADGE_CONFIG.watched.label}</span> Under Observation</label>
         </div>
         <div style="font-size:10px;color:#808080;margin-bottom:6px;">Watched users get a [WATCHED] tag automatically added to all mod log entries.</div>
         <div style="margin-bottom:5px;display:flex;align-items:center;gap:6px;">
-          <input type="checkbox" id="ucfMuted" ${u.muted?'checked':''}/>
+          <input type="checkbox" id="ucfMuted" ${u.muted?'checked':''} ${rankOf(MY_LEVEL)<rankOf(BUILTIN_BADGE_CONFIG.muted.assignLevel||'MODERATOR')&&!isSoftwareManager()?'disabled':''}/>
           <label for="ucfMuted" style="font-size:11px;color:#000;cursor:pointer;"><span style="font-size:10px;font-weight:bold;color:${BUILTIN_BADGE_CONFIG.muted.textColor};background:${BUILTIN_BADGE_CONFIG.muted.bgColor};padding:0 3px;border:1px solid ${BUILTIN_BADGE_CONFIG.muted.borderColor};">${BUILTIN_BADGE_CONFIG.muted.label}</span> Muted</label>
         </div>
         <div style="font-size:10px;color:#808080;">Muted flag visible on user profile for staff reference.</div>
@@ -3104,7 +3121,7 @@ async function addCustomField(){
 async function revokeP(uid, pid){
   const u=USERS[uid]; if(!u||!u.punishments||!u.punishments[pid]) return;
   const p=u.punishments[pid];
-  await push(ref(db,'logs/revoke'),{user:u.username,action:p.action,origMod:p.mod,revokedBy:ME,date:today(),note:p.note||''});
+  await push(ref(db,'logs/revoke'),{user:u.username,action:p.action,origMod:p.mod,revokedBy:ME,date:nowStr(),note:p.note||''});
   await remove(ref(db,`users/${uid}/punishments/${pid}`));
   await update(ref(db,`users/${uid}`),{status:'active'});
   auditLog('Punishment Revoked',`${u.username}: ${p.action}`);
@@ -3224,7 +3241,7 @@ function openProtectedUserDialog(uid, u, action, reason, note){
     close();
     if(opt==='cancel') return;
     if(opt==='escalate'){
-      await push(ref(db,'modRequests'),{targetUser:u.username,targetUid:uid,action,reason:reason||'',note:note||'',submittedBy:ME,date:today(),status:'Pending',reviewedBy:'',reviewNote:''});
+      await push(ref(db,'modRequests'),{targetUser:u.username,targetUid:uid,action,reason:reason||'',note:note||'',submittedBy:ME,date:nowStr(),status:'Pending',reviewedBy:'',reviewNote:''});
       auditLog('Escalated Mod Request',`${u.username}: ${action} by ${ME}`);
       pushNotif('newRequest',`Escalated request for ${u.username} from ${ME}`);
       const el=document.getElementById('mResult');
@@ -3246,8 +3263,8 @@ async function executeModAction(uid, u, action, reason, note){
   const watchTag=u.watched?' [WATCHED]':'';
   const newStatus=action==='Suspend'?'suspended':action.startsWith('Ban')?'banned':u.status;
   await update(ref(db,`users/${uid}`),{status:newStatus});
-  await push(ref(db,`users/${uid}/punishments`),{action,mod:ME,created:today(),expiry:action.includes('Day')?'Varies':'Permanent',note:(note||reason||'')+watchTag});
-  await push(ref(db,'logs/moderation'),{user:u.username,action,mod:ME,date:today(),reason:reason||'',note:(note||'')+watchTag});
+  await push(ref(db,`users/${uid}/punishments`),{action,mod:ME,created:nowStr(),expiry:action.includes('Day')?'Varies':'Permanent',note:(note||reason||'')+watchTag});
+  await push(ref(db,'logs/moderation'),{user:u.username,action,mod:ME,date:nowStr(),reason:reason||'',note:(note||'')+watchTag});
   auditLog('Player Moderated',`${u.username}: ${action}${watchTag}`);
 }
 
@@ -3269,14 +3286,24 @@ async function addStaff(){
   if(Object.values(STAFF).find(s=>s.username===u)){ el.style.color='#880000'; el.textContent='Already exists.'; return; }
   el.style.color='#000080'; el.textContent='Creating account...';
 
-  // Create Firebase Auth account
+  // Step 1: Create Firebase Auth account (this briefly signs in as new user)
+  let authCreated=false;
   try{
     await createUserWithEmailAndPassword(auth,`${u}@admin.com`,p);
+    authCreated=true;
   }catch(e){
-    // Auth account may already exist — continue to write DB record
+    if(e.code==='auth/email-already-in-use') authCreated=true; // already exists, that's fine
+    else{ el.style.color='#880000'; el.textContent=`Auth error: ${e.message}`; return; }
   }
 
-  // Write the DB record NOW while still authenticated (either as new user or as ME)
+  // Step 2: Immediately sign back in as ME so DB write is authenticated as admin
+  try{
+    await signInWithEmailAndPassword(auth,`${ME}@admin.com`,currentPassword);
+  }catch(e){
+    el.style.color='#880000'; el.textContent='Session expired — please log out and back in, then try again.'; return;
+  }
+
+  // Step 3: Fetch avatar while signed in as ME
   let avatarUrl='';
   if(avatarUser){
     el.textContent='Fetching avatar...';
@@ -3285,6 +3312,8 @@ async function addStaff(){
       if(info&&info.avatarUrl) avatarUrl=info.avatarUrl;
     }catch(e){}
   }
+
+  // Step 4: Write DB record as ME (authenticated admin)
   const staffRecord={
     username:u, level:l, joined:today(), notes:'',
     suspended:false, secured:false, forceLogout:false,
@@ -3294,22 +3323,14 @@ async function addStaff(){
   try{
     await set(ref(db,`staff/${u}`),staffRecord);
   }catch(e){
-    el.style.color='#880000'; el.textContent=`DB write failed: ${e.message}`; 
-    // Re-sign in as ME before returning
-    try{ await signInWithEmailAndPassword(auth,`${ME}@admin.com`,currentPassword); }catch(e2){}
+    el.style.color='#880000';
+    el.textContent=`Account created but DB write failed (${e.code||e.message}). Check Firebase Database rules — authenticated users need write access to /staff/.`;
     return;
   }
 
-  // Re-sign in as ME after writing
-  try{
-    await signInWithEmailAndPassword(auth,`${ME}@admin.com`,currentPassword);
-  }catch(e){
-    // If re-sign fails, do logout/login — just warn
-    el.style.color='#cc8800'; el.textContent=`${u} added but session refresh failed. Please refresh the page.`; return;
-  }
-
   auditLog('Staff Added',`${u} as ${l}`);
-  el.style.color='#006600'; el.textContent=`${u} added as ${l}${avatarUrl?' (avatar loaded)':avatarUser?' (avatar unavailable — set via profile)':''}.`;
+  el.style.color='#006600';
+  el.textContent=`${u} added as ${l}${avatarUrl?' (avatar loaded)':avatarUser?' (avatar unavailable — set via profile)':''}.`;
   setTimeout(()=>{ el.textContent=''; },3500);
 }
 
@@ -3376,7 +3397,7 @@ function promptSuspendStaff(sid, isCurrentlySuspended){
       async()=>{
         const reason=document.getElementById('dlgReason').value.trim()||'No reason given.';
         await update(ref(db,`staff/${sid}`),{suspended:false,suspendInfo:null,forceLogout:false});
-        await push(ref(db,'logs/suspend'),{username:s.username,action:'Unsuspend',by:ME,date:today(),reason,modNote:'',offensiveItem:''});
+        await push(ref(db,'logs/suspend'),{username:s.username,action:'Unsuspend',by:ME,date:nowStr(),reason,modNote:'',offensiveItem:''});
         auditLog('Staff Unsuspended',s.username);
       }
     );
@@ -3394,9 +3415,9 @@ function promptSuspendStaff(sid, isCurrentlySuspended){
         const reason=document.getElementById('suspReasonSel').value;
         const modNote=document.getElementById('suspModNoteIn').value.trim();
         const offensiveItem=document.getElementById('suspOffItemIn').value.trim();
-        const suspInfo={date:today(),reason,modNote,offensiveItem,by:ME};
+        const suspInfo={date:nowStr(),reason,modNote,offensiveItem,by:ME};
         await update(ref(db,`staff/${sid}`),{suspended:true,suspendInfo:suspInfo,forceLogout:true});
-        await push(ref(db,'logs/suspend'),{username:s.username,action:'Suspend',by:ME,date:today(),reason,modNote,offensiveItem});
+        await push(ref(db,'logs/suspend'),{username:s.username,action:'Suspend',by:ME,date:nowStr(),reason,modNote,offensiveItem});
         auditLog('Staff Suspended',`${s.username}: ${reason}`);
       }
     );
@@ -3469,7 +3490,7 @@ function promptTerminateStaff(sid){  const s=STAFF[sid]; if(!s) return;
       const reason=document.getElementById('termReasonSel').value;
       const modNote=document.getElementById('termModNoteIn').value.trim();
       const offensiveItem=document.getElementById('termOffItemIn').value.trim();
-      await push(ref(db,'logs/terminate'),{username:s.username,type:'Staff',by:ME,date:today(),reason,modNote,offensiveItem});
+      await push(ref(db,'logs/terminate'),{username:s.username,type:'Staff',by:ME,date:nowStr(),reason,modNote,offensiveItem});
       auditLog('Staff Terminated',`${s.username}: ${reason}`);
       // Force logout before removing — gives them a kick message
       await update(ref(db,`staff/${sid}`),{forceLogout:true}).catch(()=>{});
@@ -3660,12 +3681,35 @@ function startHeartbeat(){
   heartbeatInterval=setInterval(async()=>{
     if(!ME) return;
     const snap=await get(ref(db,`staff/${ME}`));
-    if(!snap.exists()) return;
+    if(!snap.exists()){
+      // Staff record deleted — check if wiped
+      const wipeSnap=await get(ref(db,`wipedAccounts/${ME}`)).catch(()=>null);
+      clearInterval(heartbeatInterval);
+      if(wipeSnap&&wipeSnap.exists()){
+        const wd=wipeSnap.val();
+        await signOut(auth).catch(()=>{});
+        ME=''; MY_LEVEL=''; currentPassword='';
+        document.getElementById('adminScreen').style.display='none';
+        document.getElementById('loginScreen').style.display='flex';
+        document.getElementById('loginUser').value='';
+        document.getElementById('loginPass').value='';
+        // Show wipe popup with details
+        document.getElementById('wipedReason').textContent=wd.reason||'Account wiped by administrator.';
+        document.getElementById('wipedBy').textContent=wd.by||'Unknown';
+        document.getElementById('wipedDate').textContent=wd.date||'Unknown';
+        document.getElementById('wipedOverlay').classList.add('show');
+      } else {
+        alert('Your account no longer exists. You will be logged out.');
+        doLogout();
+      }
+      return;
+    }
     const s=snap.val();
     // Force logout check
     if(s.forceLogout){
       await update(ref(db,`staff/${ME}`),{forceLogout:false});
       clearInterval(heartbeatInterval);
+      // Check if this is a wipe (staff record still exists momentarily)
       alert('You have been logged out by an administrator.');
       doLogout(); return;
     }
@@ -3674,6 +3718,18 @@ function startHeartbeat(){
       clearInterval(heartbeatInterval);
       alert(s.secured?'Your account has been secured. You will be logged out.':'Your account has been suspended. You will be logged out.');
       doLogout(); return;
+    }
+    // Auto-delete expired wipedAccounts records (runs for SW managers only to clean up)
+    if(isSoftwareManager()){
+      const wipeListSnap=await get(ref(db,'wipedAccounts')).catch(()=>null);
+      if(wipeListSnap&&wipeListSnap.exists()){
+        const now=Date.now();
+        for(const[wUser,wd] of Object.entries(wipeListSnap.val())){
+          if(wd.autoDeleteAt&&wd.autoDeleteAt>0&&now>wd.autoDeleteAt){
+            await remove(ref(db,`wipedAccounts/${wUser}`)).catch(()=>{});
+          }
+        }
+      }
     }
     const lastActive=s.lastActive&&s.lastActive!=='Never'?new Date(s.lastActive):null;
     if(lastActive&&(new Date()-lastActive)>=1200000){
@@ -3684,7 +3740,7 @@ function startHeartbeat(){
       doLogout();
       alert('You have been automatically logged out due to inactivity (20 minutes).');
     }
-  }, 8000); // check every 8 seconds for fast kick on suspend/secure/force-logout
+  }, 8000);
 }
 
 function updateActivity(){
@@ -4003,13 +4059,13 @@ function renderStaffConfig(c){
           if(!s||s.username===ME||s.level==='SOFTWARE MANAGER') continue;
           try{
             if(action==='suspend'){
-              const suspInfo={date:today(),reason,modNote:noteTag,offensiveItem:'',by:ME};
+              const suspInfo={date:nowStr(),reason,modNote:noteTag,offensiveItem:'',by:ME};
               await update(ref(db,`staff/${sid}`),{suspended:true,suspendInfo:suspInfo,forceLogout:true});
-              await push(ref(db,'logs/suspend'),{username,action:'Suspend',by:ME,date:today(),reason,modNote:noteTag,offensiveItem:''});
+              await push(ref(db,'logs/suspend'),{username,action:'Suspend',by:ME,date:nowStr(),reason,modNote:noteTag,offensiveItem:''});
               auditLog('Staff Suspended (Bulk)',`${username}: ${reason}`);
             } else if(action==='unsuspend'){
               await update(ref(db,`staff/${sid}`),{suspended:false,suspendInfo:null,forceLogout:false});
-              await push(ref(db,'logs/suspend'),{username,action:'Unsuspend',by:ME,date:today(),reason:reason||'Bulk unsuspend',modNote:'',offensiveItem:''});
+              await push(ref(db,'logs/suspend'),{username,action:'Unsuspend',by:ME,date:nowStr(),reason:reason||'Bulk unsuspend',modNote:'',offensiveItem:''});
             } else if(action==='secure'){
               await update(ref(db,`staff/${sid}`),{secured:true,secureInfo:{reason,note:noteTag,by:ME,date:nowStr()},forceLogout:true});
             } else if(action==='unsecure'){
@@ -4017,7 +4073,7 @@ function renderStaffConfig(c){
             } else if(action==='forcelogout'){
               await update(ref(db,`staff/${sid}`),{forceLogout:true,lastAction:'Force logged out by '+ME});
             } else if(action==='terminate'){
-              await push(ref(db,'logs/terminate'),{username,type:'Staff',by:ME,date:today(),reason,modNote:noteTag,offensiveItem:''});
+              await push(ref(db,'logs/terminate'),{username,type:'Staff',by:ME,date:nowStr(),reason,modNote:noteTag,offensiveItem:''});
               await update(ref(db,`staff/${sid}`),{forceLogout:true}).catch(()=>{});
               await new Promise(r=>setTimeout(r,200));
               await remove(ref(db,`staff/${sid}`));
@@ -4025,7 +4081,7 @@ function renderStaffConfig(c){
             } else if(action==='wipe'){
               const wipeId=generateWipeId();
               const wipeName=`[WIPED #${wipeId}]`;
-              await set(ref(db,`wipedAccounts/${username}`),{reason,by:ME,date:nowStr()});
+              await writeWipedAccount(username, reason, `Bulk wipe by ${ME}`);
               await push(ref(db,'wipelog'),{wipeId,wipeTag:wipeName,originalUsername:username,level:s.level||'—',joined:s.joined||'—',wipedBy:ME,date:nowStr(),note:'Bulk wipe'});
               await update(ref(db,`staff/${sid}`),{forceLogout:true}).catch(()=>{});
               await new Promise(r=>setTimeout(r,200));
@@ -4298,11 +4354,12 @@ function renderBadgeMgmt(c){
   <div class="sbox" style="border:2px solid #0066aa;"><div class="stitle" style="background:#004466;color:#fff;">Built-in Badges</div><div class="sbody">
     <div style="font-size:11px;color:#555;margin-bottom:6px;">Edit the appearance and description of built-in system badges. Label, colors and description are customisable. Changes apply immediately everywhere.</div>
     <div class="tbl-wrap"><table class="tbl" style="width:100%;">
-      <tr><th>Preview</th><th>Key</th><th>Label</th><th>Description</th><th>Edit</th></tr>
+      <tr><th>Preview</th><th>Key</th><th>Label</th><th>Assign Level</th><th>Description</th><th>Edit</th></tr>
       ${Object.entries(BUILTIN_BADGE_CONFIG).map(([key,cfg])=>`<tr>
         <td><span style="font-size:10px;font-weight:bold;padding:1px 4px;border:1px solid ${cfg.borderColor};background:${cfg.bgColor};color:${cfg.textColor};">${cfg.label}</span></td>
         <td><code style="font-size:10px;">${key}</code></td>
         <td style="font-size:11px;">${cfg.label}</td>
+        <td>${levelBadge(cfg.assignLevel||'MODERATOR')}</td>
         <td style="font-size:11px;max-width:180px;white-space:normal;">${cfg.desc||'—'}</td>
         <td><button class="btn small edit-builtin-btn" data-key="${key}">Edit</button></td>
       </tr>`).join('')}
@@ -4457,6 +4514,8 @@ function renderBadgeMgmt(c){
         <div style="font-size:11px;color:#555;margin-bottom:8px;">Customise the appearance of the <b>${key}</b> badge. The internal key cannot change.</div>
         <div style="margin-bottom:4px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;font-weight:bold;">Label (text shown on badge):</label>
           <input type="text" id="bb-label" style="width:100%;" value="${cfg.label}" maxlength="8"/></div>
+        <div style="margin-bottom:4px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;font-weight:bold;">Min. Level to Assign:</label>
+          <select id="bb-level" style="width:100%;">${[...LEVEL_LIST,'SOFTWARE MANAGER'].map(l=>`<option value="${l}" ${(cfg.assignLevel||'MODERATOR')===l?'selected':''}>${l}</option>`).join('')}</select></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
           <div><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;font-weight:bold;">Background:</label>
             <input type="text" id="bb-bg" style="width:80px;" value="${cfg.bgColor}"/></div>
@@ -4476,6 +4535,7 @@ function renderBadgeMgmt(c){
             ...BUILTIN_BADGE_CONFIG,
             [key]:{
               label:(document.getElementById('bb-label').value.trim().toUpperCase()||cfg.label),
+              assignLevel:document.getElementById('bb-level').value||'MODERATOR',
               bgColor:document.getElementById('bb-bg').value.trim()||cfg.bgColor,
               textColor:document.getElementById('bb-text').value.trim()||cfg.textColor,
               borderColor:document.getElementById('bb-border').value.trim()||cfg.borderColor,
@@ -4484,7 +4544,7 @@ function renderBadgeMgmt(c){
           };
           await set(ref(db,'meta/builtinBadgeConfig'),newCfg);
           BUILTIN_BADGE_CONFIG=newCfg;
-          auditLog('Built-in Badge Edited',`${key}: label=${newCfg[key].label}`);
+          auditLog('Built-in Badge Edited',`${key}: label=${newCfg[key].label}, assignLevel=${newCfg[key].assignLevel}`);
           nav('badgemgmt');
         }
       );
@@ -4651,7 +4711,10 @@ function setupMenus(){
   });
   // Help menu
   const mabout=document.getElementById('menu-about');
-  if(mabout) mabout.onclick=()=>openDialog('About',`Administration Panel<br><br>Version: <b>${UPDATE_LOG&&UPDATE_LOG.length?UPDATE_LOG[0].version:'2.3'}</b><br>Built for your Roblox game.<br>Logged in as: <b>${ME}</b> [${MY_LEVEL}]`,'',null);
+  if(mabout) mabout.onclick=()=>{
+    const cfg={...SITE_CONFIG_DEFAULTS,...SITE_CONFIG};
+    openDialog('About',`${cfg.aboutText||'Administration Panel'}<br><br>Version: <b>${UPDATE_LOG&&UPDATE_LOG.length?UPDATE_LOG[0].version:'2.4'}</b><br>Logged in as: <b>${ME}</b> [${MY_LEVEL}]`,'',null);
+  };
   const mshort=document.getElementById('menu-shortcuts');
   if(mshort) mshort.onclick=()=>openDialog('Keyboard Shortcuts',
     '<b>Enter</b> &mdash; Submit / Confirm<br><b>Escape</b> &mdash; Close dialog<br><br>Navigation shortcuts:<br><b>Alt+U</b> &mdash; User Admin<br><b>Alt+A</b> &mdash; All Accounts<br><b>Alt+S</b> &mdash; Staff Registry<br><b>Alt+M</b> &mdash; Moderation Log','',null);
