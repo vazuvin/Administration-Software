@@ -215,7 +215,7 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
         </div>
       </div>
     </div>
-    <div class="announce-bar" id="announceBar"></div>
+    <div class="announce-bar" id="announceBar" style="background:#fff0cc;border-bottom:2px solid #c8a800;"></div>
     <div class="topinfo" id="topinfo">Loading...</div>
     <div class="main">
       <div class="sidebar">
@@ -228,6 +228,7 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
           <span class="sb-link" id="nav-useradmin">&#9658; User Admin</span>
           <span class="sb-link" id="nav-moderate">&#9658; Moderate User</span>
           <span class="sb-link" id="nav-accounts">&#9658; All Accounts</span>
+          <span class="sb-link" id="nav-requests">&#9658; Requests</span>
         </div>
         <div class="sb-section" id="sb-content-section">
           <div class="sb-title">Content Moderation</div>
@@ -239,6 +240,7 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
           <div class="sb-title">Staff</div>
           <span class="sb-link" id="nav-staff">&#9658; Staff Registry</span>
           <span class="sb-link" id="nav-activity">&#9658; Staff Activity</span>
+          <span class="sb-link" id="nav-messaging">&#9658; Staff Messaging</span>
         </div>
         <div class="sb-section">
           <div class="sb-title">Logs</div>
@@ -250,8 +252,9 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
         </div>
         <div class="sb-section" id="sb-config-section">
           <div class="sb-title">Configuration</div>
+          <span class="sb-link" id="nav-userconfig">&#9658; User Config</span>
           <span class="sb-link" id="nav-auditlog">&#9658; Audit Log</span>
-          <span class="sb-link" id="nav-announcements">&#9658; Announcements</span>
+          <span class="sb-link" id="nav-alerts">&#9658; Site-Wide Alerts</span>
           <span class="sb-link" id="nav-adminlog">&#9658; Administrator</span>
         </div>
       </div>
@@ -346,6 +349,9 @@ const DEFAULT_PERMS = {
   canSubmitAppeals:'MODERATOR', canViewAppealLog:'MODERATOR', canReviewAppeals:'ADMINISTRATOR',
   canViewStaffProfile:'ADMINISTRATOR', canChangeStaffLevel:'SUPER ADMINISTRATOR', canChangeStaffPassword:'SUPER ADMINISTRATOR',
   canExportLogs:'SUPER ADMINISTRATOR', canViewCustomFields:'INTERN', canManageCustomFields:'SUPER ADMINISTRATOR',
+  canBulkAction:'ADMINISTRATOR', canSendStaffMessage:'MODERATOR',
+  canViewUserConfig:'ADMINISTRATOR', canManageUserConfig:'SUPER ADMINISTRATOR',
+  canViewRequests:'ADMINISTRATOR',
 };
 
 const DEFAULT_REP_POINTS = { 'Remind':1, 'Warn':2, 'Ban 1 Day':3, 'Ban 3 Days':3, 'Ban 7 Days':5, 'Ban 14 Days':5, 'Suspend':4, 'Ban Permanent':10 };
@@ -365,14 +371,20 @@ let ANNOUNCEMENTS={};
 let BAN_TEMPLATES=[];
 let NOTIFICATIONS=[];
 let NOTIF_PREFS={};
+let STAFF_MESSAGES={};
+let MOD_REQUESTS={};
+let SITE_ALERTS={};
+let DASHBOARD_LOG_CONFIG={modlog:true,loginlog:true,appeals:false};
 const ALL_NOTIF_EVENTS=[
   {key:'newAppeal',label:'New Appeal Submitted',perm:'canViewAppealLog'},
   {key:'newMod',label:'New Moderation Action',perm:'canViewModLog'},
   {key:'staffSuspended',label:'Staff Member Suspended',perm:'canViewSuspendLogs'},
   {key:'staffTerminated',label:'Staff Member Terminated',perm:'canViewTerminateLogs'},
-  {key:'newAnnouncement',label:'New Announcement',perm:null},
+  {key:'newAlert',label:'New Site-Wide Alert',perm:null},
   {key:'altLinked',label:'Alt Account Linked',perm:'canViewContentModeration'},
   {key:'appealReviewed',label:'Appeal Reviewed',perm:'canViewAppealLog'},
+  {key:'newRequest',label:'New Moderation Request',perm:'canViewRequests'},
+  {key:'newStaffMessage',label:'New Staff Message',perm:'canSendStaffMessage'},
 ];
 
 function today(){ return new Date().toLocaleDateString(); }
@@ -537,17 +549,22 @@ function updateTopInfo(){
 function updateAnnouncements(){
   const bar=document.getElementById('announceBar');
   if(!bar) return;
-  const active=Object.values(ANNOUNCEMENTS).filter(a=>a.active);
+  const active=Object.values(SITE_ALERTS).filter(a=>a.active&&a.type!=='info'||a.active);
   if(!active.length){ bar.style.display='none'; return; }
   const latest=active[active.length-1];
+  const typeColors={warning:'#fff0cc',critical:'#ffd0d0',info:'#d0e8ff'};
+  const borderColors={warning:'#c8a800',critical:'#cc0000',info:'#4488cc'};
+  bar.style.background=typeColors[latest.type]||'#fff0cc';
+  bar.style.borderBottomColor=borderColors[latest.type]||'#c8a800';
   bar.style.display='block';
-  bar.innerHTML=`<b>&#128276; Notice from ${latest.by} (${latest.date}):</b> ${latest.message}`;
+  const icon=latest.type==='critical'?'🚨':latest.type==='info'?'ℹ️':'⚠️';
+  bar.innerHTML=`<b>${icon} ${latest.type?latest.type.toUpperCase()+' ALERT':''} from ${latest.by} (${latest.date}):</b> ${latest.message}`;
 }
 
 function updateSidebar(){
   const show=(id,cond)=>{ const el=document.getElementById(id); if(el) el.style.display=cond?'':'none'; };
-  show('nav-home', true);
   const showSection=(id,cond)=>{ const el=document.getElementById(id); if(el) el.style.display=cond?'':'none'; };
+  show('nav-home', true);
   showSection('sb-staff-section', canDo('canViewStaff'));
   showSection('sb-content-section', canDo('canViewContentModeration'));
   showSection('sb-config-section', true);
@@ -561,6 +578,10 @@ function updateSidebar(){
   show('nav-appeals', canDo('canViewAppealLog'));
   show('nav-auditlog', isSuperAdmin());
   show('nav-adminlog', isSuperAdmin());
+  show('nav-messaging', canDo('canSendStaffMessage'));
+  show('nav-requests', canDo('canViewRequests'));
+  show('nav-userconfig', canDo('canViewUserConfig'));
+  show('nav-alerts', canDo('canManageStaff')||isSuperAdmin());
 }
 
 function nav(p){
@@ -585,13 +606,17 @@ function render(){
   else if(page==='altdetect'){ canDo('canViewContentModeration')?renderAltDetect(c):c.innerHTML=denied; }
   else if(page==='staff'){ canDo('canViewStaff')?renderStaff(c):c.innerHTML=denied; }
   else if(page==='activity'){ canDo('canViewStaffActivity')?renderActivity(c):c.innerHTML=denied; }
+  else if(page==='messaging'){ canDo('canSendStaffMessage')?renderMessaging(c):c.innerHTML=denied; }
+  else if(page==='requests'){ canDo('canViewRequests')?renderRequests(c):c.innerHTML=denied; }
+  else if(page==='userconfig'){ canDo('canViewUserConfig')?renderUserConfig(c):c.innerHTML=denied; }
+  else if(page==='alerts'){ canDo('canManageStaff')||isSuperAdmin()?renderAlerts(c):c.innerHTML=denied; }
   else if(page==='modlog'){ canDo('canViewModLog')?renderModLog(c):c.innerHTML=denied; }
   else if(page==='revokelog'){ canDo('canViewRevokeLogs')?renderRevokeLog(c):c.innerHTML=denied; }
   else if(page==='suspendlog'){ canDo('canViewSuspendLogs')?renderSuspendLog(c):c.innerHTML=denied; }
   else if(page==='terminatelog'){ canDo('canViewTerminateLogs')?renderTerminateLog(c):c.innerHTML=denied; }
   else if(page==='loginlog'){ canDo('canViewLoginLog')?renderLoginLog(c):c.innerHTML=denied; }
   else if(page==='auditlog'){ isSuperAdmin()?renderAuditLog(c):c.innerHTML=denied; }
-  else if(page==='announcements') renderAnnouncements(c);
+  else if(page==='announcements') renderAlerts(c);
   else if(page==='adminlog'){ isSuperAdmin()?renderAdminLog(c):c.innerHTML=denied; }
 }
 
@@ -698,6 +723,7 @@ function renderHome(c){
   </div>
   <div style="display:flex;gap:6px;flex-wrap:wrap;">
     <div style="flex:2;min-width:220px;">
+      ${DASHBOARD_LOG_CONFIG.modlog!==false?`
       <div class="sbox"><div class="stitle">Recent Moderation Actions</div><div class="sbody">
         ${recentMod.length===0?'<i style="color:#444;">No recent actions.</i>':`
         <div class="tbl-wrap"><table class="tbl" style="width:100%;">
@@ -707,7 +733,8 @@ function renderHome(c){
             <td>${r.action}</td><td>${r.mod}</td><td style="font-size:10px;">${r.date}</td>
           </tr>`).join('')}
         </table></div>`}
-      </div></div>
+      </div></div>`:''}
+      ${DASHBOARD_LOG_CONFIG.loginlog!==false?`
       <div class="sbox"><div class="stitle">Recent Staff Logins</div><div class="sbody">
         ${recentLogins.length===0?'<i style="color:#444;">No logins recorded.</i>':`
         <div class="tbl-wrap"><table class="tbl" style="width:100%;">
@@ -717,7 +744,19 @@ function renderHome(c){
             <td>${r.result==='success'?'<span class="ok">OK</span>':'<span class="ban">'+r.result+'</span>'}</td>
           </tr>`).join('')}
         </table></div>`}
-      </div></div>
+      </div></div>`:''}
+      ${DASHBOARD_LOG_CONFIG.appeals?`
+      <div class="sbox"><div class="stitle">Recent Appeals</div><div class="sbody">
+        ${Object.values(APPEAL_LOG).length===0?'<i style="color:#444;">No appeals yet.</i>':`
+        <div class="tbl-wrap"><table class="tbl" style="width:100%;">
+          <tr><th>User</th><th>Reason</th><th>Status</th><th>Date</th></tr>
+          ${Object.values(APPEAL_LOG).sort((a,b)=>a.date>b.date?-1:1).slice(0,5).map(r=>`<tr>
+            <td><b>${r.user}</b></td><td>${r.presetReason||'—'}</td>
+            <td><span class="badge appeal-${(r.status||'pending').toLowerCase().replace(' ','-')}">${r.status||'Pending'}</span></td>
+            <td style="font-size:10px;">${r.date}</td>
+          </tr>`).join('')}
+        </table></div>`}
+      </div></div>`:''}
     </div>
     <div style="flex:1;min-width:160px;">
       <div class="sbox"><div class="stitle">Reputation Distribution</div><div class="sbody">
@@ -778,7 +817,7 @@ function renderUA(c){
             <div class="row"><label>Roblox Username:</label><span>${u.robloxUsername||'N/A'}</span></div>
             <div class="row"><label>Player ID:</label><span>${u.playerId||'—'}</span></div>
             <div class="row"><label>User ID (Roblox):</label><span>${u.robloxId||'—'}</span></div>
-            <div class="row"><label>Status:</label>${statusBadge(u.status)}</div>
+            <div class="row"><label>Status:</label><span>${statusBadge(u.status)}${u.protected?' <span style="font-size:10px;color:#880000;font-weight:bold;border:1px solid #cc6666;padding:1px 3px;background:#fde8e8;">&#9632; PROTECTED</span>':''}</span></div>
             <div class="row"><label>Reputation:</label>${repBar(repScore)}</div>
             <div class="row"><label>&nbsp;</label><button class="btn small" id="btn-rephistory">&#9660; History</button></div>
             <div class="row"><label>System Entry:</label><span>${u.created}</span></div>
@@ -1087,29 +1126,34 @@ function renderAccounts(c){
   const uArr=Object.entries(USERS).sort((a,b)=>(a[1].playerId||0)-(b[1].playerId||0));
   c.innerHTML=`
   <div class="ptitle">All Accounts</div>
-  ${canDo('canModerateUsers')&&uArr.length>0?`
+  ${canDo('canBulkAction')&&uArr.length>0?`
   <div class="sbox"><div class="stitle">Bulk Actions</div><div class="sbody">
-    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-      <span id="bulk-count" style="font-size:11px;color:#808080;">0 selected</span>
-      <select id="bulk-action" style="width:130px;">
-        <option value="">-- Select Action --</option>
-        <option>Warn</option><option>Ban 1 Day</option><option>Ban 3 Days</option><option>Ban 7 Days</option><option>Suspend</option><option>Ban Permanent</option>
-      </select>
-      <select id="bulk-reason" style="width:130px;">
-        <option>-- Select Reason --</option><option>Spam</option><option>Harassment</option><option>Inappropriate Content</option><option>Scam</option><option>Cheating</option><option>Other</option>
-      </select>
-      <button class="btn" id="btn-bulk-apply">Apply to Selected</button>
-      <button class="btn small" id="btn-bulk-selectall">Select All</button>
-      <button class="btn small" id="btn-bulk-clear">Clear</button>
+    <div style="display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1;">
+        <span id="bulk-count" style="font-size:11px;color:#808080;">0 selected</span>
+        <select id="bulk-action" style="width:130px;">
+          <option value="">-- Select Action --</option>
+          <option>Warn</option><option>Ban 1 Day</option><option>Ban 3 Days</option><option>Ban 7 Days</option><option>Suspend</option><option>Ban Permanent</option>
+        </select>
+        <select id="bulk-reason" style="width:130px;">
+          <option>-- Select Reason --</option><option>Spam</option><option>Harassment</option><option>Inappropriate Content</option><option>Scam</option><option>Cheating</option><option>Mass Raiding</option><option>Other</option>
+        </select>
+        <input type="text" id="bulk-note" style="width:160px;" placeholder="Bulk note (e.g. Mass Raiding - [BLK])"/>
+      </div>
+      <div style="display:flex;gap:3px;flex-shrink:0;">
+        <button class="btn" id="btn-bulk-apply">Apply to Selected</button>
+        <button class="btn small" id="btn-bulk-selectall">Select All</button>
+        <button class="btn small" id="btn-bulk-clear">Clear</button>
+      </div>
     </div>
     <div id="bulk-msg" style="font-size:11px;margin-top:3px;"></div>
   </div></div>`:''}
   <div class="sbox"><div class="stitle">Player List</div><div class="sbody">
     ${uArr.length===0?'<i style="color:#444;">No players yet.</i>':`
     <div class="tbl-wrap"><table class="tbl">
-      <tr>${canDo('canModerateUsers')?'<th><input type="checkbox" id="bulk-check-all" title="Select all"/></th>':''}<th>Player ID</th><th>Username</th><th>Roblox ID</th><th>Status</th><th>Rep</th><th>System Entry</th><th>Action</th></tr>
+      <tr>${canDo('canBulkAction')?'<th><input type="checkbox" id="bulk-check-all" title="Select all"/></th>':''}<th>Player ID</th><th>Username</th><th>Roblox ID</th><th>Status</th><th>Rep</th><th>System Entry</th><th>Action</th></tr>
       ${uArr.map(([uid,u])=>`<tr>
-        ${canDo('canModerateUsers')?`<td><input type="checkbox" class="bulk-cb" data-uid="${uid}"/></td>`:''}
+        ${canDo('canBulkAction')?`<td><input type="checkbox" class="bulk-cb" data-uid="${uid}"/></td>`:''}
         <td>${u.playerId||'—'}</td><td><b>${u.username}</b></td>
         <td>${u.robloxId||'—'}</td><td>${statusBadge(u.status)}</td>
         <td>${calcReputation(u)} pts</td><td>${u.created}</td>
@@ -1139,7 +1183,7 @@ function renderAccounts(c){
   document.getElementById('btn-adduser').onclick=addUser;
   document.getElementById('nuUser').onkeydown=e=>{ if(e.key==='Enter') addUser(); };
 
-  if(canDo('canModerateUsers')&&uArr.length>0){
+  if(canDo('canBulkAction')&&uArr.length>0){
     const checkAll=document.getElementById('bulk-check-all');
     const updateCount=()=>{
       const sel=document.querySelectorAll('.bulk-cb:checked').length;
@@ -1165,20 +1209,22 @@ function renderAccounts(c){
       const selected=[...document.querySelectorAll('.bulk-cb:checked')].map(cb=>cb.dataset.uid);
       const action=document.getElementById('bulk-action').value;
       const reason=document.getElementById('bulk-reason').value;
+      const bulkNote=document.getElementById('bulk-note').value.trim();
       const msgEl=document.getElementById('bulk-msg');
       if(!selected.length){ msgEl.style.color='#880000'; msgEl.textContent='No users selected.'; return; }
       if(!action){ msgEl.style.color='#880000'; msgEl.textContent='Select an action.'; return; }
-      openDialog(`Bulk Action: ${action}`,`Apply "${action}" to ${selected.length} player(s)?`,'',async()=>{
+      const noteTag=bulkNote?`${bulkNote} - [BLK]`:'[BLK]';
+      openDialog(`Bulk Action: ${action}`,`Apply "${action}" to ${selected.length} player(s)?<br><span style="font-size:10px;color:#808080;">Note tag: ${noteTag}</span>`,'',async()=>{
         let done=0;
         for(const uid of selected){
           const u=USERS[uid]; if(!u) continue;
           const newStatus=action==='Suspend'?'suspended':action.startsWith('Ban')?'banned':u.status;
           await update(ref(db,`users/${uid}`),{status:newStatus});
-          await push(ref(db,`users/${uid}/punishments`),{action,mod:ME,created:today(),expiry:action.includes('Day')?'Varies':'Permanent',note:reason});
-          await push(ref(db,'logs/moderation'),{user:u.username,action,mod:ME,date:today(),reason:reason||'',note:'[Bulk Action]'});
+          await push(ref(db,`users/${uid}/punishments`),{action,mod:ME,created:today(),expiry:action.includes('Day')?'Varies':'Permanent',note:noteTag});
+          await push(ref(db,'logs/moderation'),{user:u.username,action,mod:ME,date:today(),reason:reason||'',note:noteTag});
           done++;
         }
-        auditLog('Bulk Action',`${action} on ${done} players by ${ME}`);
+        auditLog('Bulk Action',`${action} on ${done} players by ${ME} — ${noteTag}`);
         msgEl.style.color='#006600'; msgEl.textContent=`Applied to ${done} player(s).`;
       });
     };
@@ -1666,49 +1712,286 @@ function openEditSuspend(lid){
 }
 
 // ── ANNOUNCEMENTS ──
-function renderAnnouncements(c){
-  const entries=Object.entries(ANNOUNCEMENTS).sort((a,b)=>a[1].date>b[1].date?-1:1);
+// ── SITE-WIDE ALERTS ──
+function renderAlerts(c){
+  const allAlerts=Object.entries(SITE_ALERTS).sort((a,b)=>a[1].date>b[1].date?-1:1);
+  const canPost=isSuperAdmin()||canDo('canManageStaff');
   c.innerHTML=`
-  <div class="ptitle">Staff Announcements</div>
-  ${isSuperAdmin()||canDo('canManageStaff')?`
-  <div class="sbox"><div class="stitle">Post Announcement</div><div class="sbody">
-    <textarea id="newAnnounce" style="width:100%;height:50px;" placeholder="Type your announcement here..."></textarea>
-    <div style="display:flex;gap:4px;margin-top:4px;">
-      <button class="btn" id="btn-postannounce">Post</button>
-      <button class="btn" id="btn-clearannounce">Clear Active</button>
+  <div class="ptitle">Site-Wide Alerts</div>
+  ${canPost?`
+  <div class="sbox"><div class="stitle">Post Alert</div><div class="sbody">
+    <div style="display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap;">
+      <div style="flex:1;min-width:180px;">
+        <div style="margin-bottom:4px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;">Alert Type:</label>
+          <select id="alertType" style="width:100%;">
+            <option value="warning">⚠️ Warning</option>
+            <option value="critical">🚨 Critical</option>
+            <option value="info">ℹ️ Info</option>
+          </select></div>
+        <div style="margin-bottom:4px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;">Message:</label>
+          <textarea id="newAlertMsg" style="width:100%;height:50px;" placeholder="Alert message visible to all staff..."></textarea></div>
+        <div style="display:flex;gap:4px;margin-top:2px;">
+          <button class="btn" id="btn-postalert">Post Alert</button>
+          <button class="btn" id="btn-clearalerts">Clear All Active</button>
+        </div>
+        <div id="alertMsg" style="font-size:11px;margin-top:3px;color:#006600;"></div>
+      </div>
     </div>
-    <div id="announceMsg" style="font-size:11px;margin-top:3px;color:#006600;"></div>
   </div></div>`:''}
-  <div class="sbox"><div class="stitle">Announcement History</div><div class="sbody">
-    ${entries.length===0?'<i style="color:#444;">No announcements yet.</i>':`
+  <div class="sbox"><div class="stitle">Alert History</div><div class="sbody">
+    ${allAlerts.length===0?'<i style="color:#444;">No alerts on record.</i>':`
     <div class="tbl-wrap"><table class="tbl">
-      <tr><th>Message</th><th>By</th><th>Date</th><th>Active</th>${isSuperAdmin()?'<th>Admin</th>':''}</tr>
-      ${entries.map(([lid,a])=>`<tr>
-        <td style="max-width:200px;white-space:normal;">${a.message}</td>
+      <tr><th>Type</th><th>Message</th><th>By</th><th>Date</th><th>Active</th>${isSuperAdmin()?'<th>Admin</th>':''}</tr>
+      ${allAlerts.map(([lid,a])=>`<tr>
+        <td><span style="font-weight:bold;color:${a.type==='critical'?'#880000':a.type==='info'?'#003388':'#886600'}">${(a.type||'warning').toUpperCase()}</span></td>
+        <td style="max-width:220px;white-space:normal;">${a.message}</td>
         <td>${a.by}</td><td>${a.date}</td>
         <td>${a.active?'<span class="ok">Yes</span>':'<span style="color:#808080;">No</span>'}</td>
-        ${isSuperAdmin()?`<td>${deleteLogBtn('announcements',lid)}</td>`:''}
+        ${isSuperAdmin()?`<td>${deleteLogBtn('siteAlerts',lid)}</td>`:''}
       </tr>`).join('')}
     </table></div>`}
   </div></div>`;
-  if(isSuperAdmin()||canDo('canManageStaff')){
-    document.getElementById('btn-postannounce').onclick=async()=>{
-      const msg=document.getElementById('newAnnounce').value.trim();
+  if(canPost){
+    document.getElementById('btn-postalert').onclick=async()=>{
+      const msg=document.getElementById('newAlertMsg').value.trim();
+      const type=document.getElementById('alertType').value;
       if(!msg) return;
-      const entries2=Object.entries(ANNOUNCEMENTS);
-      for(const[lid] of entries2) await update(ref(db,`announcements/${lid}`),{active:false});
-      await push(ref(db,'announcements'),{message:msg,by:ME,date:today(),active:true});
-      auditLog('Announcement Posted',msg.substring(0,50));
-      document.getElementById('newAnnounce').value='';
-      const el=document.getElementById('announceMsg');
-      el.textContent='Posted!'; setTimeout(()=>{ if(el) el.textContent=''; },1500);
+      for(const[lid] of Object.entries(SITE_ALERTS)) await update(ref(db,`siteAlerts/${lid}`),{active:false});
+      await push(ref(db,'siteAlerts'),{message:msg,type,by:ME,date:today(),active:true});
+      auditLog('Site Alert Posted',`[${type}] ${msg.substring(0,50)}`);
+      document.getElementById('newAlertMsg').value='';
+      const el=document.getElementById('alertMsg');
+      el.textContent='Alert posted!'; setTimeout(()=>{ if(el) el.textContent=''; },1500);
     };
-    document.getElementById('btn-clearannounce').onclick=async()=>{
-      for(const[lid] of Object.entries(ANNOUNCEMENTS)) await update(ref(db,`announcements/${lid}`),{active:false});
-      auditLog('Announcements Cleared','All announcements deactivated');
+    document.getElementById('btn-clearalerts').onclick=async()=>{
+      for(const[lid] of Object.entries(SITE_ALERTS)) await update(ref(db,`siteAlerts/${lid}`),{active:false});
+      auditLog('Site Alerts Cleared','All alerts deactivated');
     };
   }
   bindDeleteLogBtns(c);
+}
+
+// ── STAFF MESSAGING ──
+function renderMessaging(c){
+  const threads=Object.entries(STAFF_MESSAGES).sort((a,b)=>a[1].lastDate>b[1].lastDate?-1:1);
+  const staffList=Object.values(STAFF).filter(s=>s.username!==ME);
+  c.innerHTML=`
+  <div class="ptitle">Staff Messaging</div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;">
+    <div style="width:160px;flex-shrink:0;">
+      <div class="sbox"><div class="stitle">New Message</div><div class="sbody">
+        <div style="margin-bottom:3px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:1px;">To:</label>
+          <select id="msgTo" style="width:100%;">
+            <option value="__all__">📢 All Staff</option>
+            ${staffList.map(s=>`<option value="${s.username}">${s.username} [${s.level.split(' ')[0]}]</option>`).join('')}
+          </select></div>
+        <div style="margin-bottom:3px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:1px;">Subject:</label>
+          <input type="text" id="msgSubject" style="width:100%;" placeholder="Subject line"/></div>
+        <div style="margin-bottom:3px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:1px;">Message:</label>
+          <textarea id="msgBody" style="width:100%;height:60px;" placeholder="Write your message..."></textarea></div>
+        <button class="btn" id="btn-sendmsg" style="width:100%;">Send</button>
+        <div id="msgSendResult" style="font-size:11px;margin-top:2px;color:#006600;"></div>
+      </div></div>
+    </div>
+    <div style="flex:1;min-width:220px;">
+      <div class="sbox"><div class="stitle">Inbox / Sent</div><div class="sbody">
+        ${threads.length===0?'<i style="color:#444;">No messages yet.</i>':`
+        <div class="tbl-wrap"><table class="tbl" style="width:100%;">
+          <tr><th>From</th><th>To</th><th>Subject</th><th>Date</th><th>Action</th></tr>
+          ${threads.map(([lid,m])=>`<tr ${m.to===ME&&!m.read?'style="font-weight:bold;"':''}>
+            <td>${m.from}</td>
+            <td>${m.to==='__all__'?'<span style="color:#000080;">All Staff</span>':m.to}</td>
+            <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;">${m.subject||'(no subject)'}</td>
+            <td style="font-size:10px;">${m.date}</td>
+            <td><button class="btn small view-msg-btn" data-lid="${lid}">Open</button>${isSuperAdmin()?`<button class="btn red small del-msg-btn" data-lid="${lid}" style="margin-left:2px;">X</button>`:''}</td>
+          </tr>`).join('')}
+        </table></div>`}
+      </div></div>
+    </div>
+  </div>`;
+  document.getElementById('btn-sendmsg').onclick=async()=>{
+    const to=document.getElementById('msgTo').value;
+    const subject=document.getElementById('msgSubject').value.trim();
+    const body=document.getElementById('msgBody').value.trim();
+    const res=document.getElementById('msgSendResult');
+    if(!body){ res.style.color='#880000'; res.textContent='Message body required.'; return; }
+    await push(ref(db,'staffMessages'),{from:ME,to,subject,body,date:nowStr(),read:false});
+    auditLog('Staff Message Sent',`To: ${to==='__all__'?'All Staff':to} — ${subject}`);
+    document.getElementById('msgSubject').value='';
+    document.getElementById('msgBody').value='';
+    res.style.color='#006600'; res.textContent='Message sent!';
+    setTimeout(()=>{ if(res) res.textContent=''; },2000);
+  };
+  c.querySelectorAll('.view-msg-btn').forEach(btn=>{
+    btn.onclick=async()=>{
+      const m=STAFF_MESSAGES[btn.dataset.lid]; if(!m) return;
+      if(m.to===ME&&!m.read) await update(ref(db,`staffMessages/${btn.dataset.lid}`),{read:true});
+      openDialog(`Message from ${m.from}`,`<b>Subject:</b> ${m.subject||'(no subject)'}<br><b>To:</b> ${m.to==='__all__'?'All Staff':m.to}<br><b>Date:</b> ${m.date}<br><hr style="border:none;border-top:1px solid #c0bcb4;margin:6px 0;"><div style="font-size:11px;white-space:pre-wrap;">${m.body}</div>`,'',null);
+      document.getElementById('dlgOK').style.display='none';
+      document.getElementById('dlgCancel').textContent='Close';
+    };
+  });
+  if(isSuperAdmin()){
+    c.querySelectorAll('.del-msg-btn').forEach(btn=>{
+      btn.onclick=()=>openOpDialog('Delete this staff message?',async()=>{
+        await remove(ref(db,`staffMessages/${btn.dataset.lid}`));
+        auditLog('Staff Message Deleted',btn.dataset.lid);
+      });
+    });
+  }
+}
+
+// ── REQUESTS ──
+function renderRequests(c){
+  const entries=Object.entries(MOD_REQUESTS).sort((a,b)=>a[1].date>b[1].date?-1:1);
+  c.innerHTML=`
+  <div class="ptitle">Moderation Requests</div>
+  <div class="sbox"><div class="stitle">Pending Escalated Reports</div><div class="sbody">
+    <div style="font-size:11px;color:#555;margin-bottom:5px;">These are escalated moderation requests submitted by staff against protected users.</div>
+    ${entries.length===0?'<i style="color:#444;">No pending requests.</i>':`
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>Target User</th><th>Action Requested</th><th>Submitted By</th><th>Reason</th><th>Date</th><th>Status</th><th>Review</th>${isSuperAdmin()?'<th>Admin</th>':''}</tr>
+      ${entries.map(([lid,r])=>`<tr>
+        <td><b>${r.targetUser}</b> <span style="font-size:9px;color:#880000;">[PROTECTED]</span></td>
+        <td>${r.action}</td>
+        <td>${r.submittedBy}</td>
+        <td style="max-width:120px;white-space:normal;">${r.reason||'—'}</td>
+        <td style="font-size:10px;">${r.date}</td>
+        <td><span class="badge ${r.status==='Approved'?'appeal-approved':r.status==='Denied'?'appeal-denied':'appeal-open'}">${r.status||'Pending'}</span></td>
+        <td>${canDo('canReviewAppeals')?`<button class="btn small review-req-btn" data-lid="${lid}">Review</button>`:'<span style="color:#808080;font-size:10px;">No access</span>'}</td>
+        ${isSuperAdmin()?`<td>${deleteLogBtn('modRequests',lid)}</td>`:''}
+      </tr>`).join('')}
+    </table></div>`}
+  </div></div>`;
+  c.querySelectorAll('.review-req-btn').forEach(btn=>{
+    btn.onclick=()=>openReviewRequest(btn.dataset.lid);
+  });
+  bindDeleteLogBtns(c);
+}
+
+function openReviewRequest(lid){
+  const r=MOD_REQUESTS[lid]; if(!r) return;
+  openDialog('Review Moderation Request',`Request from <b>${r.submittedBy}</b> against <b>${r.targetUser}</b> [PROTECTED]:`,`
+    <div style="font-size:11px;background:#e8e4dc;padding:6px;border:1px solid #b0aca4;margin-bottom:8px;">
+      <div><b>Requested Action:</b> ${r.action}</div>
+      <div><b>Reason:</b> ${r.reason||'None provided.'}</div>
+      <div><b>Submitted:</b> ${r.date}</div>
+    </div>
+    <div style="margin-bottom:4px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;">Review Note (required):</label>
+      <textarea id="reqReviewNote" style="width:100%;height:40px;" placeholder="Explain your decision..."></textarea></div>
+    <div style="display:flex;gap:6px;justify-content:center;margin-top:4px;">
+      <button class="btn" id="btn-approve-req" style="background:#c8e0c8;">Approve & Execute</button>
+      <button class="btn red" id="btn-deny-req">Deny Request</button>
+    </div>
+    <div id="reqResult" style="font-size:11px;margin-top:4px;text-align:center;"></div>`,null);
+  document.getElementById('dlgOK').style.display='none';
+  document.getElementById('dlgCancel').textContent='Close';
+  document.getElementById('btn-approve-req').onclick=async()=>{
+    const note=document.getElementById('reqReviewNote').value.trim();
+    if(!note){ document.getElementById('reqResult').style.color='#880000'; document.getElementById('reqResult').textContent='Review note required.'; return; }
+    const entry=Object.entries(USERS).find(([,u])=>u.username===r.targetUser);
+    if(entry){
+      const[uid,u]=entry;
+      const newStatus=r.action==='Suspend'?'suspended':r.action.startsWith('Ban')?'banned':u.status;
+      await update(ref(db,`users/${uid}`),{status:newStatus});
+      await push(ref(db,`users/${uid}/punishments`),{action:r.action,mod:r.submittedBy,created:today(),expiry:'Varies',note:`[Escalated Request Approved by ${ME}] ${note}`});
+      await push(ref(db,'logs/moderation'),{user:r.targetUser,action:r.action,mod:r.submittedBy,date:today(),reason:r.reason||'',note:`[Approved by ${ME}]`});
+    }
+    await update(ref(db,`modRequests/${lid}`),{status:'Approved',reviewedBy:ME,reviewNote:note});
+    auditLog('Mod Request Approved',`${r.targetUser}: ${r.action} by ${ME}`);
+    document.getElementById('reqResult').style.color='#006600'; document.getElementById('reqResult').textContent='Request approved and action executed.';
+    setTimeout(()=>closeDialog(),1200);
+  };
+  document.getElementById('btn-deny-req').onclick=async()=>{
+    const note=document.getElementById('reqReviewNote').value.trim();
+    if(!note){ document.getElementById('reqResult').style.color='#880000'; document.getElementById('reqResult').textContent='Review note required.'; return; }
+    await update(ref(db,`modRequests/${lid}`),{status:'Denied',reviewedBy:ME,reviewNote:note});
+    auditLog('Mod Request Denied',`${r.targetUser} by ${ME}: ${note}`);
+    document.getElementById('reqResult').style.color='#880000'; document.getElementById('reqResult').textContent='Request denied.';
+    setTimeout(()=>closeDialog(),1200);
+  };
+}
+
+// ── USER CONFIG ──
+function renderUserConfig(c){
+  const uArr=Object.entries(USERS).sort((a,b)=>(a[1].playerId||0)-(b[1].playerId||0));
+  const canManage=canDo('canManageUserConfig');
+  c.innerHTML=`
+  <div class="ptitle">User Config</div>
+  <div class="sbox"><div class="stitle">Player Configuration</div><div class="sbody">
+    <div style="font-size:11px;color:#555;margin-bottom:6px;">Manage per-player settings and variables. Protected players require escalated approval before any moderation action.</div>
+    ${uArr.length===0?'<i style="color:#444;">No players yet.</i>':`
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>Player</th><th>Status</th><th>Points</th><th>Protected</th><th>Rep Score</th><th>Notes</th><th>Action</th></tr>
+      ${uArr.map(([uid,u])=>`<tr>
+        <td><b>${u.username}</b></td>
+        <td>${statusBadge(u.status)}</td>
+        <td>${u.points||0}</td>
+        <td>${u.protected?'<span style="color:#880000;font-weight:bold;">&#9632; YES</span>':'<span style="color:#808080;">No</span>'}</td>
+        <td>${calcReputation(u)} pts</td>
+        <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;font-size:10px;">${u.notes||'—'}</td>
+        <td>${canManage?`<button class="btn small cfg-user-btn" data-uid="${uid}">Configure</button>`:'<span style="color:#808080;font-size:10px;">No access</span>'}</td>
+      </tr>`).join('')}
+    </table></div>`}
+  </div></div>`;
+  if(canManage){
+    c.querySelectorAll('.cfg-user-btn').forEach(btn=>{
+      btn.onclick=()=>openUserConfigDialog(btn.dataset.uid);
+    });
+  }
+}
+
+function openUserConfigDialog(uid){
+  const u=USERS[uid]; if(!u) return;
+  openDialog(`User Config — ${u.username}`,'',`
+    <div style="font-size:11px;color:#555;margin-bottom:6px;">Configure variables and settings for <b>${u.username}</b>.</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:130px;">
+        <div style="font-size:11px;font-weight:bold;color:#000;margin-bottom:4px;">Variables</div>
+        <div style="margin-bottom:4px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:1px;">Points:</label>
+          <input type="number" id="ucfPoints" style="width:80px;" value="${u.points||0}" min="0"/></div>
+        <div style="margin-bottom:4px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:1px;">Reputation Override:</label>
+          <input type="number" id="ucfRepOverride" style="width:80px;" value="${u.repOverride??''}" placeholder="Auto"/></div>
+        <div style="margin-bottom:4px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:1px;">Warning Count:</label>
+          <input type="number" id="ucfWarnings" style="width:80px;" value="${u.warningCount||0}" min="0"/></div>
+      </div>
+      <div style="flex:1;min-width:130px;">
+        <div style="font-size:11px;font-weight:bold;color:#000;margin-bottom:4px;">Access Flags</div>
+        <div style="margin-bottom:5px;display:flex;align-items:center;gap:6px;">
+          <input type="checkbox" id="ucfProtected" ${u.protected?'checked':''}/>
+          <label for="ucfProtected" style="font-size:11px;color:#000;cursor:pointer;"><b>Protected User</b></label>
+        </div>
+        <div style="font-size:10px;color:#808080;margin-bottom:8px;">Protected users require an escalated request before any moderation action can be taken.</div>
+        <div style="margin-bottom:5px;display:flex;align-items:center;gap:6px;">
+          <input type="checkbox" id="ucfVip" ${u.vip?'checked':''}/>
+          <label for="ucfVip" style="font-size:11px;color:#000;cursor:pointer;">VIP Status</label>
+        </div>
+        <div style="margin-bottom:5px;display:flex;align-items:center;gap:6px;">
+          <input type="checkbox" id="ucfMuted" ${u.muted?'checked':''}/>
+          <label for="ucfMuted" style="font-size:11px;color:#000;cursor:pointer;">Muted In-Game</label>
+        </div>
+        <div style="margin-bottom:5px;display:flex;align-items:center;gap:6px;">
+          <input type="checkbox" id="ucfWatched" ${u.watched?'checked':''}/>
+          <label for="ucfWatched" style="font-size:11px;color:#000;cursor:pointer;">Under Observation</label>
+        </div>
+      </div>
+    </div>`,
+    async()=>{
+      const updates={
+        points:parseInt(document.getElementById('ucfPoints').value)||0,
+        warningCount:parseInt(document.getElementById('ucfWarnings').value)||0,
+        protected:document.getElementById('ucfProtected').checked,
+        vip:document.getElementById('ucfVip').checked,
+        muted:document.getElementById('ucfMuted').checked,
+        watched:document.getElementById('ucfWatched').checked,
+      };
+      const repOvr=document.getElementById('ucfRepOverride').value.trim();
+      if(repOvr!=='') updates.repOverride=parseInt(repOvr)||0;
+      else updates.repOverride=null;
+      await update(ref(db,`users/${uid}`),updates);
+      auditLog('User Config Updated',`${u.username}: protected=${updates.protected}, points=${updates.points}`);
+    }
+  );
 }
 
 // ── ADMIN LOG ──
@@ -1723,6 +2006,19 @@ function renderAdminLog(c){
   <div class="ptitle">Administrator</div>
   <div style="display:flex;gap:6px;flex-wrap:wrap;">
     <div style="flex:1;min-width:200px;">
+      <div class="sbox"><div class="stitle">Dashboard Log Widgets</div><div class="sbody">
+        <div style="font-size:11px;color:#555;margin-bottom:6px;">Choose which log panels appear on the Dashboard home page.</div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;">
+            <input type="checkbox" id="dlc-modlog" ${DASHBOARD_LOG_CONFIG.modlog!==false?'checked':''}/>Recent Moderation Actions</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;">
+            <input type="checkbox" id="dlc-loginlog" ${DASHBOARD_LOG_CONFIG.loginlog!==false?'checked':''}/>Recent Staff Logins</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;">
+            <input type="checkbox" id="dlc-appeals" ${DASHBOARD_LOG_CONFIG.appeals?'checked':''}/>Recent Appeals</label>
+        </div>
+        <button class="btn" id="btn-savedlc" style="margin-top:6px;">Save</button>
+        <div id="dlcMsg" style="font-size:11px;margin-top:3px;color:#006600;"></div>
+      </div></div>
       <div class="sbox"><div class="stitle">Staff Level Overview</div><div class="sbody">
         <table class="tbl" style="width:100%;">
           <tr><th>Level</th><th>Rank</th><th>Count</th></tr>
@@ -1822,6 +2118,18 @@ function renderAdminLog(c){
   document.getElementById('btn-saveperms').onclick=savePerms;
   document.getElementById('btn-saverep').onclick=saveRepPoints;
   document.getElementById('btn-savepresets').onclick=saveAppealPresets;
+  document.getElementById('btn-savedlc').onclick=async()=>{
+    const cfg={
+      modlog:document.getElementById('dlc-modlog').checked,
+      loginlog:document.getElementById('dlc-loginlog').checked,
+      appeals:document.getElementById('dlc-appeals').checked,
+    };
+    await set(ref(db,'meta/dashboardLogConfig'),cfg);
+    DASHBOARD_LOG_CONFIG=cfg;
+    auditLog('Dashboard Log Config Updated',JSON.stringify(cfg));
+    const el=document.getElementById('dlcMsg');
+    el.textContent='Saved!'; setTimeout(()=>{ if(el) el.textContent=''; },1500);
+  };
 
   // Ban Templates
   document.getElementById('btn-addtpl').onclick=async()=>{
@@ -1986,16 +2294,60 @@ async function submitMod(){
   const action=document.querySelector('input[name="mact"]:checked').value;
   const reason=document.getElementById('mReason').value;
   const note=document.getElementById('mNote').value;
-  if(action!=='None'){
-    const newStatus=action==='Suspend'?'suspended':action.startsWith('Ban')?'banned':u.status;
-    await update(ref(db,`users/${uid}`),{status:newStatus});
-    await push(ref(db,`users/${uid}/punishments`),{action,mod:ME,created:today(),expiry:action.includes('Day')?'Varies':'Permanent',note:note||reason});
-    await push(ref(db,'logs/moderation'),{user:u.username,action,mod:ME,date:today(),reason:reason||'',note:note||''});
-    auditLog('Player Moderated',`${u.username}: ${action}`);
+  if(action==='None'){ el.style.color='#006600'; el.textContent='No action taken.'; setTimeout(()=>nav('useradmin'),1000); return; }
+
+  // Protected user check
+  if(u.protected){
+    openProtectedUserDialog(uid, u, action, reason, note);
+    return;
   }
+  await executeModAction(uid, u, action, reason, note);
   currentUserId=uid;
-  el.style.color='#006600'; el.textContent=action==='None'?'No action taken.':`"${action}" applied to ${u.username}.`;
+  el.style.color='#006600'; el.textContent=`"${action}" applied to ${u.username}.`;
   setTimeout(()=>nav('useradmin'),1000);
+}
+
+function openProtectedUserDialog(uid, u, action, reason, note){
+  openDialog('⚠ Protected User',
+    `<div style="background:#e8d0d0;border:1px solid #cc6666;padding:6px 8px;margin-bottom:8px;">
+      <div style="font-size:12px;font-weight:bold;color:#880000;margin-bottom:3px;">PROTECTED USER</div>
+      <div style="font-size:11px;color:#000;">The user you are attempting to moderate (<b>${u.username}</b>) has been configured as a Protected User. Taking unauthorised action against this user may result in immediate disciplinary action against you.</div>
+    </div>
+    <div style="font-size:11px;color:#000;margin-bottom:6px;">How would you like to proceed?</div>
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;"><input type="radio" name="protOpt" value="escalate" checked/><span><b>Escalate Report</b> — Send to a higher authority for review</span></label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;"><input type="radio" name="protOpt" value="proceed"/><span><b>Ignore Warning &amp; Proceed</b> — Take action anyway (logged)</span></label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;"><input type="radio" name="protOpt" value="cancel"/><span><b>Cancel</b> — Take no action</span></label>
+    </div>`,
+    async()=>{
+      const opt=document.querySelector('input[name="protOpt"]:checked')?.value||'cancel';
+      if(opt==='cancel'){ closeDialog(); return; }
+      if(opt==='escalate'){
+        await push(ref(db,'modRequests'),{targetUser:u.username,targetUid:uid,action,reason:reason||'',note:note||'',submittedBy:ME,date:today(),status:'Pending',reviewedBy:'',reviewNote:''});
+        auditLog('Escalated Mod Request',`${u.username}: ${action} by ${ME}`);
+        pushNotif('newRequest',`Escalated request for ${u.username} from ${ME}`);
+        const el=document.getElementById('mResult');
+        if(el){ el.style.color='#006600'; el.textContent='Request escalated to higher authority.'; }
+        setTimeout(()=>nav('useradmin'),1200);
+        return;
+      }
+      if(opt==='proceed'){
+        await executeModAction(uid, u, action, reason, `[OVERRIDE — Protected User] ${note}`);
+        auditLog('Protected User Override',`${ME} bypassed protection on ${u.username}: ${action}`);
+        const el=document.getElementById('mResult');
+        if(el){ el.style.color='#880000'; el.textContent=`Warning override: "${action}" applied to ${u.username}.`; }
+        setTimeout(()=>nav('useradmin'),1200);
+      }
+    }
+  );
+}
+
+async function executeModAction(uid, u, action, reason, note){
+  const newStatus=action==='Suspend'?'suspended':action.startsWith('Ban')?'banned':u.status;
+  await update(ref(db,`users/${uid}`),{status:newStatus});
+  await push(ref(db,`users/${uid}/punishments`),{action,mod:ME,created:today(),expiry:action.includes('Day')?'Varies':'Permanent',note:note||reason});
+  await push(ref(db,'logs/moderation'),{user:u.username,action,mod:ME,date:today(),reason:reason||'',note:note||''});
+  auditLog('Player Moderated',`${u.username}: ${action}`);
 }
 
 async function saveNote(uid){
@@ -2302,17 +2654,34 @@ function startListeners(){
     if(page==='appeals') safeRender();
   });
   onValue(ref(db,'announcements'),snap=>{
-    const prev=Object.values(ANNOUNCEMENTS||{}).filter(a=>a.active).length;
     ANNOUNCEMENTS=snap.val()||{};
-    const now=Object.values(ANNOUNCEMENTS).filter(a=>a.active).length;
-    if(!firstAnnounce && now>prev){ const e=Object.values(ANNOUNCEMENTS).filter(a=>a.active).at(-1); pushNotif('newAnnouncement',`Announcement from ${e.by}: ${e.message.substring(0,60)}`); }
-    firstAnnounce=false;
-    updateAnnouncements();
-    if(page==='announcements') safeRender();
+    // Legacy — migrate active announcements to site alerts display
+    if(page==='alerts') safeRender();
   });
   get(ref(db,'meta/appealPresets')).then(snap=>{ if(snap.exists()) APPEAL_PRESETS=snap.val(); });
   onValue(ref(db,'meta/customFields'),snap=>{ CUSTOM_FIELDS=snap.val()||[]; });
   onValue(ref(db,'meta/banTemplates'),snap=>{ BAN_TEMPLATES=snap.val()||[]; });
+  onValue(ref(db,'meta/dashboardLogConfig'),snap=>{ if(snap.exists()) DASHBOARD_LOG_CONFIG=snap.val(); });
+  onValue(ref(db,'staffMessages'),snap=>{
+    const prev=Object.keys(STAFF_MESSAGES||{}).length;
+    STAFF_MESSAGES=snap.val()||{};
+    if(Object.keys(STAFF_MESSAGES).length>prev) pushNotif('newStaffMessage','New staff message received');
+    if(page==='messaging') safeRender();
+  });
+  onValue(ref(db,'modRequests'),snap=>{
+    const prev=Object.keys(MOD_REQUESTS||{}).length;
+    MOD_REQUESTS=snap.val()||{};
+    if(Object.keys(MOD_REQUESTS).length>prev){ const e=Object.values(MOD_REQUESTS).at(-1); pushNotif('newRequest',`New moderation request for ${e.targetUser} from ${e.submittedBy}`); }
+    if(page==='requests') safeRender();
+  });
+  onValue(ref(db,'siteAlerts'),snap=>{
+    const prev=Object.values(SITE_ALERTS||{}).filter(a=>a.active).length;
+    SITE_ALERTS=snap.val()||{};
+    const nowCount=Object.values(SITE_ALERTS).filter(a=>a.active).length;
+    if(nowCount>prev) pushNotif('newAlert','New site-wide alert posted');
+    updateAnnouncements();
+    if(page==='alerts') safeRender();
+  });
 }
 
 (async()=>{
@@ -2421,7 +2790,7 @@ function openNotifSettings(){
   document.getElementById('notifSettingsOverlay').classList.add('show');
 }
 
-['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','loginlog','auditlog','announcements','adminlog','home'].forEach(p=>{
+['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','loginlog','auditlog','alerts','adminlog','home','messaging','requests','userconfig'].forEach(p=>{
   const el=document.getElementById('nav-'+p);
   if(el) el.onclick=()=>nav(p);
 });
