@@ -1141,9 +1141,9 @@ function renderActivity(c){
       <tr><th>Username</th><th>Level</th><th>Status</th><th>Last Active</th><th>Last Action</th></tr>
       ${sArr.map(([,s])=>{
         const lastActive=s.lastActive||'Never';
-        const isRecent=s.lastActive&&(new Date()-new Date(s.lastActive))<3600000;
+        const diffMs=s.lastActive&&s.lastActive!=='Never'?(new Date()-new Date(s.lastActive)):Infinity;
         const isLoggedOut=!s.lastActive||s.lastAction==='Logged out'||s.lastActive==='Never';
-        const dot=s.suspended?'suspended':isLoggedOut?'offline':isRecent?'active':'idle';
+        const dot=s.suspended?'suspended':isLoggedOut?'offline':diffMs<300000?'active':diffMs<1200000?'idle':'offline';
         return `<tr>
           <td><span class="activity-dot ${dot}"></span><b>${s.username}</b></td>
           <td>${levelBadge(s.level)}</td>
@@ -1755,11 +1755,13 @@ async function doLogin(){
     document.getElementById('adminScreen').style.display='flex';
     document.getElementById('topbarTitle').textContent=`Administration Panel \u2014 ${ME} [${MY_LEVEL}]`;
     startListeners();
+    startHeartbeat();
     nav('useradmin');
   }catch(e){ status.textContent='INVALID!'; await push(ref(db,'logs/login'),{username:u,level:'—',date:nowStr(),result:'failed'}).catch(()=>{}); }
 }
 
 async function doLogout(){
+  if(heartbeatInterval){ clearInterval(heartbeatInterval); heartbeatInterval=null; }
   if(ME) await update(ref(db,`staff/${ME}`),{lastActive:nowStr(),lastAction:'Logged out'}).catch(()=>{});
   await signOut(auth);
   ME=''; MY_LEVEL=''; currentPassword='';
@@ -1768,6 +1770,36 @@ async function doLogout(){
   document.getElementById('loginUser').value='';
   document.getElementById('loginPass').value='';
 }
+
+// ── ACTIVITY HEARTBEAT ──
+let heartbeatInterval=null;
+function startHeartbeat(){
+  if(heartbeatInterval) clearInterval(heartbeatInterval);
+  heartbeatInterval=setInterval(async()=>{
+    if(!ME) return;
+    const snap=await get(ref(db,`staff/${ME}`));
+    if(!snap.exists()) return;
+    const s=snap.val();
+    const lastActive=s.lastActive&&s.lastActive!=='Never'?new Date(s.lastActive):null;
+    if(lastActive&&(new Date()-lastActive)>=1200000){
+      // 20 minutes inactive — auto logout
+      clearInterval(heartbeatInterval);
+      await update(ref(db,`staff/${ME}`),{lastAction:'Auto logged out (inactivity)'});
+      await push(ref(db,'logs/login'),{username:ME,level:MY_LEVEL,date:nowStr(),result:'auto-logout'});
+      doLogout();
+      alert('You have been automatically logged out due to inactivity (20 minutes).');
+    }
+  }, 60000); // check every minute
+}
+
+function updateActivity(){
+  if(!ME) return;
+  update(ref(db,`staff/${ME}`),{lastActive:nowStr()}).catch(()=>{});
+}
+
+// Update activity on any click or keypress
+document.addEventListener('click', ()=>updateActivity(), true);
+document.addEventListener('keydown', ()=>updateActivity(), true);
 
 function startListeners(){
   onValue(ref(db,'users'),snap=>{ USERS=snap.val()||{}; if(page) render(); });
