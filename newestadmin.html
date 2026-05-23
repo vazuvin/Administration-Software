@@ -308,6 +308,7 @@ const DEFAULT_PERMS = {
   canViewStaffActivity:'ADMINISTRATOR',
   canSubmitAppeals:'MODERATOR', canViewAppealLog:'MODERATOR', canReviewAppeals:'ADMINISTRATOR',
   canViewStaffProfile:'ADMINISTRATOR', canChangeStaffLevel:'SUPER ADMINISTRATOR', canChangeStaffPassword:'SUPER ADMINISTRATOR',
+  canExportLogs:'SUPER ADMINISTRATOR', canViewCustomFields:'INTERN', canManageCustomFields:'SUPER ADMINISTRATOR',
 };
 
 const DEFAULT_REP_POINTS = { 'Remind':1, 'Warn':2, 'Ban 1 Day':3, 'Ban 3 Days':3, 'Ban 7 Days':5, 'Ban 14 Days':5, 'Suspend':4, 'Ban Permanent':10 };
@@ -322,6 +323,7 @@ let USERS={}, STAFF={}, MOD_LOG={}, REVOKE_LOG={}, SUSPEND_LOG={}, TERMINATE_LOG
 let PERMS={...DEFAULT_PERMS};
 let REP_POINTS={...DEFAULT_REP_POINTS};
 let APPEAL_PRESETS=[...DEFAULT_APPEAL_PRESETS];
+let CUSTOM_FIELDS=[];
 let ANNOUNCEMENTS={};
 
 function today(){ return new Date().toLocaleDateString(); }
@@ -390,9 +392,18 @@ async function fetchRobloxInfo(username){
     const d1=await r1.json();
     if(!d1.data||!d1.data.length) return null;
     const robloxId=d1.data[0].id;
-    const r2=await fetch(proxy+encodeURIComponent(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${robloxId}&size=150x150&format=Png&isCircular=false`));
+    const[r2,r3]=await Promise.all([
+      fetch(proxy+encodeURIComponent(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${robloxId}&size=150x150&format=Png&isCircular=false`)),
+      fetch(proxy+encodeURIComponent(`https://users.roblox.com/v1/users/${robloxId}`))
+    ]);
     const d2=await r2.json();
-    return {robloxId:String(robloxId), avatarUrl:d2.data&&d2.data[0]?d2.data[0].imageUrl:''};
+    const d3=await r3.json();
+    let accountCreated='';
+    if(d3.created){
+      const d=new Date(d3.created);
+      accountCreated=d.toLocaleDateString();
+    }
+    return {robloxId:String(robloxId), avatarUrl:d2.data&&d2.data[0]?d2.data[0].imageUrl:'', accountCreated};
   }catch(e){ return null; }
 }
 
@@ -546,8 +557,12 @@ function renderUA(c){
             <div class="row"><label>Status:</label>${statusBadge(u.status)}</div>
             <div class="row"><label>Reputation:</label>${repBar(repScore)}</div>
             <div class="row"><label>System Entry:</label><span>${u.created}</span></div>
-            ${u.robloxAccountCreated?`<div class="row"><label>Account Created:</label><span>${u.robloxAccountCreated} &mdash; ${accountAge(u.robloxAccountCreated)}</span></div>`:''}
-            <div class="row"><label>Last Login:</label><span>${u.lastLogin}</span></div>
+            <div class="row"><label>Account Created:</label><span>${u.robloxAccountCreated?`${u.robloxAccountCreated} &mdash; ${accountAge(u.robloxAccountCreated)}`:'<span style="color:#808080;">Not fetched yet</span>'}</span></div>
+            ${CUSTOM_FIELDS.length&&canDo('canViewCustomFields')?`<hr style="border:none;border-top:1px solid #c0bcb4;margin:3px 0;">`:''}
+            ${CUSTOM_FIELDS.length&&canDo('canViewCustomFields')?CUSTOM_FIELDS.map(f=>{
+              const val=(u.customData&&u.customData[f.name])||'—';
+              return `<div class="row"><label>${f.name}:</label><span>${val}</span></div>`;
+            }).join(''):''}
             ${u.alts&&u.alts.length?`<div class="row"><label>Linked Alts:</label><span style="color:#880000;">${u.alts.join(', ')}</span></div>`:''}
           </div>
         </div>
@@ -555,6 +570,7 @@ function renderUA(c){
           ${canDo('canModerateUsers')?'<button class="btn" id="btn-moduser">Moderate User</button>':''}
           <button class="btn" id="btn-refresh">Refresh Roblox Data</button>
           ${isSuperAdmin()?`<button class="btn red" id="btn-wipe">Delete Account</button>`:''}
+          ${canDo('canViewCustomFields')&&CUSTOM_FIELDS.length?`<button class="btn" id="btn-manageuser">Manage User</button>`:''}
           <span id="refreshMsg" style="font-size:11px;color:#006600;"></span>
         </div>
       </div></div>
@@ -611,6 +627,39 @@ function renderUA(c){
     const apBtn=document.getElementById('btn-open-appeal-panel');
     if(apBtn) apBtn.onclick=()=>openAppealPanel(currentUserId);
   }
+  if(canDo('canViewCustomFields')&&CUSTOM_FIELDS.length){
+    const muBtn=document.getElementById('btn-manageuser');
+    if(muBtn) muBtn.onclick=()=>openManageUser(currentUserId);
+  }
+}
+
+function openManageUser(uid){
+  const u=USERS[uid]; if(!u||!CUSTOM_FIELDS.length) return;
+  const customData=u.customData||{};
+  const fields=CUSTOM_FIELDS.map(f=>{
+    const val=customData[f.name]||'';
+    if(f.type==='select'){
+      const opts=(f.options||[]).map(o=>`<option value="${o}" ${val===o?'selected':''}>${o}</option>`).join('');
+      return `<div style="margin-bottom:5px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;">${f.name}:</label>
+        <select id="cf-${f.name.replace(/ /g,'_')}" style="width:100%;font-family:inherit;font-size:11px;height:16px;"><option value="">-- None --</option>${opts}</select></div>`;
+    } else if(f.type==='toggle'){
+      return `<div style="margin-bottom:5px;display:flex;align-items:center;gap:6px;"><label style="font-size:11px;color:#000;">${f.name}:</label>
+        <input type="checkbox" id="cf-${f.name.replace(/ /g,'_')}" ${val==='true'?'checked':''}/></div>`;
+    } else {
+      return `<div style="margin-bottom:5px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;">${f.name}:</label>
+        <input type="text" id="cf-${f.name.replace(/ /g,'_')}" style="width:100%;" value="${val||''}"/></div>`;
+    }
+  }).join('');
+  openDialog(`Manage User — ${u.username}`,'',fields,async()=>{
+    const newData={};
+    CUSTOM_FIELDS.forEach(f=>{
+      const el=document.getElementById('cf-'+f.name.replace(/ /g,'_'));
+      if(!el) return;
+      newData[f.name]=f.type==='toggle'?String(el.checked):el.value;
+    });
+    await update(ref(db,`users/${uid}`),{customData:newData});
+    auditLog('User Custom Data Updated',`${u.username}`);
+  });
 }
 
 function openAppealPanel(uid){
@@ -660,7 +709,9 @@ async function refreshRoblox(uid){
   if(el) el.textContent='Fetching...';
   const info=await fetchRobloxInfo(u.robloxUsername||u.username);
   if(!info){ if(el) el.textContent='Not found on Roblox.'; return; }
-  await update(ref(db,`users/${uid}`),{robloxId:info.robloxId,avatarUrl:info.avatarUrl});
+  const updates={robloxId:info.robloxId,avatarUrl:info.avatarUrl};
+  if(info.accountCreated) updates.robloxAccountCreated=info.accountCreated;
+  await update(ref(db,`users/${uid}`),updates);
   auditLog('Roblox Data Refreshed',`${u.username}`);
   if(el){ el.textContent='Updated!'; setTimeout(()=>{ if(el) el.textContent=''; },2000); }
 }
@@ -694,7 +745,7 @@ async function lookupAndAdd(username){
   preview.style.display='flex';
   avatarBox.innerHTML='<span style="font-size:8px;">...</span>';
   const[info,playerId]=await Promise.all([fetchRobloxInfo(username),getNextPlayerId()]);
-  const newUser={username,robloxUsername:username,robloxId:info?info.robloxId:'',avatarUrl:info?info.avatarUrl:'',playerId,status:'active',created:today(),lastLogin:'Never',notes:'',punishments:{}};
+  const newUser={username,robloxUsername:username,robloxId:info?info.robloxId:'',avatarUrl:info?info.avatarUrl:'',robloxAccountCreated:info&&info.accountCreated?info.accountCreated:'',playerId,status:'active',created:today(),notes:'',punishments:{}};
   if(info){ avatarBox.innerHTML=`<img src="${info.avatarUrl}" width="36" height="36"/>`; infoEl.innerHTML=`<b>${username}</b><br>Roblox ID: ${info.robloxId}`; msgEl.style.color='#006600'; msgEl.textContent='Found! Adding...'; }
   else { preview.style.display='none'; msgEl.style.color='#995500'; msgEl.textContent=`Not on Roblox — adding as Player #${playerId}.`; }
   const newRef=push(ref(db,'users'));
@@ -805,7 +856,7 @@ async function addUser(){
   avatarBox.innerHTML='<span style="font-size:9px;">...</span>';
   previewInfo.textContent='Fetching...';
   const[info,playerId]=await Promise.all([fetchRobloxInfo(rawUsername),getNextPlayerId()]);
-  const newUser={username:rawUsername,robloxUsername:rawUsername,robloxId:info?info.robloxId:'',avatarUrl:info?info.avatarUrl:'',playerId,status:'active',created:today(),lastLogin:'Never',notes:'',punishments:{}};
+  const newUser={username:rawUsername,robloxUsername:rawUsername,robloxId:info?info.robloxId:'',avatarUrl:info?info.avatarUrl:'',robloxAccountCreated:info&&info.accountCreated?info.accountCreated:'',playerId,status:'active',created:today(),notes:'',punishments:{}};
   if(info){ avatarBox.innerHTML=`<img src="${info.avatarUrl}" width="40" height="40"/>`; previewInfo.innerHTML=`<b>${rawUsername}</b><br>Roblox ID: ${info.robloxId}<br>Player #${playerId}`; el.style.color='#006600'; el.textContent='Found! Adding player...'; }
   else { preview.style.display='none'; el.style.color='#995500'; el.textContent=`Not found on Roblox — added as Player #${playerId}.`; }
   const newRef=push(ref(db,'users'));
@@ -1298,6 +1349,36 @@ function renderAdminLog(c){
         <button class="btn" id="btn-savepresets" style="margin-top:4px;">Save Presets</button>
         <div id="presetsMsg" style="font-size:11px;margin-top:3px;color:#006600;"></div>
       </div></div>
+      ${canDo('canManageCustomFields')?`
+      <div class="sbox"><div class="stitle">Custom User Fields</div><div class="sbody">
+        <div style="font-size:11px;color:#555;margin-bottom:6px;">Add custom fields that appear on every player profile under "Manage User".</div>
+        <div id="cfList">
+          ${CUSTOM_FIELDS.length===0?'<i style="color:#444;font-size:11px;">No custom fields yet.</i>':
+            CUSTOM_FIELDS.map((f,i)=>`
+            <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;font-size:11px;">
+              <b style="width:90px;overflow:hidden;">${f.name}</b>
+              <span style="color:#808080;width:50px;">${f.type}</span>
+              ${f.type==='select'?`<span style="color:#555;font-size:10px;">${(f.options||[]).join(', ')}</span>`:''}
+              <button class="btn red small del-cf-btn" data-idx="${i}" style="margin-left:auto;">Remove</button>
+            </div>`).join('')}
+        </div>
+        <hr style="border:none;border-top:1px solid #c0bcb4;margin:6px 0;">
+        <div style="font-size:11px;font-weight:bold;color:#000;margin-bottom:4px;">Add New Field</div>
+        <div class="row"><label>Field Name:</label><input type="text" id="cfName" style="width:110px;" placeholder="e.g. Rank"/></div>
+        <div class="row"><label>Type:</label>
+          <select id="cfType" style="width:100px;" onchange="toggleCFOptions(this.value)">
+            <option value="select">Dropdown (select)</option>
+            <option value="text">Text</option>
+            <option value="toggle">Yes/No Toggle</option>
+          </select>
+        </div>
+        <div id="cfOptionsRow" style="margin-bottom:3px;">
+          <div style="font-size:11px;color:#000;margin-bottom:2px;">Options (comma separated):</div>
+          <input type="text" id="cfOptions" style="width:100%;" placeholder="e.g. Rookie, Veteran, Elite"/>
+        </div>
+        <button class="btn" id="btn-addcf" style="margin-top:3px;">Add Field</button>
+        <div id="cfMsg" style="font-size:11px;margin-top:3px;color:#006600;"></div>
+      </div></div>`:''}
     </div>
     <div style="flex:2;min-width:260px;">
       <div class="sbox"><div class="stitle">Permission Settings</div><div class="sbody">
@@ -1317,6 +1398,25 @@ function renderAdminLog(c){
   document.getElementById('btn-saveperms').onclick=savePerms;
   document.getElementById('btn-saverep').onclick=saveRepPoints;
   document.getElementById('btn-savepresets').onclick=saveAppealPresets;
+  if(canDo('canManageCustomFields')){
+    window.toggleCFOptions=function(val){
+      const row=document.getElementById('cfOptionsRow');
+      if(row) row.style.display=val==='select'?'':'none';
+    };
+    const addCF=document.getElementById('btn-addcf');
+    if(addCF) addCF.onclick=addCustomField;
+    document.querySelectorAll('.del-cf-btn').forEach(btn=>{
+      btn.onclick=async()=>{
+        const idx=parseInt(btn.dataset.idx);
+        const newFields=[...CUSTOM_FIELDS];
+        newFields.splice(idx,1);
+        await set(ref(db,'meta/customFields'),newFields);
+        CUSTOM_FIELDS=newFields;
+        auditLog('Custom Field Removed',`Index ${idx}`);
+        nav('adminlog');
+      };
+    });
+  }
 }
 
 function formatPermKey(k){ return k.replace(/([A-Z])/g,' $1').replace(/^can /i,'Can ').trim(); }
@@ -1353,6 +1453,26 @@ async function saveAppealPresets(){
   auditLog('Appeal Presets Updated',`${lines.length} presets saved`);
   const el=document.getElementById('presetsMsg');
   el.textContent='Saved!'; setTimeout(()=>{ if(el) el.textContent=''; },2000);
+}
+
+async function addCustomField(){
+  const name=document.getElementById('cfName').value.trim();
+  const type=document.getElementById('cfType').value;
+  const el=document.getElementById('cfMsg');
+  if(!name){ el.style.color='#880000'; el.textContent='Field name required.'; return; }
+  if(CUSTOM_FIELDS.find(f=>f.name===name)){ el.style.color='#880000'; el.textContent='Field already exists.'; return; }
+  const field={name,type};
+  if(type==='select'){
+    const opts=document.getElementById('cfOptions').value.split(',').map(o=>o.trim()).filter(o=>o);
+    if(!opts.length){ el.style.color='#880000'; el.textContent='Add at least one option.'; return; }
+    field.options=opts;
+  }
+  const newFields=[...CUSTOM_FIELDS,field];
+  await set(ref(db,'meta/customFields'),newFields);
+  CUSTOM_FIELDS=newFields;
+  auditLog('Custom Field Added',`${name} (${type})`);
+  el.style.color='#006600'; el.textContent=`Field "${name}" added!`;
+  setTimeout(()=>{ nav('adminlog'); },800);
 }
 
 // ── ACTIONS ──
@@ -1598,6 +1718,8 @@ async function doLogin(){
     REP_POINTS=repSnap.exists()?{...DEFAULT_REP_POINTS,...repSnap.val()}:{...DEFAULT_REP_POINTS};
     const presetsSnap=await get(ref(db,'meta/appealPresets'));
     APPEAL_PRESETS=presetsSnap.exists()?presetsSnap.val():[...DEFAULT_APPEAL_PRESETS];
+    const cfSnap=await get(ref(db,'meta/customFields'));
+    CUSTOM_FIELDS=cfSnap.exists()?cfSnap.val():[];
     await push(ref(db,'logs/login'),{username:u,level:MY_LEVEL,date:nowStr(),result:'success'});
     await update(ref(db,`staff/${u}`),{lastActive:nowStr(),lastAction:'Logged in'});
     status.textContent='';
@@ -1631,6 +1753,7 @@ function startListeners(){
   onValue(ref(db,'logs/appeals'),snap=>{ APPEAL_LOG=snap.val()||{}; if(page==='appeals') render(); });
   onValue(ref(db,'announcements'),snap=>{ ANNOUNCEMENTS=snap.val()||{}; updateAnnouncements(); if(page==='announcements') render(); });
   get(ref(db,'meta/appealPresets')).then(snap=>{ if(snap.exists()) APPEAL_PRESETS=snap.val(); });
+  onValue(ref(db,'meta/customFields'),snap=>{ CUSTOM_FIELDS=snap.val()||[]; });
 }
 
 (async()=>{
@@ -1663,6 +1786,7 @@ function setupMenus(){
   const mlogout=document.getElementById('menu-logout'); if(mlogout) mlogout.onclick=doLogout;
   const mprint=document.getElementById('menu-printlog');
   if(mprint) mprint.onclick=()=>{
+    if(!canDo('canExportLogs')){ openDialog('Access Denied','You do not have permission to export logs.','',null); return; }
     const logData=JSON.stringify({MOD_LOG,REVOKE_LOG,SUSPEND_LOG,TERMINATE_LOG,LOGIN_LOG},null,2);
     const blob=new Blob([logData],{type:'application/json'});
     const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
