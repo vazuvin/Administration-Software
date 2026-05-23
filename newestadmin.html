@@ -575,46 +575,69 @@ function repBar(score){
   </div>`;
 }
 
+const CORS_PROXIES=[
+  url=>`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  url=>`https://corsproxy.io/?${encodeURIComponent(url)}`,
+  url=>`https://thingproxy.freeboard.io/fetch/${url}`,
+];
+
+async function proxyFetch(url, options={}){
+  for(const proxyFn of CORS_PROXIES){
+    try{
+      const r=await fetch(proxyFn(url), {...options, signal:AbortSignal.timeout(8000)});
+      if(r.ok){
+        const text=await r.text();
+        return JSON.parse(text);
+      }
+    }catch(e){ continue; }
+  }
+  return null;
+}
+
+async function proxyPost(url, body){
+  for(const proxyFn of CORS_PROXIES){
+    try{
+      const r=await fetch(proxyFn(url),{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-requested-with':'XMLHttpRequest'},
+        body:JSON.stringify(body),
+        signal:AbortSignal.timeout(8000)
+      });
+      if(r.ok){
+        const text=await r.text();
+        return JSON.parse(text);
+      }
+    }catch(e){ continue; }
+  }
+  return null;
+}
+
 async function fetchRobloxInfo(username){
   try{
-    const proxy='https://corsproxy.io/?';
-    const r1=await fetch(proxy+encodeURIComponent('https://users.roblox.com/v1/usernames/users'),{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({usernames:[username],excludeBannedUsers:false})
-    });
-    const d1=await r1.json();
-    if(!d1.data||!d1.data.length) return null;
+    const d1=await proxyPost('https://users.roblox.com/v1/usernames/users',{usernames:[username],excludeBannedUsers:false});
+    if(!d1||!d1.data||!d1.data.length) return null;
     const robloxId=d1.data[0].id;
-    const[r2,r3]=await Promise.all([
-      fetch(proxy+encodeURIComponent(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${robloxId}&size=150x150&format=Png&isCircular=false`)),
-      fetch(proxy+encodeURIComponent(`https://users.roblox.com/v1/users/${robloxId}`))
+    const[d2,d3]=await Promise.all([
+      proxyFetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${robloxId}&size=150x150&format=Png&isCircular=false`),
+      proxyFetch(`https://users.roblox.com/v1/users/${robloxId}`)
     ]);
-    const d2=await r2.json();
-    const d3=await r3.json();
     let accountCreated='';
-    if(d3.created){
-      const d=new Date(d3.created);
-      accountCreated=d.toLocaleDateString();
-    }
-    return {robloxId:String(robloxId), avatarUrl:d2.data&&d2.data[0]?d2.data[0].imageUrl:'', accountCreated};
+    if(d3&&d3.created){ accountCreated=new Date(d3.created).toLocaleDateString(); }
+    return {robloxId:String(robloxId), avatarUrl:d2&&d2.data&&d2.data[0]?d2.data[0].imageUrl:'', accountCreated};
   }catch(e){ return null; }
 }
 
 async function fetchRobloxFriends(robloxId){
   try{
-    const proxy='https://corsproxy.io/?';
-    const r=await fetch(proxy+encodeURIComponent(`https://friends.roblox.com/v1/users/${robloxId}/friends?limit=50`));
-    const d=await r.json();
-    return d.data?d.data.map(f=>({id:String(f.id),name:f.name})):[];
+    const d=await proxyFetch(`https://friends.roblox.com/v1/users/${robloxId}/friends?limit=50`);
+    return d&&d.data?d.data.map(f=>({id:String(f.id),name:f.name})):[];
   }catch(e){ return []; }
 }
 
 async function fetchRobloxGroups(robloxId){
   try{
-    const proxy='https://corsproxy.io/?';
-    const r=await fetch(proxy+encodeURIComponent(`https://groups.roblox.com/v1/users/${robloxId}/groups/roles`));
-    const d=await r.json();
-    return d.data?d.data.map(g=>({id:String(g.group.id),name:g.group.name})):[];
+    const d=await proxyFetch(`https://groups.roblox.com/v1/users/${robloxId}/groups/roles`);
+    return d&&d.data?d.data.map(g=>({id:String(g.group.id),name:g.group.name})):[];
   }catch(e){ return []; }
 }
 
@@ -2559,6 +2582,11 @@ function openDialog(title, body, extraHTML, cb){
   document.getElementById('dlgBody').innerHTML=body;
   document.getElementById('dlgExtra').innerHTML=extraHTML||'';
   dlgCallback=cb;
+  // Always reset button state so stale hide/rename from previous dialog never carries over
+  const ok=document.getElementById('dlgOK');
+  if(ok){ ok.style.display=''; ok.textContent='OK'; }
+  const cancel=document.getElementById('dlgCancel');
+  if(cancel) cancel.textContent='Cancel';
   document.getElementById('overlay').classList.add('show');
 }
 function closeDialog(){
