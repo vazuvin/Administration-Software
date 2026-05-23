@@ -826,18 +826,26 @@ async function proxyPost(url, body){
 }
 
 async function fetchRobloxInfo(username){
+  if(!username||!username.trim()) return null;
   try{
-    const d1=await proxyPost('https://users.roblox.com/v1/usernames/users',{usernames:[username],excludeBannedUsers:false});
+    const d1=await proxyPost('https://users.roblox.com/v1/usernames/users',{usernames:[username.trim()],excludeBannedUsers:false});
     if(!d1||!d1.data||!d1.data.length) return null;
     const robloxId=d1.data[0].id;
+    if(!robloxId) return null;
     const[d2,d3]=await Promise.all([
       proxyFetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${robloxId}&size=150x150&format=Png&isCircular=false`),
       proxyFetch(`https://users.roblox.com/v1/users/${robloxId}`)
     ]);
     let accountCreated='', displayName='';
-    if(d3&&d3.created){ accountCreated=new Date(d3.created).toLocaleDateString(); }
+    if(d3&&d3.created) accountCreated=new Date(d3.created).toLocaleDateString();
     if(d3&&d3.displayName) displayName=d3.displayName;
-    return {robloxId:String(robloxId), avatarUrl:d2&&d2.data&&d2.data[0]?d2.data[0].imageUrl:'', accountCreated, displayName};
+    let avatarUrl=d2&&d2.data&&d2.data[0]&&d2.data[0].imageUrl?d2.data[0].imageUrl:'';
+    // Fallback thumbnail endpoint if primary fails
+    if(!avatarUrl){
+      const d2b=await proxyFetch(`https://thumbnails.roblox.com/v1/users/avatar?userIds=${robloxId}&size=150x150&format=Png`);
+      if(d2b&&d2b.data&&d2b.data[0]) avatarUrl=d2b.data[0].imageUrl||'';
+    }
+    return {robloxId:String(robloxId), avatarUrl, accountCreated, displayName};
   }catch(e){ return null; }
 }
 
@@ -3260,18 +3268,15 @@ async function addStaff(){
   if(!p){ el.style.color='#880000'; el.textContent='Password required.'; return; }
   if(Object.values(STAFF).find(s=>s.username===u)){ el.style.color='#880000'; el.textContent='Already exists.'; return; }
   el.style.color='#000080'; el.textContent='Creating account...';
+
   // Create Firebase Auth account
   try{
     await createUserWithEmailAndPassword(auth,`${u}@admin.com`,p);
   }catch(e){
-    // May already exist as auth account — continue
+    // Auth account may already exist — continue to write DB record
   }
-  // Re-sign in as current admin BEFORE writing to DB
-  try{
-    await signInWithEmailAndPassword(auth,`${ME}@admin.com`,currentPassword);
-  }catch(e){
-    el.style.color='#880000'; el.textContent='Re-authentication failed. Try again.'; return;
-  }
+
+  // Write the DB record NOW while still authenticated (either as new user or as ME)
   let avatarUrl='';
   if(avatarUser){
     el.textContent='Fetching avatar...';
@@ -3280,10 +3285,31 @@ async function addStaff(){
       if(info&&info.avatarUrl) avatarUrl=info.avatarUrl;
     }catch(e){}
   }
-  const staffRecord={username:u,level:l,joined:today(),notes:'',suspended:false,secured:false,forceLogout:false,password:p,avatarRobloxUser:avatarUser,avatarUrl,lastActive:'Never',lastAction:'—'};
-  await set(ref(db,`staff/${u}`),staffRecord);
+  const staffRecord={
+    username:u, level:l, joined:today(), notes:'',
+    suspended:false, secured:false, forceLogout:false,
+    password:p, avatarRobloxUser:avatarUser, avatarUrl,
+    lastActive:'Never', lastAction:'—'
+  };
+  try{
+    await set(ref(db,`staff/${u}`),staffRecord);
+  }catch(e){
+    el.style.color='#880000'; el.textContent=`DB write failed: ${e.message}`; 
+    // Re-sign in as ME before returning
+    try{ await signInWithEmailAndPassword(auth,`${ME}@admin.com`,currentPassword); }catch(e2){}
+    return;
+  }
+
+  // Re-sign in as ME after writing
+  try{
+    await signInWithEmailAndPassword(auth,`${ME}@admin.com`,currentPassword);
+  }catch(e){
+    // If re-sign fails, do logout/login — just warn
+    el.style.color='#cc8800'; el.textContent=`${u} added but session refresh failed. Please refresh the page.`; return;
+  }
+
   auditLog('Staff Added',`${u} as ${l}`);
-  el.style.color='#006600'; el.textContent=`${u} added as ${l}${avatarUrl?' (avatar loaded)':avatarUser?' (avatar unavailable — use refresh)':''}.`;
+  el.style.color='#006600'; el.textContent=`${u} added as ${l}${avatarUrl?' (avatar loaded)':avatarUser?' (avatar unavailable — set via profile)':''}.`;
   setTimeout(()=>{ el.textContent=''; },3500);
 }
 
@@ -3862,16 +3888,15 @@ function renderSuggestions(c){
 // ── STAFF CONFIG ──
 function renderStaffConfig(c){
   const sArr=Object.entries(STAFF).filter(([,s])=>s&&s.username);
+  const canSuperAdmin=isSuperAdmin();
   const loginAttempts=Object.values(LOGIN_LOG);
   const failedByUser={};
-  loginAttempts.forEach(l=>{ if(l.result!=='success'){ failedByUser[l.username]=(failedByUser[l.username]||0)+1; } });
+  loginAttempts.forEach(l=>{ if(l&&l.result!=='success'&&l.username){ failedByUser[l.username]=(failedByUser[l.username]||0)+1; } });
 
-  // Collect active overrides: which staff members have "canBeOverridden" set per action
-  // OVERRIDE_ACTIONS = actions whose outcomes can be overridden (e.g. who can have their punishments revoked)
   const OVERRIDE_ACTIONS=[
     {key:'revokePunishment',label:'Revoke Punishments'},
     {key:'editNote',label:'Edit User Notes'},
-    {key:'submitAppeal',label:'Submit Appeals on Behalf'},
+    {key:'submitAppeal',label:'Submit Appeals'},
     {key:'changeStatus',label:'Change User Status'},
     {key:'viewProfile',label:'View Full Profile'},
   ];
@@ -3879,79 +3904,158 @@ function renderStaffConfig(c){
   c.innerHTML=`
   <div class="ptitle">Staff Configuration &amp; Analytics</div>
 
-  ${isSuperAdmin()?`
-  <div class="sbox" style="border-color:#880000;"><div class="stitle" style="background:#880000;color:#fff;">Staff Mass Actions</div><div class="sbody">
-    <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
-      <button class="btn red small" id="btn-logout-allstaff">Force Log Out All Staff</button>
-      <span style="font-size:11px;color:#808080;">Forces every active staff member except yourself to log out on next heartbeat. Emergency use only.</span>
+  ${canSuperAdmin?`
+  <div class="sbox"><div class="stitle">Bulk Staff Actions</div><div class="sbody">
+    <div style="display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1;">
+        <span id="sblk-count" style="font-size:11px;color:#808080;">0 selected</span>
+        <select id="sblk-action" style="width:140px;">
+          <option value="">-- Select Action --</option>
+          <option value="suspend">Suspend</option>
+          <option value="unsuspend">Unsuspend</option>
+          <option value="secure">Secure Account</option>
+          <option value="unsecure">Unsecure Account</option>
+          <option value="forcelogout">Force Log Out</option>
+          ${canSuperAdmin?'<option value="terminate">Terminate</option>':''}`
+          +`${canSuperAdmin?'<option value="wipe">Wipe Account</option>':''}
+        </select>
+        <input type="text" id="sblk-reason" style="width:180px;" placeholder="Reason (required for most actions)"/>
+        <input type="text" id="sblk-note" style="width:150px;" placeholder="Bulk note [BLK]"/>
+      </div>
+      <div style="display:flex;gap:3px;flex-shrink:0;">
+        <button class="btn" id="btn-sblk-apply">Apply to Selected</button>
+        <button class="btn small" id="btn-sblk-selectall">Select All</button>
+        <button class="btn small" id="btn-sblk-clear">Clear</button>
+      </div>
     </div>
-    <div id="massStaffMsg" style="font-size:11px;margin-top:3px;color:#006600;min-height:14px;"></div>
+    <div id="sblk-msg" style="font-size:11px;margin-top:3px;min-height:14px;"></div>
+    <div style="margin-top:4px;font-size:10px;color:#808080;">Terminate and Wipe actions will prompt for an operator code before executing.</div>
   </div></div>`:''}
 
-  <div class="sbox"><div class="stitle">Staff Analytics</div><div class="sbody">
+  <div class="sbox"><div class="stitle">Staff List</div><div class="sbody">
+    ${sArr.length===0?'<i style="color:#444;">No staff yet.</i>':`
     <div class="tbl-wrap"><table class="tbl">
-      <tr><th>Username</th><th>Level</th><th>Status</th><th>Joined</th><th>Last Active</th><th>Mod Actions</th><th>Failed Logins</th></tr>
+      <tr>
+        ${canSuperAdmin?'<th><input type="checkbox" id="sblk-check-all" title="Select all"/></th>':''}
+        <th>Username</th><th>Level</th><th>Status</th><th>Joined</th><th>Last Active</th><th>Mod Actions</th><th>Failed Logins</th><th>Overrides</th><th>View</th>
+      </tr>
       ${sArr.map(([sid,s])=>{
-        const actionsTaken=Object.values(MOD_LOG).filter(m=>m.mod===s.username).length;
+        const actionsTaken=Object.values(MOD_LOG).filter(m=>m&&m.mod===s.username).length;
         const failed=failedByUser[s.username]||0;
+        const status=s.suspended?'<span class="sus">SUSP</span>':s.secured?'<span class="ban">SECURED</span>':'<span class="ok">OK</span>';
         return `<tr>
-          <td><b>${s.username}</b>${s.secured?` <span style="font-size:9px;color:#880000;font-weight:bold;">[SECURED]</span>`:''}</td>
+          ${canSuperAdmin?`<td><input type="checkbox" class="sblk-cb" data-sid="${sid}" data-username="${s.username}"/></td>`:''}
+          <td><b>${s.username}</b></td>
           <td>${levelBadge(s.level)}</td>
-          <td>${s.suspended?'<span class="sus">SUSP</span>':s.secured?'<span class="ban">SECURED</span>':'<span class="ok">OK</span>'}</td>
+          <td>${status}</td>
           <td style="font-size:10px;">${s.joined||'—'}</td>
           <td style="font-size:10px;">${s.lastActive||'Never'}</td>
           <td><b>${actionsTaken}</b></td>
           <td>${failed>3?`<span class="ban">${failed}</span>`:failed}</td>
+          <td><button class="btn small open-overrides-btn" data-sid="${sid}" data-username="${s.username}">Open</button></td>
+          <td><button class="btn small view-staff-config-btn" data-sid="${sid}">View</button></td>
         </tr>`;
       }).join('')}
-    </table></div>
+    </table></div>`}
   </div></div>
 
-  <div class="sbox"><div class="stitle">Decision Override Matrix</div><div class="sbody">
-    <div style="font-size:11px;color:#555;margin-bottom:8px;">
-      Controls whose decisions can be overridden/reversed by other staff. Check a box to <b>BLOCK</b> that action — meaning that staff member's decision for that category <b>cannot</b> be changed by standard-level staff (Super Admin+ can always override). Useful for protecting Senior Mod decisions from being undone by lower staff.
-    </div>
-    <div style="overflow-x:auto;">
-    <table class="tbl" id="overrideMatrix" style="min-width:500px;">
-      <tr>
-        <th style="white-space:nowrap;">Staff Member</th>
-        ${OVERRIDE_ACTIONS.map(a=>`<th style="white-space:nowrap;font-size:10px;">${a.label}</th>`).join('')}
-        <th>Save</th>
-      </tr>
-      ${sArr.filter(([,s])=>s.level!=='SOFTWARE MANAGER').map(([sid,s])=>{
-        const blocked=s.decisionBlocks||{};
-        return `<tr>
-          <td><b>${s.username}</b><div style="font-size:9px;color:#808080;">${s.level.split(' ')[0]}</div></td>
-          ${OVERRIDE_ACTIONS.map(a=>`<td style="text-align:center;"><input type="checkbox" class="override-cb" data-sid="${sid}" data-key="${a.key}" ${blocked[a.key]?'checked':''} title="${blocked[a.key]?'BLOCKED — others cannot reverse this action':'Allowed — others can reverse this action'}"/></td>`).join('')}
-          <td><button class="btn small save-override-btn" data-sid="${sid}">Save</button></td>
-        </tr>`;
-      }).join('')}    </table>
-    </div>
-    <div id="overrideMsg" style="font-size:11px;margin-top:5px;color:#006600;min-height:14px;"></div>
-    <div style="font-size:10px;color:#808080;margin-top:4px;">&#9646; = blocked (decision is protected) &nbsp; &#9647; = open (decision can be overridden)</div>
-  </div></div>
-
-  ${isSuperAdmin()?`
-  <div class="sbox" style="border-color:#880000;"><div class="stitle" style="background:#880000;color:#fff;">Wipe Staff Account</div><div class="sbody">
-    <div style="font-size:11px;color:#555;margin-bottom:6px;">Permanently remove a staff member's Firebase Auth account and all their data. They will be immediately kicked. This cannot be undone.</div>
+  ${canSuperAdmin?`
+  <div class="sbox" style="border-color:#880000;"><div class="stitle" style="background:#880000;color:#fff;">Emergency</div><div class="sbody">
     <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
-      <select id="wipeStaffSel" style="width:160px;">
-        ${sArr.filter(([,s])=>s.level!=='SOFTWARE MANAGER'&&s.username!==ME).map(([,s])=>`<option value="${s.username}">${s.username} [${s.level.split(' ')[0]}]</option>`).join('')}
-      </select>
-      <button class="btn red" id="btn-wipestaff">Wipe Account</button>
+      <button class="btn red small" id="btn-logout-allstaff">Force Log Out ALL Staff</button>
+      <span style="font-size:11px;color:#808080;">Logs out every active session except yours. Emergency use only.</span>
     </div>
-    <div id="wipeStaffMsg" style="font-size:11px;margin-top:4px;min-height:14px;"></div>
-  </div></div>`:''}
-`;
+    <div id="massStaffMsg" style="font-size:11px;margin-top:3px;color:#006600;min-height:14px;"></div>
+  </div></div>`:''}`;
 
-  if(isSuperAdmin()){
+  // ── Check-all ──
+  if(canSuperAdmin){
+    const checkAll=document.getElementById('sblk-check-all');
+    const updateCount=()=>{
+      const sel=c.querySelectorAll('.sblk-cb:checked').length;
+      const el=document.getElementById('sblk-count');
+      if(el) el.textContent=`${sel} selected`;
+    };
+    if(checkAll) checkAll.onclick=()=>{ c.querySelectorAll('.sblk-cb').forEach(cb=>cb.checked=checkAll.checked); updateCount(); };
+    c.querySelectorAll('.sblk-cb').forEach(cb=>cb.onclick=updateCount);
+    document.getElementById('btn-sblk-selectall').onclick=()=>{ c.querySelectorAll('.sblk-cb').forEach(cb=>cb.checked=true); if(checkAll) checkAll.checked=true; updateCount(); };
+    document.getElementById('btn-sblk-clear').onclick=()=>{ c.querySelectorAll('.sblk-cb').forEach(cb=>cb.checked=false); if(checkAll) checkAll.checked=false; updateCount(); };
+
+    // ── Bulk Apply ──
+    document.getElementById('btn-sblk-apply').onclick=()=>{
+      const selected=[...c.querySelectorAll('.sblk-cb:checked')].map(cb=>({sid:cb.dataset.sid,username:cb.dataset.username}));
+      const action=document.getElementById('sblk-action').value;
+      const reason=document.getElementById('sblk-reason').value.trim();
+      const note=document.getElementById('sblk-note').value.trim();
+      const msgEl=document.getElementById('sblk-msg');
+      if(!selected.length){ msgEl.style.color='#880000'; msgEl.textContent='No staff selected.'; return; }
+      if(!action){ msgEl.style.color='#880000'; msgEl.textContent='Select an action.'; return; }
+      if(!reason&&['suspend','secure','terminate','wipe'].includes(action)){ msgEl.style.color='#880000'; msgEl.textContent='Reason required for this action.'; return; }
+
+      const needsOpCode=['terminate','wipe'].includes(action);
+      const noteTag=note?`${note} [BLK]`:'[BLK]';
+
+      const doExecute=async()=>{
+        let done=0;
+        const errors=[];
+        for(const {sid,username} of selected){
+          const s=STAFF[sid];
+          if(!s||s.username===ME||s.level==='SOFTWARE MANAGER') continue;
+          try{
+            if(action==='suspend'){
+              const suspInfo={date:today(),reason,modNote:noteTag,offensiveItem:'',by:ME};
+              await update(ref(db,`staff/${sid}`),{suspended:true,suspendInfo:suspInfo,forceLogout:true});
+              await push(ref(db,'logs/suspend'),{username,action:'Suspend',by:ME,date:today(),reason,modNote:noteTag,offensiveItem:''});
+              auditLog('Staff Suspended (Bulk)',`${username}: ${reason}`);
+            } else if(action==='unsuspend'){
+              await update(ref(db,`staff/${sid}`),{suspended:false,suspendInfo:null,forceLogout:false});
+              await push(ref(db,'logs/suspend'),{username,action:'Unsuspend',by:ME,date:today(),reason:reason||'Bulk unsuspend',modNote:'',offensiveItem:''});
+            } else if(action==='secure'){
+              await update(ref(db,`staff/${sid}`),{secured:true,secureInfo:{reason,note:noteTag,by:ME,date:nowStr()},forceLogout:true});
+            } else if(action==='unsecure'){
+              await update(ref(db,`staff/${sid}`),{secured:false,secureInfo:null,forceLogout:false});
+            } else if(action==='forcelogout'){
+              await update(ref(db,`staff/${sid}`),{forceLogout:true,lastAction:'Force logged out by '+ME});
+            } else if(action==='terminate'){
+              await push(ref(db,'logs/terminate'),{username,type:'Staff',by:ME,date:today(),reason,modNote:noteTag,offensiveItem:''});
+              await update(ref(db,`staff/${sid}`),{forceLogout:true}).catch(()=>{});
+              await new Promise(r=>setTimeout(r,200));
+              await remove(ref(db,`staff/${sid}`));
+              auditLog('Staff Terminated (Bulk)',`${username}: ${reason}`);
+            } else if(action==='wipe'){
+              const wipeId=generateWipeId();
+              const wipeName=`[WIPED #${wipeId}]`;
+              await set(ref(db,`wipedAccounts/${username}`),{reason,by:ME,date:nowStr()});
+              await push(ref(db,'wipelog'),{wipeId,wipeTag:wipeName,originalUsername:username,level:s.level||'—',joined:s.joined||'—',wipedBy:ME,date:nowStr(),note:'Bulk wipe'});
+              await update(ref(db,`staff/${sid}`),{forceLogout:true}).catch(()=>{});
+              await new Promise(r=>setTimeout(r,200));
+              await remove(ref(db,`staff/${sid}`));
+              auditLog('Staff Wiped (Bulk)',`${username}`);
+            }
+            done++;
+          }catch(e){ errors.push(username); }
+        }
+        auditLog(`Bulk Staff Action: ${action}`,`${done} staff affected by ${ME}`);
+        msgEl.style.color=errors.length?'#cc8800':'#006600';
+        msgEl.textContent=`Done: ${done} affected${errors.length?` (${errors.length} errors: ${errors.join(', ')})`:''}.`;
+        setTimeout(()=>nav('staffconfig'),1500);
+      };
+
+      if(needsOpCode){
+        openOpDialog(`Some selected actions (${action}) require operator authorization. Enter your operator code to proceed.`, doExecute);
+      } else {
+        openDialog(`Bulk Action: ${action}`,`Apply <b>${action}</b> to <b>${selected.length}</b> staff member(s)?<br><span style="font-size:10px;color:#808080;">Reason: ${reason||'—'} | Note: ${noteTag}</span>`,'',doExecute);
+      }
+    };
+
+    // Emergency logout all
     const logoutAllBtn=document.getElementById('btn-logout-allstaff');
     if(logoutAllBtn) logoutAllBtn.onclick=()=>{
-      openDialog('Force Log Out All Staff','Force log out ALL staff members except yourself? They will be kicked on their next heartbeat check.',
-        `<div style="font-size:11px;color:#880000;background:#fde8e8;border:1px solid #cc6666;padding:6px;margin-bottom:4px;">This affects every active staff session. Use only in emergencies.</div>`,
+      openDialog('Force Log Out All Staff','Force log out ALL staff members except yourself?',
+        `<div style="font-size:11px;color:#880000;background:#fde8e8;border:1px solid #cc6666;padding:6px;">Emergency use only. All active sessions will be terminated on next heartbeat.</div>`,
         async()=>{
           for(const[sid,s] of Object.entries(STAFF)){
-            if(s.username!==ME) await update(ref(db,`staff/${sid}`),{forceLogout:true}).catch(()=>{});
+            if(s&&s.username!==ME) await update(ref(db,`staff/${sid}`),{forceLogout:true}).catch(()=>{});
           }
           auditLog('All Staff Force Logged Out',`By ${ME}`);
           const msgEl=document.getElementById('massStaffMsg');
@@ -3961,51 +4065,35 @@ function renderStaffConfig(c){
     };
   }
 
-  c.querySelectorAll('.save-override-btn').forEach(btn=>{
-    btn.onclick=async()=>{
+  // ── Overrides popup ──
+  c.querySelectorAll('.open-overrides-btn').forEach(btn=>{
+    btn.onclick=()=>{
       const sid=btn.dataset.sid;
       const s=STAFF[sid]; if(!s) return;
-      const blocks={};
-      c.querySelectorAll(`.override-cb[data-sid="${sid}"]`).forEach(cb=>{ if(cb.checked) blocks[cb.dataset.key]=true; });
-      await update(ref(db,`staff/${sid}`),{decisionBlocks:blocks});
-      auditLog('Staff Decision Blocks Updated',`${s.username}: ${Object.keys(blocks).join(', ')||'none'}`);
-      const msgEl=document.getElementById('overrideMsg');
-      if(msgEl){ msgEl.textContent=`Saved for ${s.username}!`; setTimeout(()=>{ if(msgEl) msgEl.textContent=''; },1800); }
-    };
-  });
-
-  if(isSuperAdmin()){
-    const wipeBtn=document.getElementById('btn-wipestaff');
-    if(wipeBtn) wipeBtn.onclick=()=>{
-      const username=document.getElementById('wipeStaffSel').value;
-      if(!username) return;
-      openOpDialog(`WARNING: Permanently wipe all data for staff member "${username}"? This removes their account completely and cannot be undone.`,
+      const blocked=s.decisionBlocks||{};
+      openDialog(`Decision Overrides — ${s.username}`,
+        `<div style="font-size:11px;color:#555;margin-bottom:8px;">Check a box to <b>BLOCK</b> that action for this staff member — their decision in that category cannot be reversed by standard staff.<br>Super Admin+ can always override regardless.</div>`,
+        OVERRIDE_ACTIONS.map(a=>`
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:11px;">
+            <input type="checkbox" id="ov-${sid}-${a.key}" ${blocked[a.key]?'checked':''}/>
+            <label for="ov-${sid}-${a.key}" style="cursor:pointer;color:#000;">
+              <b>${a.label}</b><div style="font-size:10px;color:#808080;">${blocked[a.key]?'BLOCKED — others cannot reverse this decision':'Open — others can reverse this decision'}</div>
+            </label>
+          </div>`).join(''),
         async()=>{
-          const staffEntry=Object.entries(STAFF).find(([,s])=>s.username===username);
-          if(!staffEntry){ document.getElementById('wipeStaffMsg').textContent='Not found.'; return; }
-          const [sid,sData]=staffEntry;
-          const wipeId=generateWipeId();
-          const wipeName=`[WIPED #${wipeId}]`;
-          // Write wipe record BEFORE removing so wiped user sees details on next login attempt
-          await set(ref(db,`wipedAccounts/${username}`),{reason:'Account wiped by administrator',by:ME,date:nowStr(),seenByUser:false});
-          // Write to wipe log
-          await push(ref(db,'wipelog'),{
-            wipeId, wipeTag:wipeName, originalUsername:username,
-            level:sData.level||'—', joined:sData.joined||'—',
-            wipedBy:ME, date:nowStr(), note:'Staff account permanently wiped'
-          });
-          // Force logout
-          await update(ref(db,`staff/${sid}`),{forceLogout:true}).catch(()=>{});
-          await new Promise(r=>setTimeout(r,500));
-          await remove(ref(db,`staff/${sid}`));
-          await push(ref(db,'logs/terminate'),{username:wipeName,type:'Staff Wipe',by:ME,date:today(),reason:'Account wiped by administrator',modNote:'',offensiveItem:''});
-          auditLog('Staff Account Wiped',`${username} by ${ME}`);
-          const msgEl=document.getElementById('wipeStaffMsg');
-          if(msgEl){ msgEl.style.color='#006600'; msgEl.textContent=`${username} wiped.`; setTimeout(()=>{ if(msgEl) msgEl.textContent=''; nav('staffconfig'); },2000); }
+          const newBlocks={};
+          OVERRIDE_ACTIONS.forEach(a=>{ const el=document.getElementById(`ov-${sid}-${a.key}`); if(el&&el.checked) newBlocks[a.key]=true; });
+          await update(ref(db,`staff/${sid}`),{decisionBlocks:newBlocks});
+          auditLog('Decision Overrides Updated',`${s.username}: ${Object.keys(newBlocks).join(', ')||'none blocked'}`);
         }
       );
     };
-  }
+  });
+
+  // ── View (navigate to staff profile) ──
+  c.querySelectorAll('.view-staff-config-btn').forEach(btn=>{
+    btn.onclick=()=>{ currentStaffId=btn.dataset.sid; nav('staff'); };
+  });
 }
 
 // ── MESSAGE ANALYZE ──
