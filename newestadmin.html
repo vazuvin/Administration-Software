@@ -263,10 +263,12 @@ const DEFAULT_PERMS = {
   canViewSuspendLogs:'ADMINISTRATOR', canViewTerminateLogs:'ADMINISTRATOR',
   canViewLoginLog:'ADMINISTRATOR', canViewContentModeration:'MODERATOR',
   canViewStaffActivity:'ADMINISTRATOR',
+  canSubmitAppeals:'MODERATOR', canViewAppealLog:'MODERATOR', canReviewAppeals:'ADMINISTRATOR',
 };
 
 const DEFAULT_REP_POINTS = { 'Remind':1, 'Warn':2, 'Ban 1 Day':3, 'Ban 3 Days':3, 'Ban 7 Days':5, 'Ban 14 Days':5, 'Suspend':4, 'Ban Permanent':10 };
 
+const DEFAULT_APPEAL_PRESETS = ['Hacked Account','False Ban','Misunderstanding','Exploited by Another','No Warning Given','Other'];
 const LEVEL_RANK = {'INTERN':1,'MODERATOR':2,'ADMINISTRATOR':3,'SUPER ADMINISTRATOR':4};
 
 let ME='', MY_LEVEL='', currentPassword='';
@@ -275,6 +277,7 @@ let currentUserId=null, currentStaffId=null;
 let USERS={}, STAFF={}, MOD_LOG={}, REVOKE_LOG={}, SUSPEND_LOG={}, TERMINATE_LOG={}, LOGIN_LOG={}, AUDIT_LOG={}, APPEAL_LOG={};
 let PERMS={...DEFAULT_PERMS};
 let REP_POINTS={...DEFAULT_REP_POINTS};
+let APPEAL_PRESETS=[...DEFAULT_APPEAL_PRESETS];
 let ANNOUNCEMENTS={};
 
 function today(){ return new Date().toLocaleDateString(); }
@@ -404,6 +407,7 @@ function updateSidebar(){
   show('nav-terminatelog', canDo('canViewTerminateLogs'));
   show('nav-loginlog', canDo('canViewLoginLog'));
   show('nav-activity', canDo('canViewStaffActivity'));
+  show('nav-appeals', canDo('canViewAppealLog'));
   show('nav-auditlog', isSuperAdmin());
   show('nav-adminlog', isSuperAdmin());
 }
@@ -536,12 +540,10 @@ function renderUA(c){
         <div id="fuResult" style="margin-top:4px;"></div>
       </div></div>
       <div class="sbox"><div class="stitle">Appeal Status</div><div class="sbody">
-        <div class="row"><label>Status:</label><span>${u.appealStatus?`<span class="badge appeal-${u.appealStatus.toLowerCase().replace(' ','-')}">${u.appealStatus}</span>`:'None'}</span></div>
-        ${canDo('canModerateUsers')?`
-        <div style="margin-top:4px;display:flex;gap:3px;flex-wrap:wrap;">
-          <button class="btn small" id="btn-appeal-open">Open</button>
-          <button class="btn small" id="btn-appeal-approve">Approve</button>
-          <button class="btn small red" id="btn-appeal-deny">Deny</button>
+        <div class="row"><label>Status:</label><span>${u.appealStatus?`<span class="badge appeal-${(u.appealStatus||'').toLowerCase().replace(' ','-')}">${u.appealStatus}</span>`:'None'}</span></div>
+        ${canDo('canSubmitAppeals')&&u.punishments&&Object.keys(u.punishments).length>0?`
+        <div style="margin-top:4px;">
+          <button class="btn small" id="btn-open-appeal-panel">Open Appeal Panel</button>
         </div>`:''}
       </div></div>
     </div>
@@ -558,18 +560,42 @@ function renderUA(c){
       async()=>{ await wipeUser(currentUserId,u.username); }
     );
   };
-  if(canDo('canModerateUsers')){
-    document.getElementById('btn-appeal-open').onclick=()=>setAppealStatus(currentUserId,'Open');
-    document.getElementById('btn-appeal-approve').onclick=()=>setAppealStatus(currentUserId,'Approved');
-    document.getElementById('btn-appeal-deny').onclick=()=>setAppealStatus(currentUserId,'Denied');
+  if(canDo('canSubmitAppeals')){
+    const apBtn=document.getElementById('btn-open-appeal-panel');
+    if(apBtn) apBtn.onclick=()=>openAppealPanel(currentUserId);
   }
 }
 
-async function setAppealStatus(uid, status){
+function openAppealPanel(uid){
   const u=USERS[uid]; if(!u) return;
-  await update(ref(db,`users/${uid}`),{appealStatus:status});
-  await push(ref(db,'logs/appeals'),{user:u.username,status,by:ME,date:today(),note:''});
-  auditLog('Appeal Status Changed',`${u.username} -> ${status}`);
+  const punishments=u.punishments?Object.entries(u.punishments):[];
+  if(!punishments.length){ return; }
+  const punishOptions=punishments.map(([pid,p])=>`<option value="${pid}">${p.action} (${p.created})</option>`).join('');
+  const presetOptions=APPEAL_PRESETS.map(p=>`<option>${p}</option>`).join('');
+  openDialog('Appeal Panel',`Filing appeal for <b>${u.username}</b>:`,`
+    <div style="margin-bottom:4px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;">Username:</label>
+      <input type="text" id="appealUser" style="width:100%;" value="${u.username}" readonly/></div>
+    <div style="margin-bottom:4px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;">Punishment Being Appealed:</label>
+      <select id="appealPunish" style="width:100%;font-family:inherit;font-size:11px;height:16px;">${punishOptions}</select></div>
+    <div style="margin-bottom:4px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;">Preset Reason:</label>
+      <select id="appealPreset" style="width:100%;font-family:inherit;font-size:11px;height:16px;">${presetOptions}</select></div>
+    <div style="margin-bottom:0;"><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;">Additional Reason:</label>
+      <textarea id="appealReason" style="width:100%;height:50px;" placeholder="Explain the appeal in detail..."></textarea></div>`,
+    async()=>{
+      const pid=document.getElementById('appealPunish').value;
+      const preset=document.getElementById('appealPreset').value;
+      const reason=document.getElementById('appealReason').value.trim();
+      const p=u.punishments[pid];
+      await push(ref(db,'logs/appeals'),{
+        user:u.username, uid, punishId:pid,
+        punishAction:p?p.action:'Unknown', punishDate:p?p.created:'Unknown',
+        presetReason:preset, reason, submittedBy:ME,
+        status:'Pending', reviewedBy:'', reviewNote:'', date:today()
+      });
+      await update(ref(db,`users/${uid}`),{appealStatus:'Pending'});
+      auditLog('Appeal Submitted',`${u.username}: ${preset}`);
+    }
+  );
 }
 
 async function wipeUser(uid, uname){
@@ -773,16 +799,78 @@ function renderAppeals(c){
   <div class="sbox"><div class="stitle">All Appeals</div><div class="sbody">
     ${entries.length===0?'<i style="color:#444;">No appeals on record.</i>':`
     <div class="tbl-wrap"><table class="tbl">
-      <tr><th>User</th><th>Status</th><th>Reviewed By</th><th>Date</th><th>Note</th>${isSuperAdmin()?'<th>Admin</th>':''}</tr>
+      <tr><th>User</th><th>Appeal Status</th><th>Punishment</th><th>Preset Reason</th><th>Submitted By</th><th>Date</th><th>Reviewer</th><th>Review Note</th><th>Appeal(s)</th>${isSuperAdmin()?'<th>Admin</th>':''}</tr>
       ${entries.map(([lid,r])=>`<tr>
         <td><b>${r.user}</b></td>
-        <td><span class="badge appeal-${(r.status||'open').toLowerCase().replace(' ','-')}">${r.status||'Open'}</span></td>
-        <td>${r.by}</td><td>${r.date}</td><td>${r.note||''}</td>
+        <td><span class="badge appeal-${(r.status||'pending').toLowerCase().replace(' ','-')}">${r.status||'Pending'}</span></td>
+        <td style="font-size:10px;">${r.punishAction||'—'} (${r.punishDate||'—'})</td>
+        <td>${r.presetReason||'—'}</td>
+        <td>${r.submittedBy||r.by||'—'}</td>
+        <td>${r.date}</td>
+        <td>${r.reviewedBy||'Pending'}</td>
+        <td style="max-width:120px;white-space:normal;">${r.reviewNote||'—'}</td>
+        <td>${canDo('canReviewAppeals')?`<button class="btn small review-appeal-btn" data-lid="${lid}">Open</button>`:'<span style="color:#808080;font-size:10px;">No access</span>'}</td>
         ${isSuperAdmin()?`<td>${deleteLogBtn('logs/appeals',lid)}</td>`:''}
       </tr>`).join('')}
     </table></div>`}
   </div></div>`;
+  c.querySelectorAll('.review-appeal-btn').forEach(btn=>{
+    btn.onclick=()=>openReviewPanel(btn.dataset.lid);
+  });
   bindDeleteLogBtns(c);
+}
+
+function openReviewPanel(lid){
+  const r=APPEAL_LOG[lid]; if(!r) return;
+  openDialog('Review Appeal',`Reviewing appeal for <b>${r.user}</b>:`,`
+    <div style="font-size:11px;color:#000;margin-bottom:8px;background:#e8e4dc;padding:6px;border:1px solid #b0aca4;">
+      <div><b>Punishment:</b> ${r.punishAction||'—'} (${r.punishDate||'—'})</div>
+      <div><b>Preset Reason:</b> ${r.presetReason||'—'}</div>
+      <div><b>Reason:</b> ${r.reason||'None provided.'}</div>
+      <div><b>Submitted by:</b> ${r.submittedBy||r.by||'—'} on ${r.date}</div>
+    </div>
+    <div style="margin-bottom:4px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;">Review Note (required):</label>
+      <textarea id="reviewNote" style="width:100%;height:45px;" placeholder="Explain your decision..."></textarea></div>
+    <div style="display:flex;gap:6px;justify-content:center;margin-top:2px;">
+      <button class="btn" id="btn-approve-appeal" style="background:#c8e0c8;">Approve</button>
+      <button class="btn red" id="btn-deny-appeal">Deny</button>
+    </div>
+    <div id="reviewResult" style="font-size:11px;margin-top:4px;text-align:center;"></div>`,
+    null
+  );
+  // Override dlgOK to hide it, use custom buttons
+  document.getElementById('dlgOK').style.display='none';
+  document.getElementById('dlgCancel').textContent='Close';
+
+  document.getElementById('btn-approve-appeal').onclick=async()=>{
+    const note=document.getElementById('reviewNote').value.trim();
+    if(!note){ document.getElementById('reviewResult').style.color='#880000'; document.getElementById('reviewResult').textContent='Please enter a review note.'; return; }
+    await update(ref(db,`logs/appeals/${lid}`),{status:'Approved',reviewedBy:ME,reviewNote:note});
+    // Auto-revoke the punishment
+    if(r.uid&&r.punishId&&USERS[r.uid]&&USERS[r.uid].punishments&&USERS[r.uid].punishments[r.punishId]){
+      const p=USERS[r.uid].punishments[r.punishId];
+      await push(ref(db,'logs/revoke'),{user:r.user,action:p.action,origMod:p.mod,revokedBy:ME,date:today(),note:'[Revoked by Appeal]'});
+      await remove(ref(db,`users/${r.uid}/punishments/${r.punishId}`));
+      await update(ref(db,`users/${r.uid}`),{status:'active',appealStatus:'Approved'});
+    } else {
+      if(r.uid) await update(ref(db,`users/${r.uid}`),{appealStatus:'Approved'});
+    }
+    auditLog('Appeal Approved',`${r.user} by ${ME}: ${note}`);
+    document.getElementById('reviewResult').style.color='#006600';
+    document.getElementById('reviewResult').textContent='Appeal approved and punishment revoked!';
+    setTimeout(()=>closeDialog(),1200);
+  };
+
+  document.getElementById('btn-deny-appeal').onclick=async()=>{
+    const note=document.getElementById('reviewNote').value.trim();
+    if(!note){ document.getElementById('reviewResult').style.color='#880000'; document.getElementById('reviewResult').textContent='Please enter a review note.'; return; }
+    await update(ref(db,`logs/appeals/${lid}`),{status:'Denied',reviewedBy:ME,reviewNote:note});
+    if(r.uid) await update(ref(db,`users/${r.uid}`),{appealStatus:'Denied'});
+    auditLog('Appeal Denied',`${r.user} by ${ME}: ${note}`);
+    document.getElementById('reviewResult').style.color='#880000';
+    document.getElementById('reviewResult').textContent='Appeal denied.';
+    setTimeout(()=>closeDialog(),1200);
+  };
 }
 
 // ── ALT DETECTION ──
@@ -1147,6 +1235,12 @@ function renderAdminLog(c){
         <button class="btn" id="btn-saverep" style="margin-top:5px;">Save Values</button>
         <div id="repMsg" style="font-size:11px;margin-top:3px;color:#006600;"></div>
       </div></div>
+      <div class="sbox"><div class="stitle">Appeal Preset Reasons</div><div class="sbody">
+        <div style="font-size:11px;color:#555;margin-bottom:4px;">One preset per line.</div>
+        <textarea id="appealPresetsTA" style="width:100%;height:80px;">${APPEAL_PRESETS.join('\n')}</textarea>
+        <button class="btn" id="btn-savepresets" style="margin-top:4px;">Save Presets</button>
+        <div id="presetsMsg" style="font-size:11px;margin-top:3px;color:#006600;"></div>
+      </div></div>
     </div>
     <div style="flex:2;min-width:260px;">
       <div class="sbox"><div class="stitle">Permission Settings</div><div class="sbody">
@@ -1165,6 +1259,7 @@ function renderAdminLog(c){
   </div>`;
   document.getElementById('btn-saveperms').onclick=savePerms;
   document.getElementById('btn-saverep').onclick=saveRepPoints;
+  document.getElementById('btn-savepresets').onclick=saveAppealPresets;
 }
 
 function formatPermKey(k){ return k.replace(/([A-Z])/g,' $1').replace(/^can /i,'Can ').trim(); }
@@ -1189,6 +1284,17 @@ async function saveRepPoints(){
   REP_POINTS={...newRep};
   auditLog('Reputation Points Updated','Point values changed');
   const el=document.getElementById('repMsg');
+  el.textContent='Saved!'; setTimeout(()=>{ if(el) el.textContent=''; },2000);
+}
+
+async function saveAppealPresets(){
+  const ta=document.getElementById('appealPresetsTA');
+  if(!ta) return;
+  const lines=ta.value.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
+  await set(ref(db,'meta/appealPresets'),lines);
+  APPEAL_PRESETS=lines;
+  auditLog('Appeal Presets Updated',`${lines.length} presets saved`);
+  const el=document.getElementById('presetsMsg');
   el.textContent='Saved!'; setTimeout(()=>{ if(el) el.textContent=''; },2000);
 }
 
@@ -1367,7 +1473,14 @@ function openDialog(title, body, extraHTML, cb){
   dlgCallback=cb;
   document.getElementById('overlay').classList.add('show');
 }
-function closeDialog(){ document.getElementById('overlay').classList.remove('show'); dlgCallback=null; }
+function closeDialog(){
+  document.getElementById('overlay').classList.remove('show');
+  dlgCallback=null;
+  const ok=document.getElementById('dlgOK');
+  if(ok){ ok.style.display=''; ok.textContent='OK'; }
+  const cancel=document.getElementById('dlgCancel');
+  if(cancel) cancel.textContent='Cancel';
+}
 document.getElementById('dlgClose').onclick=closeDialog;
 document.getElementById('dlgCancel').onclick=closeDialog;
 document.getElementById('dlgOK').onclick=()=>{ if(dlgCallback) dlgCallback(); closeDialog(); };
@@ -1426,6 +1539,8 @@ async function doLogin(){
     const[permsSnap,repSnap]=await Promise.all([get(ref(db,'meta/permissions')),get(ref(db,'meta/repPoints'))]);
     PERMS=permsSnap.exists()?{...DEFAULT_PERMS,...permsSnap.val()}:{...DEFAULT_PERMS};
     REP_POINTS=repSnap.exists()?{...DEFAULT_REP_POINTS,...repSnap.val()}:{...DEFAULT_REP_POINTS};
+    const presetsSnap=await get(ref(db,'meta/appealPresets'));
+    APPEAL_PRESETS=presetsSnap.exists()?presetsSnap.val():[...DEFAULT_APPEAL_PRESETS];
     await push(ref(db,'logs/login'),{username:u,level:MY_LEVEL,date:nowStr(),result:'success'});
     await update(ref(db,`staff/${u}`),{lastActive:nowStr(),lastAction:'Logged in'});
     status.textContent='';
@@ -1458,6 +1573,7 @@ function startListeners(){
   onValue(ref(db,'logs/audit'),snap=>{ AUDIT_LOG=snap.val()||{}; if(page==='auditlog') render(); });
   onValue(ref(db,'logs/appeals'),snap=>{ APPEAL_LOG=snap.val()||{}; if(page==='appeals') render(); });
   onValue(ref(db,'announcements'),snap=>{ ANNOUNCEMENTS=snap.val()||{}; updateAnnouncements(); if(page==='announcements') render(); });
+  get(ref(db,'meta/appealPresets')).then(snap=>{ if(snap.exists()) APPEAL_PRESETS=snap.val(); });
 }
 
 (async()=>{
