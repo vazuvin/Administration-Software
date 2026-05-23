@@ -161,6 +161,9 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
       <span id="topbarTitle">Administration Panel</span>
       <div class="topbar-right">
         <div style="position:relative;display:inline-block;">
+          <button class="logout-btn" id="refreshBtn" style="width:22px;padding:0;font-size:12px;" title="Refresh data">&#8635;</button>
+          <div id="refreshTooltip" style="display:none;position:absolute;top:100%;right:0;background:#222;color:#fff;font-size:10px;white-space:nowrap;padding:3px 6px;border-radius:2px;z-index:999;margin-top:2px;pointer-events:none;"></div>
+        </div>
           <button class="logout-btn" id="notifBtn" style="width:22px;padding:0;font-size:12px;position:relative;" title="Notifications">&#128276;</button>
           <span id="notifBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#cc0000;color:#fff;font-size:8px;font-weight:bold;border-radius:50%;width:12px;height:12px;line-height:12px;text-align:center;pointer-events:none;"></span>
           <div id="notifDropdown" style="display:none;position:absolute;top:100%;right:0;background:#d4d0c8;border-top:1px solid #fff;border-left:1px solid #fff;border-right:1px solid #404040;border-bottom:1px solid #404040;z-index:600;width:260px;box-shadow:2px 2px 4px rgba(0,0,0,0.4);">
@@ -299,6 +302,57 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
   </div>
 </div>
 
+<!-- PROTECTED USER POPUP -->
+<div class="overlay" id="protectedOverlay">
+  <div class="dialog" style="width:400px;">
+    <div class="titlebar">
+      <div class="titlebar-title">&#9651; Protected User</div>
+      <div class="win-btns"><div class="wcb" id="protClose">&#10005;</div></div>
+    </div>
+    <div style="padding:12px 14px 10px;">
+      <div style="background:#e8d0d0;border:1px solid #cc6666;padding:8px 10px;margin-bottom:10px;">
+        <div style="font-size:12px;font-weight:bold;color:#880000;margin-bottom:4px;">PROTECTED USER</div>
+        <div style="font-size:11px;color:#000;line-height:1.6;" id="protMsg"></div>
+      </div>
+      <div style="font-size:11px;color:#000;margin-bottom:8px;font-weight:bold;">How would you like to proceed?</div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
+        <label style="display:flex;align-items:flex-start;gap:7px;font-size:11px;cursor:pointer;padding:4px 6px;border:1px solid #c0bcb4;background:#e8e4dc;">
+          <input type="radio" name="protOpt" value="escalate" checked style="margin-top:1px;"/>
+          <span><b>Escalate Report</b> — Send to a higher authority for review. No action will be taken until approved.</span>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:7px;font-size:11px;cursor:pointer;padding:4px 6px;border:1px solid #c0bcb4;background:#e8e4dc;">
+          <input type="radio" name="protOpt" value="proceed" style="margin-top:1px;"/>
+          <span><b>Ignore Warning &amp; Proceed</b> — Take action immediately. This override will be permanently logged.</span>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:7px;font-size:11px;cursor:pointer;padding:4px 6px;border:1px solid #c0bcb4;background:#e8e4dc;">
+          <input type="radio" name="protOpt" value="cancel" style="margin-top:1px;"/>
+          <span><b>Cancel</b> — Take no action and return.</span>
+        </label>
+      </div>
+      <div style="display:flex;gap:5px;justify-content:center;">
+        <button class="btn" id="protConfirm">Confirm</button>
+        <button class="btn" id="protCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- UPDATE LOG POPUP -->
+<div class="overlay" id="updateLogOverlay">
+  <div class="dialog" style="width:420px;">
+    <div class="titlebar">
+      <div class="titlebar-title">&#9998; Update Log</div>
+      <div class="win-btns"><div class="wcb" id="updateLogClose">&#10005;</div></div>
+    </div>
+    <div style="padding:10px 14px 12px;max-height:400px;overflow-y:auto;">
+      <div id="updateLogBody" style="font-size:11px;color:#000;line-height:1.7;"></div>
+    </div>
+    <div style="padding:6px 14px 10px;display:flex;justify-content:center;">
+      <button class="btn" id="updateLogOK">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- NOTIFICATION SETTINGS POPUP -->
 <div class="overlay" id="notifSettingsOverlay">
   <div class="dialog" style="width:300px;">
@@ -375,6 +429,37 @@ let STAFF_MESSAGES={};
 let MOD_REQUESTS={};
 let SITE_ALERTS={};
 let DASHBOARD_LOG_CONFIG={modlog:true,loginlog:true,appeals:false};
+let lastRefreshed=null;
+
+const UPDATE_LOG=[
+  {version:'2.3', date:'Current', entries:[
+    'Added Site-Wide Alerts (Warning / Critical / Info types) replacing Announcements',
+    'Added Staff Messaging — direct messages and all-staff broadcasts',
+    'Added User Config — Protected flag, VIP, Muted, Under Observation, Points, Rep Override',
+    'Protected Users now trigger escalation popup on moderation attempt',
+    'Added Requests page — senior staff can approve or deny escalated mod requests',
+    'Bulk Actions now require canBulkAction permission (Administrator+)',
+    'Bulk Actions note field — auto-appends [BLK] tag to mod log entries',
+    'Dashboard log widgets are now configurable in Administrator tab',
+    'Added Refresh button in topbar with last-updated timestamp tooltip',
+    'Added Update Log popup accessible from Dashboard',
+  ]},
+  {version:'2.2', date:'Previous', entries:[
+    'Added Dashboard home page with stat cards and quick links',
+    'Added Notification Bell with per-event preference settings',
+    'Added Ban Message Templates editable in Administrator',
+    'Added Mod Log Filters (moderator, action, user, date range)',
+    'Added Bulk Actions on All Accounts page',
+    'Added Reputation History Graph on User Admin',
+  ]},
+  {version:'2.1', date:'Earlier', entries:[
+    'Added Alt Detection with Roblox friends/groups cross-reference',
+    'Added Appeal Log with approve/deny and auto-revoke',
+    'Added custom permission levels per action in Administrator',
+    'Added Audit Log and Operator Code for sensitive actions',
+    'Added Staff Suspension and Termination flows',
+  ]},
+];
 const ALL_NOTIF_EVENTS=[
   {key:'newAppeal',label:'New Appeal Submitted',perm:'canViewAppealLog'},
   {key:'newMod',label:'New Moderation Action',perm:'canViewModLog'},
@@ -792,6 +877,8 @@ function renderHome(c){
         ${canDo('canViewUserAdmin')?`<button class="btn small" onclick="nav('useradmin')">&#9658; User Admin</button>`:''}
         <button class="btn small" onclick="nav('accounts')">&#9658; All Accounts</button>
         ${canDo('canViewAppealLog')?`<button class="btn small" onclick="nav('appeals')">&#9658; Appeal Log</button>`:''}
+        <hr style="border:none;border-top:1px solid #c0bcb4;margin:2px 0;">
+        <button class="btn small" onclick="openUpdateLog()">&#9998; Update Log</button>
       </div></div>
     </div>
   </div>`;
@@ -2308,38 +2395,37 @@ async function submitMod(){
 }
 
 function openProtectedUserDialog(uid, u, action, reason, note){
-  openDialog('⚠ Protected User',
-    `<div style="background:#e8d0d0;border:1px solid #cc6666;padding:6px 8px;margin-bottom:8px;">
-      <div style="font-size:12px;font-weight:bold;color:#880000;margin-bottom:3px;">PROTECTED USER</div>
-      <div style="font-size:11px;color:#000;">The user you are attempting to moderate (<b>${u.username}</b>) has been configured as a Protected User. Taking unauthorised action against this user may result in immediate disciplinary action against you.</div>
-    </div>
-    <div style="font-size:11px;color:#000;margin-bottom:6px;">How would you like to proceed?</div>
-    <div style="display:flex;flex-direction:column;gap:4px;">
-      <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;"><input type="radio" name="protOpt" value="escalate" checked/><span><b>Escalate Report</b> — Send to a higher authority for review</span></label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;"><input type="radio" name="protOpt" value="proceed"/><span><b>Ignore Warning &amp; Proceed</b> — Take action anyway (logged)</span></label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;"><input type="radio" name="protOpt" value="cancel"/><span><b>Cancel</b> — Take no action</span></label>
-    </div>`,
-    async()=>{
-      const opt=document.querySelector('input[name="protOpt"]:checked')?.value||'cancel';
-      if(opt==='cancel'){ closeDialog(); return; }
-      if(opt==='escalate'){
-        await push(ref(db,'modRequests'),{targetUser:u.username,targetUid:uid,action,reason:reason||'',note:note||'',submittedBy:ME,date:today(),status:'Pending',reviewedBy:'',reviewNote:''});
-        auditLog('Escalated Mod Request',`${u.username}: ${action} by ${ME}`);
-        pushNotif('newRequest',`Escalated request for ${u.username} from ${ME}`);
-        const el=document.getElementById('mResult');
-        if(el){ el.style.color='#006600'; el.textContent='Request escalated to higher authority.'; }
-        setTimeout(()=>nav('useradmin'),1200);
-        return;
-      }
-      if(opt==='proceed'){
-        await executeModAction(uid, u, action, reason, `[OVERRIDE — Protected User] ${note}`);
-        auditLog('Protected User Override',`${ME} bypassed protection on ${u.username}: ${action}`);
-        const el=document.getElementById('mResult');
-        if(el){ el.style.color='#880000'; el.textContent=`Warning override: "${action}" applied to ${u.username}.`; }
-        setTimeout(()=>nav('useradmin'),1200);
-      }
+  document.getElementById('protMsg').innerHTML=
+    `The user you are attempting to moderate (<b>${u.username}</b>) has been configured as a Protected User. Taking unauthorised action against this user may result in immediate disciplinary action against you.`;
+  // Reset radios
+  const radios=document.querySelectorAll('input[name="protOpt"]');
+  radios.forEach(r=>{ r.checked=r.value==='escalate'; });
+  document.getElementById('protectedOverlay').classList.add('show');
+
+  const close=()=>{ document.getElementById('protectedOverlay').classList.remove('show'); };
+  document.getElementById('protClose').onclick=close;
+  document.getElementById('protCancel').onclick=close;
+  document.getElementById('protConfirm').onclick=async()=>{
+    const opt=document.querySelector('input[name="protOpt"]:checked')?.value||'cancel';
+    close();
+    if(opt==='cancel') return;
+    if(opt==='escalate'){
+      await push(ref(db,'modRequests'),{targetUser:u.username,targetUid:uid,action,reason:reason||'',note:note||'',submittedBy:ME,date:today(),status:'Pending',reviewedBy:'',reviewNote:''});
+      auditLog('Escalated Mod Request',`${u.username}: ${action} by ${ME}`);
+      pushNotif('newRequest',`Escalated request for ${u.username} from ${ME}`);
+      const el=document.getElementById('mResult');
+      if(el){ el.style.color='#006600'; el.textContent='Request escalated to higher authority.'; }
+      setTimeout(()=>nav('useradmin'),1200);
+      return;
     }
-  );
+    if(opt==='proceed'){
+      await executeModAction(uid, u, action, reason, `[OVERRIDE — Protected User] ${note}`);
+      auditLog('Protected User Override',`${ME} bypassed protection on ${u.username}: ${action}`);
+      const el=document.getElementById('mResult');
+      if(el){ el.style.color='#880000'; el.textContent=`Warning override: "${action}" applied to ${u.username}.`; }
+      setTimeout(()=>nav('useradmin'),1200);
+    }
+  };
 }
 
 async function executeModAction(uid, u, action, reason, note){
@@ -2553,6 +2639,7 @@ async function doLogin(){
     startListeners();
     startHeartbeat();
     loadNotifPrefs();
+    lastRefreshed=nowStr();
     nav('home');
   }catch(e){ status.textContent='INVALID!'; await push(ref(db,'logs/login'),{username:u,level:'—',date:nowStr(),result:'failed'}).catch(()=>{}); }
 }
@@ -2774,6 +2861,42 @@ function setupMenus(){
   document.getElementById('notifSettingsClose').onclick=()=>document.getElementById('notifSettingsOverlay').classList.remove('show');
   document.getElementById('notifSettingsCancel').onclick=()=>document.getElementById('notifSettingsOverlay').classList.remove('show');
   document.getElementById('notifSettingsSave').onclick=()=>{ saveNotifPrefs(); document.getElementById('notifSettingsOverlay').classList.remove('show'); };
+
+  // Refresh button
+  const refreshBtn=document.getElementById('refreshBtn');
+  const refreshTooltip=document.getElementById('refreshTooltip');
+  if(refreshBtn){
+    refreshBtn.onmouseenter=()=>{
+      if(refreshTooltip){
+        refreshTooltip.textContent=lastRefreshed?`Last updated: ${lastRefreshed}`:'Not refreshed yet';
+        refreshTooltip.style.display='block';
+      }
+    };
+    refreshBtn.onmouseleave=()=>{ if(refreshTooltip) refreshTooltip.style.display='none'; };
+    refreshBtn.onclick=()=>{
+      lastRefreshed=nowStr();
+      refreshBtn.style.opacity='0.5';
+      render();
+      updateAnnouncements();
+      updateTopInfo();
+      setTimeout(()=>{ refreshBtn.style.opacity='1'; },600);
+    };
+  }
+
+  // Update log popup
+  document.getElementById('updateLogClose').onclick=()=>document.getElementById('updateLogOverlay').classList.remove('show');
+  document.getElementById('updateLogOK').onclick=()=>document.getElementById('updateLogOverlay').classList.remove('show');
+  window.openUpdateLog=function(){
+    const body=document.getElementById('updateLogBody');
+    if(body){
+      body.innerHTML=UPDATE_LOG.map(v=>`
+        <div style="margin-bottom:10px;">
+          <div style="font-size:12px;font-weight:bold;color:#000080;margin-bottom:3px;border-bottom:1px solid #c0bcb4;padding-bottom:2px;">Version ${v.version} <span style="font-size:10px;color:#808080;font-weight:normal;">${v.date}</span></div>
+          ${v.entries.map(e=>`<div style="font-size:11px;color:#000;padding-left:8px;margin-bottom:2px;">&#9658; ${e}</div>`).join('')}
+        </div>`).join('');
+    }
+    document.getElementById('updateLogOverlay').classList.add('show');
+  };
 }
 setupMenus();
 
