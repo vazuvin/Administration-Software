@@ -285,6 +285,7 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
           <div class="sb-title" style="color:#000;">Machine Management</div>
           <span class="sb-link" id="nav-siteconfig">&#9658; Configuration</span>
           <span class="sb-link" id="nav-statuslog">&#9658; Status Log</span>
+          <span class="sb-link" id="nav-wipelog">&#9658; Wipe Log</span>
           <span class="sb-link" id="nav-badgemgmt">&#9658; Badge Management</span>
         </div>
       </div>
@@ -573,6 +574,7 @@ let MOD_REQUESTS={};
 let SITE_ALERTS={};
 let SITE_CONFIG={};
 let SUGGESTIONS={};
+let WIPE_LOG={};
 let SITE_STATUS={status:'OK',reason:'',by:'',date:''};
 let STATUS_LOG={};
 let CUSTOM_STATUSES={};
@@ -889,7 +891,9 @@ function updateSidebar(){
   show('nav-home', true);
   showSec('sb-staff-section', canDo('canViewStaff'));
   showSec('sb-content-section', canDo('canViewContentModeration'));
-  showSec('sb-config-section', true);
+  // Config section — only show if user can access at least one item inside it
+  const canSeeConfig=canDo('canViewUserConfig')||isSuperAdmin()||canDo('canManageStaff');
+  showSec('sb-config-section', canSeeConfig);
   showSec('sb-machine-section', isSoftwareManager());
   show('nav-moderate', canDo('canModerateUsers'));
   show('nav-modlog', canDo('canViewModLog'));
@@ -909,6 +913,7 @@ function updateSidebar(){
   show('nav-staffconfig', canDo('canViewStaffConfig'));
   show('nav-msganalyze', canDo('canViewMessageAnalyze'));
   show('nav-statuslog', isSoftwareManager());
+  show('nav-wipelog', isSoftwareManager());
   show('nav-badgemgmt', isSoftwareManager());
   show('nav-altdetect', canDo('canViewContentModeration'));
 }
@@ -968,6 +973,7 @@ function render(){
   else if(page==='adminlog'){ isSuperAdmin()?renderAdminLog(c):c.innerHTML=denied; }
   else if(page==='siteconfig'){ isSoftwareManager()?renderSiteConfig(c):c.innerHTML=denied; }
   else if(page==='statuslog'){ isSoftwareManager()?renderStatusLog(c):c.innerHTML=denied; }
+  else if(page==='wipelog'){ isSoftwareManager()?renderWipeLog(c):c.innerHTML=denied; }
   else if(page==='badgemgmt'){ isSoftwareManager()?renderBadgeMgmt(c):c.innerHTML=denied; }
   else if(page==='suggestions'){ canDo('canViewSuggestions')?renderSuggestions(c):c.innerHTML=denied; }
   else if(page==='staffconfig'){ canDo('canViewStaffConfig')?renderStaffConfig(c):c.innerHTML=denied; }
@@ -1075,7 +1081,7 @@ function renderSiteConfig(c){
         <div style="margin-bottom:5px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;font-weight:bold;">Reason (required):</label>
           <textarea id="siteStatusReason" style="width:100%;height:45px;" placeholder="Why is the status changing?"></textarea></div>
         <div style="margin-bottom:8px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;font-weight:bold;">Alert Duration:</label>
-          <select id="siteStatusDuration" style="width:100%;font-family:inherit;font-size:11px;height:16px;">
+          <select id="siteStatusDuration" style="width:100%;font-family:inherit;font-size:11px;height:16px;" onchange="document.getElementById('statusCustomExpiry').style.display=this.value==='custom'?'flex':'none'">
             <option value="0">Never (manual clear)</option>
             <option value="15">15 minutes</option>
             <option value="30">30 minutes</option>
@@ -1083,7 +1089,16 @@ function renderSiteConfig(c){
             <option value="120">2 hours</option>
             <option value="240">4 hours</option>
             <option value="480">8 hours</option>
-          </select></div>
+            <option value="custom">Custom...</option>
+          </select>
+          <div id="statusCustomExpiry" style="display:none;gap:5px;align-items:center;margin-top:3px;flex-wrap:wrap;">
+            <input type="number" id="statusCustomDays" style="width:45px;" placeholder="d" min="0" value="0"/>
+            <span style="font-size:11px;">d</span>
+            <input type="number" id="statusCustomHours" style="width:45px;" placeholder="h" min="0" max="23" value="0"/>
+            <span style="font-size:11px;">h</span>
+            <input type="number" id="statusCustomMins" style="width:45px;" placeholder="m" min="0" max="59" value="0"/>
+            <span style="font-size:11px;">m</span>
+          </div></div>
         <button class="btn" id="btn-setsitestatus">Apply Status Change</button>
         <div id="statusMsg" style="font-size:11px;margin-top:4px;color:#006600;"></div>
       </div></div>
@@ -1123,7 +1138,14 @@ function renderSiteConfig(c){
   document.getElementById('btn-setsitestatus').onclick=async()=>{
     const newStatus=document.getElementById('siteStatusSel').value;
     const reason=document.getElementById('siteStatusReason').value.trim();
-    const durationMins=parseInt(document.getElementById('siteStatusDuration').value)||0;
+    const durationVal=document.getElementById('siteStatusDuration').value;
+    let durationMins=0;
+    if(durationVal==='custom'){
+      const d=parseInt(document.getElementById('statusCustomDays').value)||0;
+      const h=parseInt(document.getElementById('statusCustomHours').value)||0;
+      const m=parseInt(document.getElementById('statusCustomMins').value)||0;
+      durationMins=d*1440+h*60+m;
+    } else { durationMins=parseInt(durationVal)||0; }
     const statusMsgEl=document.getElementById('statusMsg');
     if(!reason){ statusMsgEl.style.color='#880000'; statusMsgEl.textContent='Reason is required.'; return; }
     const prevStatus=(SITE_STATUS&&SITE_STATUS.status)||'OK';
@@ -1523,12 +1545,32 @@ function openAppealPanel(uid){
   );
 }
 
+function generateWipeId(){
+  // Generate a random 4-digit number that doesn't repeat in current wipelog
+  const existing=new Set(Object.values(WIPE_LOG).map(e=>e.wipeId));
+  let id;
+  do { id=Math.floor(1000+Math.random()*9000); } while(existing.has(id));
+  return id;
+}
+
 async function wipeUser(uid, uname){
-  const wipeName='[WIPED]';
+  const wipeId=generateWipeId();
+  const wipeName=`[WIPED #${wipeId}]`;
+  // Replace username in all logs
   for(const [lid,e] of Object.entries(MOD_LOG)) if(e.user===uname) await update(ref(db,`logs/moderation/${lid}`),{user:wipeName});
   for(const [lid,e] of Object.entries(REVOKE_LOG)) if(e.user===uname) await update(ref(db,`logs/revoke/${lid}`),{user:wipeName});
+  // Write to wipe log before deletion
+  const u=USERS[uid];
+  await push(ref(db,'wipelog'),{
+    wipeId, wipeTag:wipeName, originalUsername:uname,
+    playerId:u?.playerId||'—', robloxId:u?.robloxId||'—',
+    status:u?.status||'—', repScore:calcReputation(u||{}),
+    punishmentCount:u?.punishments?Object.keys(u.punishments).length:0,
+    wipedBy:ME, date:nowStr(),
+    note:'Player account permanently deleted'
+  });
   await remove(ref(db,`users/${uid}`));
-  await push(ref(db,'logs/audit'),{action:'Account Wiped',detail:`${uname} permanently deleted`,by:ME,date:nowStr()});
+  await push(ref(db,'logs/audit'),{action:'Account Wiped',detail:`${uname} -> ${wipeName} by ${ME}`,by:ME,date:nowStr()});
   currentUserId=null; nav('accounts');
 }
 
@@ -2022,7 +2064,9 @@ function renderStaff(c){
       ${canDo('canViewStaffProfile')?`
       <div class="sbox"><div class="stitle">Staff Profile &mdash; ${s.username}</div><div class="sbody" style="overflow:hidden;">
         <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;">
-          <div class="avatar-box" style="width:52px;height:52px;flex-shrink:0;">${avatarHTML(s,52)}</div>
+          <div class="avatar-box" style="width:52px;height:52px;flex-shrink:0;overflow:hidden;">
+            ${s.avatarUrl?`<img src="${s.avatarUrl}" style="width:52px;height:52px;object-fit:cover;display:block;" onerror="this.parentElement.innerHTML='<span style=\\'font-size:14px;font-weight:bold;color:#555;\\'>${(s.username||'?').substring(0,2).toUpperCase()}</span>'">`:`<span style="font-size:14px;font-weight:bold;color:#555;">${(s.username||'?').substring(0,2).toUpperCase()}</span>`}
+          </div>
           <div style="min-width:0;flex:1;overflow:hidden;">
             <div style="font-size:11px;font-weight:bold;color:#000;word-break:break-all;">${s.username}</div>
             <div style="margin-top:2px;">${levelBadge(s.level)}</div>
@@ -2326,7 +2370,7 @@ function renderAlerts(c){
           </div>
           <div style="flex:1;min-width:120px;">
             <label style="font-size:11px;color:#000;display:block;margin-bottom:2px;">Expires After:</label>
-            <select id="alertExpiry" style="width:100%;font-family:inherit;font-size:11px;height:16px;">
+            <select id="alertExpiry" style="width:100%;font-family:inherit;font-size:11px;height:16px;" onchange="document.getElementById('alertCustomExpiry').style.display=this.value==='custom'?'flex':'none'">
               <option value="0">Never (manual)</option>
               <option value="15">15 minutes</option>
               <option value="30">30 minutes</option>
@@ -2335,7 +2379,16 @@ function renderAlerts(c){
               <option value="240">4 hours</option>
               <option value="480">8 hours</option>
               <option value="1440">24 hours</option>
+              <option value="custom">Custom...</option>
             </select>
+            <div id="alertCustomExpiry" style="display:none;gap:5px;align-items:center;margin-top:3px;flex-wrap:wrap;">
+              <input type="number" id="alertCustomDays" style="width:45px;" placeholder="d" min="0" value="0"/>
+              <span style="font-size:11px;">d</span>
+              <input type="number" id="alertCustomHours" style="width:45px;" placeholder="h" min="0" max="23" value="0"/>
+              <span style="font-size:11px;">h</span>
+              <input type="number" id="alertCustomMins" style="width:45px;" placeholder="m" min="0" max="59" value="0"/>
+              <span style="font-size:11px;">m</span>
+            </div>
           </div>
         </div>
         <div style="margin-bottom:4px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;">Message:</label>
@@ -2370,7 +2423,14 @@ function renderAlerts(c){
     document.getElementById('btn-postalert').onclick=async()=>{
       const msg=document.getElementById('newAlertMsg').value.trim();
       const type=document.getElementById('alertType').value;
-      const expiryMins=parseInt(document.getElementById('alertExpiry').value)||0;
+      const expiryVal=document.getElementById('alertExpiry').value;
+      let expiryMins=0;
+      if(expiryVal==='custom'){
+        const d=parseInt(document.getElementById('alertCustomDays').value)||0;
+        const h=parseInt(document.getElementById('alertCustomHours').value)||0;
+        const m=parseInt(document.getElementById('alertCustomMins').value)||0;
+        expiryMins=d*1440+h*60+m;
+      } else { expiryMins=parseInt(expiryVal)||0; }
       if(!msg) return;
       // Remove all previous alerts before posting new one
       await remove(ref(db,'siteAlerts'));
@@ -3703,6 +3763,7 @@ function startListeners(){
     if(page==='alerts') safeRender();
   });
   onValue(ref(db,'suggestions'),snap=>{ SUGGESTIONS=snap.val()||{}; if(page==='suggestions') safeRender(); });
+  onValue(ref(db,'wipelog'),snap=>{ WIPE_LOG=snap.val()||{}; if(page==='wipelog') safeRender(); });
   onValue(ref(db,'statusLog'),snap=>{ STATUS_LOG=snap.val()||{}; if(page==='statuslog') safeRender(); });
   onValue(ref(db,'meta/siteStatus'),snap=>{
     if(snap.exists()){
@@ -3727,8 +3788,8 @@ function startListeners(){
 // ── MENUBAR ──
 // ── SUGGESTIONS ──
 function renderSuggestions(c){
-  const canManage=canDo('canManageSuggestions');
-  const entries=Object.entries(SUGGESTIONS).sort((a,b)=>a[1].date>b[1].date?-1:1);
+  const canManage=canDo('canManageSuggestions')||canDo('canViewSuggestions');
+  const entries=Object.entries(SUGGESTIONS).sort((a,b)=>(a[1].date||'')>(b[1].date||'')?-1:1);
   c.innerHTML=`
   <div class="ptitle">Staff Suggestions</div>
   ${canManage?`
@@ -3923,13 +3984,21 @@ function renderStaffConfig(c){
           const staffEntry=Object.entries(STAFF).find(([,s])=>s.username===username);
           if(!staffEntry){ document.getElementById('wipeStaffMsg').textContent='Not found.'; return; }
           const [sid,sData]=staffEntry;
+          const wipeId=generateWipeId();
+          const wipeName=`[WIPED #${wipeId}]`;
           // Write wipe record BEFORE removing so wiped user sees details on next login attempt
           await set(ref(db,`wipedAccounts/${username}`),{reason:'Account wiped by administrator',by:ME,date:nowStr(),seenByUser:false});
+          // Write to wipe log
+          await push(ref(db,'wipelog'),{
+            wipeId, wipeTag:wipeName, originalUsername:username,
+            level:sData.level||'—', joined:sData.joined||'—',
+            wipedBy:ME, date:nowStr(), note:'Staff account permanently wiped'
+          });
           // Force logout
           await update(ref(db,`staff/${sid}`),{forceLogout:true}).catch(()=>{});
           await new Promise(r=>setTimeout(r,500));
           await remove(ref(db,`staff/${sid}`));
-          await push(ref(db,'logs/terminate'),{username,type:'Staff Wipe',by:ME,date:today(),reason:'Account wiped by administrator',modNote:'',offensiveItem:''});
+          await push(ref(db,'logs/terminate'),{username:wipeName,type:'Staff Wipe',by:ME,date:today(),reason:'Account wiped by administrator',modNote:'',offensiveItem:''});
           auditLog('Staff Account Wiped',`${username} by ${ME}`);
           const msgEl=document.getElementById('wipeStaffMsg');
           if(msgEl){ msgEl.style.color='#006600'; msgEl.textContent=`${username} wiped.`; setTimeout(()=>{ if(msgEl) msgEl.textContent=''; nav('staffconfig'); },2000); }
@@ -3940,29 +4009,102 @@ function renderStaffConfig(c){
 }
 
 // ── MESSAGE ANALYZE ──
+// Rule-based message analyzer (works without API)
+function analyzeMessageLocally(msg){
+  const m=msg.toLowerCase();
+  const flags=[];
+  // Severity categories
+  const critical=[/\bkill\b/,/\bmurder\b/,/\bsuicide\b/,/\bterror/,/\bbomb\b/,/\bhack\b/,/ip.?grab/,/dox/,/swat/];
+  const high=[/\bfuck\b/,/\bshit\b/,/\bass\b/,/\bbitch\b/,/\bcunt\b/,/\bslur/,/\bracist/,/\bn.gger/,/\bfag/,/exploit/,/cheat/,/script/];
+  const medium=[/\bstupid\b/,/\bidiot\b/,/\bnoob\b/,/\bsuck\b/,/\bscam/,/\bfree.?robux/,/\bspam/,/\bstalk/];
+  const lowFlags=[/\bad(min)?\b/,/\breport\b/,/\bban/,/\bwarn/,/caps lock/];
+
+  let severity='None', verdict='No Action', reason='Message appears acceptable.', suggested='';
+  if(critical.some(r=>{ if(r.test(m)){ flags.push(r.source.replace(/\\b/g,'').replace(/[()]/g,'')); return true; } return false; })){
+    severity='High'; verdict='Moderation Action'; reason='Message contains potentially harmful content (threats, exploits, or dangerous language).'; suggested='Warn or suspend depending on severity and context.';
+  } else if(high.some(r=>{ if(r.test(m)){ flags.push(r.source.replace(/\\b/g,'').replace(/[()]/g,'')); return true; } return false; })){
+    severity='High'; verdict='Moderation Action'; reason='Message contains profanity or discriminatory language.'; suggested='Warn player.';
+  } else if(medium.some(r=>{ if(r.test(m)){ flags.push(r.source.replace(/\\b/g,'').replace(/[()]/g,'')); return true; } return false; })){
+    severity='Medium'; verdict='Warning'; reason='Message contains mildly inappropriate language or possible scam content.'; suggested='Issue a warning.';
+  } else if(lowFlags.some(r=>{ if(r.test(m)){ flags.push(r.source.replace(/\\b/g,'').replace(/[()]/g,'')); return true; } return false; })){
+    severity='Low'; verdict='No Action'; reason='Message mentions moderation topics but nothing actionable.'; suggested='';
+  }
+  // All caps check
+  if(msg.length>10&&msg===msg.toUpperCase()&&/[A-Z]/.test(msg)){ flags.push('all-caps'); if(severity==='None'){ severity='Low'; verdict='No Action'; reason='Message is in all caps but content is acceptable.'; } }
+  // Excessive repetition
+  if(/(.)\1{5,}/.test(msg)){ flags.push('repetition'); if(severity==='None'){ severity='Low'; verdict='No Action'; reason='Message contains excessive repetition.'; } }
+  return {verdict,severity,reason,suggested_action:suggested,flags:[...new Set(flags)],source:'Rule-based (offline)'};
+}
+
 function renderMsgAnalyze(c){
   c.innerHTML=`
   <div class="ptitle">Message Analyze</div>
-  <div class="sbox"><div class="stitle">AI-Assisted Message Analysis</div><div class="sbody">
-    <div style="font-size:11px;color:#555;margin-bottom:6px;">Paste a player's message below. The system will suggest whether it warrants a warning, moderation action, or no action, with reasoning.</div>
-    <div style="margin-bottom:5px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;font-weight:bold;">Player Username (optional):</label>
-      <input type="text" id="maUser" style="width:200px;" placeholder="For context only"/></div>
+  <div class="sbox"><div class="stitle">Message Analysis</div><div class="sbody">
+    <div style="font-size:11px;color:#555;margin-bottom:6px;">Paste a player message below. Uses a rule-based engine that works offline, with an AI upgrade when the Anthropic API is accessible.</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:5px;">
+      <div style="flex:1;min-width:150px;">
+        <label style="font-size:11px;color:#000;display:block;margin-bottom:2px;font-weight:bold;">Player Username (optional):</label>
+        <input type="text" id="maUser" style="width:100%;" placeholder="For context only"/></div>
+      <div style="flex:1;min-width:80px;">
+        <label style="font-size:11px;color:#000;display:block;margin-bottom:2px;font-weight:bold;">Engine:</label>
+        <select id="maEngine" style="width:100%;font-family:inherit;font-size:11px;height:16px;">
+          <option value="local">Rule-based (always works)</option>
+          <option value="ai">AI (requires API key)</option>
+        </select>
+      </div>
+    </div>
     <div style="margin-bottom:5px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;font-weight:bold;">Message to Analyze:</label>
       <textarea id="maMsg" style="width:100%;height:80px;" placeholder="Paste the player's message here..."></textarea></div>
     <button class="btn" id="btn-maanalyze">Analyze Message</button>
     <div id="maLoading" style="display:none;font-size:11px;color:#000080;margin-top:5px;">Analyzing...</div>
     <div id="maResult" style="margin-top:8px;"></div>
   </div></div>
-  <div class="sbox"><div class="stitle">Analysis History</div><div class="sbody">
+  <div class="sbox"><div class="stitle">Analysis History (this session)</div><div class="sbody">
     <div id="maHistory" style="font-size:11px;color:#555;"><i>No analyses run this session.</i></div>
   </div></div>`;
+
   const history=[];
+
+  function showResult(parsed, resultEl, historyEl, user, msg){
+    const verdictColor=parsed.verdict==='No Action'?'#006600':parsed.verdict==='Warning'?'#cc8800':'#cc0000';
+    const bgColor=parsed.verdict==='No Action'?'#e8f4e8':parsed.verdict==='Warning'?'#fff8e0':'#fde8e8';
+    resultEl.innerHTML=`
+      <div style="border:2px solid ${verdictColor};background:${bgColor};padding:8px 10px;">
+        <div style="font-size:12px;font-weight:bold;color:${verdictColor};margin-bottom:5px;">${parsed.verdict} &mdash; ${parsed.severity} Severity</div>
+        <div style="font-size:11px;color:#000;margin-bottom:3px;"><b>Reason:</b> ${parsed.reason||'—'}</div>
+        ${parsed.suggested_action?`<div style="font-size:11px;color:#000;margin-bottom:3px;"><b>Suggested:</b> ${parsed.suggested_action}</div>`:''}
+        ${parsed.flags&&parsed.flags.length?`<div style="font-size:11px;color:#000;margin-bottom:3px;"><b>Flags:</b> ${parsed.flags.join(', ')}</div>`:''}
+        <div style="font-size:10px;color:#808080;margin-top:4px;">Engine: ${parsed.source||'AI'}</div>
+      </div>
+      ${canDo('canModerateUsers')&&parsed.verdict!=='No Action'?`<button class="btn small" style="margin-top:4px;" onclick="nav('moderate')">Go to Moderate User</button>`:''}`;
+    history.unshift({user:user||'Unknown',msg:msg.substring(0,50)+(msg.length>50?'...':''),verdict:parsed.verdict,date:nowStr()});
+    historyEl.innerHTML=history.map(h=>`
+      <div style="border-bottom:1px solid #c0bcb4;padding:3px 0;font-size:11px;">
+        <span style="color:#808080;font-size:10px;">${h.date}</span> &mdash;
+        <b>${h.user}</b>: "${h.msg}" &mdash;
+        <span style="font-weight:bold;color:${h.verdict==='No Action'?'#006600':h.verdict==='Warning'?'#cc8800':'#cc0000'};">${h.verdict}</span>
+      </div>`).join('');
+  }
+
   document.getElementById('btn-maanalyze').onclick=async()=>{
     const msg=document.getElementById('maMsg').value.trim();
     const user=document.getElementById('maUser').value.trim();
-    if(!msg){ document.getElementById('maResult').innerHTML='<span style="color:#880000;font-size:11px;">Please enter a message to analyze.</span>'; return; }
-    document.getElementById('maLoading').style.display='block';
-    document.getElementById('maResult').innerHTML='';
+    const engine=document.getElementById('maEngine').value;
+    const loadEl=document.getElementById('maLoading');
+    const resultEl=document.getElementById('maResult');
+    const historyEl=document.getElementById('maHistory');
+    if(!msg){ resultEl.innerHTML='<span style="color:#880000;font-size:11px;">Please enter a message to analyze.</span>'; return; }
+    loadEl.style.display='block'; resultEl.innerHTML='';
+
+    if(engine==='local'){
+      // Pure local analysis — instant, no API needed
+      await new Promise(r=>setTimeout(r,30)); // tiny delay so UI updates
+      loadEl.style.display='none';
+      showResult(analyzeMessageLocally(msg), resultEl, historyEl, user, msg);
+      return;
+    }
+
+    // AI engine
     try{
       const response=await fetch('https://api.anthropic.com/v1/messages',{
         method:'POST',
@@ -3978,46 +4120,52 @@ function renderMsgAnalyze(c){
           messages:[{role:'user',content:`Analyze this player message${user?' from user '+user:''}:\n"${msg}"`}]
         })
       });
-      if(!response.ok){
-        const errText=await response.text();
-        throw new Error(`API error ${response.status}: ${errText.substring(0,120)}`);
-      }
+      loadEl.style.display='none';
+      if(!response.ok) throw new Error(`API ${response.status}`);
       const data=await response.json();
-      document.getElementById('maLoading').style.display='none';
       const raw=data.content?.map(i=>i.text||'').join('').trim();
       const clean=raw.replace(/^```json\s*/,'').replace(/\s*```$/,'').trim();
       let parsed=null;
-      try{ parsed=JSON.parse(clean); }catch(e){ parsed=null; }
-      const verdictColor=parsed?.verdict==='No Action'?'#006600':parsed?.verdict==='Warning'?'#cc8800':'#cc0000';
-      const resultHtml=parsed?`
-        <div style="border:2px solid ${verdictColor};background:${parsed.verdict==='No Action'?'#e8f4e8':parsed.verdict==='Warning'?'#fff8e0':'#fde8e8'};padding:8px 10px;">
-          <div style="font-size:12px;font-weight:bold;color:${verdictColor};margin-bottom:5px;">${parsed.verdict} &mdash; ${parsed.severity} Severity</div>
-          <div style="font-size:11px;color:#000;margin-bottom:3px;"><b>Reason:</b> ${parsed.reason||'—'}</div>
-          ${parsed.suggested_action?`<div style="font-size:11px;color:#000;margin-bottom:3px;"><b>Suggested Action:</b> ${parsed.suggested_action}</div>`:''}
-          ${parsed.flags&&parsed.flags.length?`<div style="font-size:11px;color:#000;"><b>Flags:</b> ${parsed.flags.join(', ')}</div>`:''}
-        </div>
-        ${canDo('canModerateUsers')&&parsed.verdict!=='No Action'?`<button class="btn small" style="margin-top:4px;" onclick="nav('moderate')">&#9658; Go to Moderate User</button>`:''}`:
-        `<div style="font-size:11px;color:#880000;background:#fde8e8;border:1px solid #cc6666;padding:6px;">
-          Could not parse AI response. Make sure the Anthropic API key is set if required by your deployment.<br>
-          <span style="font-size:10px;color:#555;margin-top:3px;display:block;">Raw: ${(raw||'empty').substring(0,200)}</span>
-        </div>`;
-      document.getElementById('maResult').innerHTML=resultHtml;
-      history.unshift({user:user||'Unknown',msg:msg.substring(0,50)+(msg.length>50?'...':''),verdict:parsed?.verdict||'Error',date:nowStr()});
-      document.getElementById('maHistory').innerHTML=history.map(h=>`
-        <div style="border-bottom:1px solid #c0bcb4;padding:3px 0;font-size:11px;">
-          <span style="color:#808080;font-size:10px;">${h.date}</span> &mdash;
-          <b>${h.user}</b>: "${h.msg}" &mdash;
-          <span style="font-weight:bold;color:${h.verdict==='No Action'?'#006600':h.verdict==='Warning'?'#cc8800':'#cc0000'};">${h.verdict}</span>
-        </div>`).join('');
+      try{ parsed=JSON.parse(clean); }catch(e){}
+      if(parsed){ parsed.source='AI (Claude)'; showResult(parsed, resultEl, historyEl, user, msg); }
+      else{
+        // AI returned something unparseable — fall back to local
+        const local=analyzeMessageLocally(msg);
+        local.source='Rule-based (AI response unparseable)';
+        showResult(local, resultEl, historyEl, user, msg);
+      }
     }catch(err){
-      document.getElementById('maLoading').style.display='none';
-      document.getElementById('maResult').innerHTML=`
-        <div style="font-size:11px;color:#880000;background:#fde8e8;border:1px solid #cc6666;padding:6px;">
-          <b>Analysis failed:</b> ${err.message}<br>
-          <span style="font-size:10px;color:#555;margin-top:3px;display:block;">Note: The Anthropic API requires an API key. This feature works when the panel is served from an environment where the key is available, or when accessed via Claude Artifacts.</span>
-        </div>`;
+      loadEl.style.display='none';
+      // Fall back to local on any error
+      const local=analyzeMessageLocally(msg);
+      local.source=`Rule-based (AI unavailable: ${err.message.substring(0,60)})`;
+      showResult(local, resultEl, historyEl, user, msg);
     }
   };
+}
+
+// ── WIPE LOG ──
+function renderWipeLog(c){
+  const entries=Object.entries(WIPE_LOG).sort((a,b)=>(a[1].date||'')>(b[1].date||'')?-1:1);
+  c.innerHTML=`
+  <div class="ptitle" style="background:#004466;">Machine Management &mdash; Wipe Log</div>
+  <div class="sbox" style="border:2px solid #880000;"><div class="stitle" style="background:#880000;color:#fff;">Wiped Account Records</div><div class="sbody">
+    <div style="font-size:11px;color:#555;margin-bottom:6px;">All wiped accounts are permanently recorded here. The Wipe Tag is what appears in place of the original username in all logs.</div>
+    ${entries.length===0?'<i style="color:#444;">No accounts wiped yet.</i>':`
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>Wipe Tag</th><th>Original Username</th><th>Level / Type</th><th>Player ID</th><th>Rep Score</th><th>Wiped By</th><th>Date</th><th>Note</th></tr>
+      ${entries.map(([lid,e])=>`<tr>
+        <td><span class="wiped">${e.wipeTag||'[WIPED]'}</span></td>
+        <td style="color:#880000;font-weight:bold;">${e.originalUsername||'—'}</td>
+        <td style="font-size:10px;">${e.level||e.status||'—'}</td>
+        <td>${e.playerId||'—'}</td>
+        <td>${e.repScore!==undefined?e.repScore+'pts':'—'}</td>
+        <td><b>${e.wipedBy||'—'}</b></td>
+        <td style="font-size:10px;">${e.date||'—'}</td>
+        <td style="font-size:10px;max-width:120px;white-space:normal;">${e.note||'—'}</td>
+      </tr>`).join('')}
+    </table></div>`}
+  </div></div>`;
 }
 
 // ── STATUS LOG ──
@@ -4328,15 +4476,26 @@ function runAdvancedSearch(){
     }
     if(chModlog){
       const matches=Object.entries(MOD_LOG).filter(([,r])=>r&&queries.some(q=>(r.user||'').toLowerCase().includes(q)||(r.mod||'').toLowerCase().includes(q)));
-      matches.slice(0,20).forEach(([,r])=>results.push({type:'Mod Log',label:`${r.user||'—'} &mdash; ${r.action||'—'}`,sub:`By ${r.mod||'—'} on ${r.date||'—'}`,action:''}));
+      matches.slice(0,20).forEach(([,r])=>{
+        const uid=Object.entries(USERS).find(([,u])=>u.username===r.user)?.[0];
+        results.push({type:'Mod Log',label:`${r.user||'—'} &mdash; ${r.action||'—'}`,sub:`By ${r.mod||'—'} on ${r.date||'—'}`,action:uid?`<button class="btn small srch-goto" data-type="player" data-uid="${uid}">View</button>`:'<span style="font-size:10px;color:#808080;">[wiped]</span>'});
+      });
     }
     if(chLogin){
       const matches=Object.entries(LOGIN_LOG).filter(([,r])=>r&&queries.some(q=>(r.username||'').toLowerCase().includes(q)));
-      matches.slice(0,10).forEach(([,r])=>results.push({type:'Login',label:`<b>${r.username||'—'}</b>`,sub:`${r.result||'—'} &mdash; ${r.date||'—'}`,action:''}));
+      matches.slice(0,10).forEach(([,r])=>{
+        const uid=Object.entries(USERS).find(([,u])=>u.username===r.username)?.[0];
+        const sid=Object.entries(STAFF).find(([,s])=>s.username===r.username)?.[0];
+        const action=uid?`<button class="btn small srch-goto" data-type="player" data-uid="${uid}">View</button>`:sid?`<button class="btn small srch-goto" data-type="staff" data-sid="${sid}">View</button>`:'';
+        results.push({type:'Login',label:`<b>${r.username||'—'}</b>`,sub:`${r.result||'—'} &mdash; ${r.date||'—'}`,action});
+      });
     }
     if(chAppeals){
       const matches=Object.entries(APPEAL_LOG).filter(([,r])=>r&&queries.some(q=>(r.user||'').toLowerCase().includes(q)));
-      matches.slice(0,10).forEach(([,r])=>results.push({type:'Appeal',label:`<b>${r.user||'—'}</b>`,sub:`${r.presetReason||'—'} &mdash; ${r.status||'—'}`,action:''}));
+      matches.slice(0,10).forEach(([,r])=>{
+        const uid=r.uid||Object.entries(USERS).find(([,u])=>u.username===r.user)?.[0];
+        results.push({type:'Appeal',label:`<b>${r.user||'—'}</b>`,sub:`${r.presetReason||'—'} &mdash; ${r.status||'—'}`,action:uid?`<button class="btn small srch-goto" data-type="player" data-uid="${uid}">View</button>`:''});
+      });
     }
 
     if(!results.length){
@@ -4514,7 +4673,7 @@ function openNotifSettings(){
   document.getElementById('notifSettingsOverlay').classList.add('show');
 }
 
-['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','loginlog','auditlog','alerts','adminlog','home','messaging','requests','userconfig','siteconfig','suggestions','staffconfig','msganalyze','statuslog','badgemgmt'].forEach(p=>{
+['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','loginlog','auditlog','alerts','adminlog','home','messaging','requests','userconfig','siteconfig','suggestions','staffconfig','msganalyze','statuslog','badgemgmt','wipelog'].forEach(p=>{
   const el=document.getElementById('nav-'+p);
   if(el) el.onclick=()=>nav(p);
 });
