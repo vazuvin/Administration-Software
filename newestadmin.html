@@ -570,6 +570,7 @@ function nav(p){
   if(el) el.classList.add('active');
   render();
 }
+window.nav=nav;
 
 function render(){
   updateTopInfo(); updateSidebar(); updateAnnouncements();
@@ -2315,9 +2316,12 @@ function setupMenus(){
       if(!isOpen){ drop.classList.add('show'); trigger.classList.add('open'); }
     };
   });
-  document.addEventListener('click',()=>{
-    document.querySelectorAll('.dropdown').forEach(d=>d.classList.remove('show'));
-    document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('open'));
+  document.addEventListener('click',(e)=>{
+    const menubar=document.getElementById('menubar');
+    if(menubar&&!menubar.contains(e.target)){
+      document.querySelectorAll('.dropdown').forEach(d=>d.classList.remove('show'));
+      document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('open'));
+    }
   });
   // File menu
   const mlogout=document.getElementById('menu-logout'); if(mlogout) mlogout.onclick=doLogout;
@@ -2362,7 +2366,13 @@ function setupMenus(){
       if(!isOpen) renderNotifDropdown();
     };
   }
-  document.addEventListener('click',()=>{ const d=document.getElementById('notifDropdown'); if(d) d.style.display='none'; });
+  document.addEventListener('click',(e)=>{
+    const bell=document.getElementById('notifBtn');
+    const drop=document.getElementById('notifDropdown');
+    if(drop&&bell&&!bell.contains(e.target)&&!drop.contains(e.target)){
+      drop.style.display='none';
+    }
+  });
   const notifClear=document.getElementById('notifClearBtn');
   if(notifClear) notifClear.onclick=(e)=>{ e.stopPropagation(); NOTIFICATIONS=[]; renderNotifBadge(); renderNotifDropdown(); };
   const notifSettingsLink=document.getElementById('notifSettingsLink');
