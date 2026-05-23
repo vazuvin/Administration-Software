@@ -24,23 +24,25 @@ body{font-family:'MS Sans Serif',Tahoma,Arial,sans-serif;font-size:11px;backgrou
 .ok-btn{width:90px;height:24px;}
 .win98-btn:active{border-color:#404040 #fff #fff #404040;}
 .login-status{font-size:11px;font-weight:bold;color:#cc0000;text-align:center;min-height:14px;}
-#adminScreen{display:none;width:100%;min-height:100vh;background:#d4d0c8;}
-.shell{font-family:'MS Sans Serif',Tahoma,Arial,sans-serif;font-size:11px;background:#d4d0c8;min-height:100vh;}
+#adminScreen{display:none;width:100%;min-height:100vh;background:#d4d0c8;flex-direction:column;}
+.shell{font-family:'MS Sans Serif',Tahoma,Arial,sans-serif;font-size:11px;background:#d4d0c8;min-height:100vh;display:flex;flex-direction:column;}
 .topbar{background:#00007e;color:#fff;padding:3px 6px;font-size:11px;font-weight:bold;display:flex;align-items:center;justify-content:space-between;}
 .topbar-right{display:flex;align-items:center;gap:8px;}
 .logout-btn{background:#d4d0c8;border-top:1px solid #fff;border-left:1px solid #fff;border-right:1px solid #404040;border-bottom:1px solid #404040;font-size:10px;font-family:inherit;color:#000;cursor:pointer;padding:0 5px;height:16px;border-radius:0;}
 .menubar{background:#d4d0c8;border-bottom:1px solid #606060;padding:2px 4px;display:flex;gap:12px;}
 .menubar span{cursor:default;padding:1px 4px;color:#000;}
 .menubar span:hover{background:#00007e;color:#fff;}
+.announce-bar{background:#fffbcc;border-bottom:2px solid #c8a800;padding:3px 8px;font-size:11px;color:#000;display:none;}
+.announce-bar b{color:#7a6000;}
 .topinfo{font-size:11px;color:#000;padding:2px 6px;border-bottom:1px solid #606060;background:#d4d0c8;}
-.main{display:flex;min-height:calc(100vh - 72px);}
-.sidebar{width:160px;flex-shrink:0;background:#d4d0c8;border-right:2px solid #808080;padding:4px 0;}
+.main{display:flex;flex:1;}
+.sidebar{width:165px;flex-shrink:0;background:#d4d0c8;border-right:2px solid #808080;padding:4px 0;overflow-y:auto;}
 .sb-section{padding:2px 6px 0;margin-top:5px;}
 .sb-title{font-weight:bold;font-size:11px;margin-bottom:1px;color:#000;}
 .sb-link{padding:1px 4px 1px 12px;cursor:pointer;color:#000066;text-decoration:underline;display:block;font-size:11px;white-space:nowrap;}
 .sb-link:hover{background:#00007e;color:#fff;}
 .sb-link.active{font-weight:bold;color:#000;text-decoration:none;background:#b8b4ac;}
-.content{flex:1;padding:6px;min-width:0;}
+.content{flex:1;padding:6px;min-width:0;overflow-y:auto;}
 .ptitle{background:#000080;color:#fff;padding:2px 6px;font-weight:bold;font-size:11px;margin-bottom:5px;}
 .sbox{border:1px solid #606060;margin-bottom:6px;}
 .stitle{background:#c0bcb4;border-bottom:1px solid #606060;padding:1px 5px;font-weight:bold;font-size:11px;color:#000;}
@@ -58,7 +60,7 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
 .tbl-wrap{overflow-x:auto;width:100%;}
 .tbl{border-collapse:collapse;font-size:11px;white-space:nowrap;}
 .tbl th{background:#000080;color:#fff;padding:2px 8px;text-align:left;font-weight:bold;}
-.tbl td{padding:2px 8px;border-bottom:1px solid #b0b0b0;color:#000;}
+.tbl td{padding:2px 8px;border-bottom:1px solid #b0b0b0;color:#000;vertical-align:middle;}
 .tbl tr:nth-child(even) td{background:#e4e0d8;}
 .ok{color:#006600;font-weight:bold;}
 .sus{color:#995500;font-weight:bold;}
@@ -69,6 +71,13 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
 .badge.moderator{background:#c8d0e8;color:#000055;}
 .badge.administrator{background:#e8d0a0;color:#553300;}
 .badge.superadmin{background:#e8c0c0;color:#550000;}
+.badge.appeal-open{background:#d0e8ff;color:#003366;border-color:#6699cc;}
+.badge.appeal-approved{background:#c8e0c8;color:#003300;border-color:#669966;}
+.badge.appeal-denied{background:#f0c0c0;color:#660000;border-color:#cc6666;}
+.rep-bar{height:10px;background:#e0dcd4;border:1px solid #808080;overflow:hidden;}
+.rep-fill{height:100%;background:#cc0000;}
+.rep-fill.low{background:#006600;}
+.rep-fill.mid{background:#cc8800;}
 .avatar-box{background:#b0aca4;border:1px solid #707070;display:flex;align-items:center;justify-content:center;font-size:9px;color:#333;flex-shrink:0;overflow:hidden;}
 .avatar-box img{width:100%;height:100%;display:block;object-fit:cover;}
 .nonexistent{color:#880000;font-weight:bold;}
@@ -76,10 +85,14 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
 .overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:999;align-items:center;justify-content:center;}
 .overlay.show{display:flex;}
 .dialog{background:#d4d0c8;border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #404040;border-bottom:2px solid #404040;width:320px;box-shadow:4px 4px 10px rgba(0,0,0,0.7);}
-.susp-popup{background:#d4d0c8;border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #404040;border-bottom:2px solid #404040;width:380px;box-shadow:4px 4px 10px rgba(0,0,0,0.8);}
+.susp-popup{background:#d4d0c8;border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #404040;border-bottom:2px solid #404040;width:390px;box-shadow:4px 4px 10px rgba(0,0,0,0.8);}
 .susp-field{margin-bottom:6px;}
 .susp-field label{display:block;font-size:11px;font-weight:bold;color:#000;margin-bottom:2px;}
 .susp-field .val{font-size:11px;color:#000;line-height:1.5;}
+.activity-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;}
+.activity-dot.active{background:#006600;}
+.activity-dot.idle{background:#cc8800;}
+.activity-dot.offline{background:#808080;}
 </style>
 </head>
 <body>
@@ -106,7 +119,7 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
   </div>
 </div>
 
-<!-- SUSPENSION POPUP -->
+<!-- SUSPENSION/TERMINATION POPUP -->
 <div class="overlay" id="suspOverlay">
   <div class="susp-popup">
     <div class="titlebar">
@@ -118,7 +131,7 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
         <div style="font-size:28px;flex-shrink:0;">&#9888;</div>
         <div>
           <div style="font-size:13px;font-weight:bold;color:#000;margin-bottom:4px;" id="suspPopupHeading">Account Suspended</div>
-          <div style="font-size:11px;color:#000;line-height:1.6;" id="suspPopupMsg">Our content administration has determined your behavior has been in violation of our Terms of Use.</div>
+          <div style="font-size:11px;color:#000;line-height:1.6;" id="suspPopupMsg"></div>
         </div>
       </div>
       <div style="border:1px solid #808080;background:#c8c4bc;padding:8px 10px;margin-bottom:10px;">
@@ -128,7 +141,7 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
         <div class="susp-field" style="margin-bottom:0;"><label>Offensive Item:</label><div class="val" id="suspOffItem"></div></div>
       </div>
       <div style="display:flex;justify-content:center;">
-        <button class="win98-btn ok-btn" onclick="document.getElementById('suspOverlay').classList.remove('show')">OK</button>
+        <button class="win98-btn ok-btn" id="suspOKBtn">OK</button>
       </div>
     </div>
   </div>
@@ -144,6 +157,7 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
       </div>
     </div>
     <div class="menubar"><span>File</span><span>View</span><span>Tools</span><span>Help</span></div>
+    <div class="announce-bar" id="announceBar"></div>
     <div class="topinfo" id="topinfo">Loading...</div>
     <div class="main">
       <div class="sidebar">
@@ -153,9 +167,16 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
           <span class="sb-link" id="nav-moderate">&#9658; Moderate User</span>
           <span class="sb-link" id="nav-accounts">&#9658; All Accounts</span>
         </div>
+        <div class="sb-section" id="sb-content-section">
+          <div class="sb-title">Content Moderation</div>
+          <span class="sb-link" id="nav-reputation">&#9658; Reputation System</span>
+          <span class="sb-link" id="nav-appeals">&#9658; Appeal Log</span>
+          <span class="sb-link" id="nav-altdetect">&#9658; Alt Detection</span>
+        </div>
         <div class="sb-section" id="sb-staff-section">
           <div class="sb-title">Staff</div>
           <span class="sb-link" id="nav-staff">&#9658; Staff Registry</span>
+          <span class="sb-link" id="nav-activity">&#9658; Staff Activity</span>
         </div>
         <div class="sb-section">
           <div class="sb-title">Logs</div>
@@ -163,6 +184,12 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
           <span class="sb-link" id="nav-revokelog">&#9658; Revoke Log</span>
           <span class="sb-link" id="nav-suspendlog">&#9658; Suspension Log</span>
           <span class="sb-link" id="nav-terminatelog">&#9658; Termination Log</span>
+          <span class="sb-link" id="nav-loginlog">&#9658; Login Log</span>
+        </div>
+        <div class="sb-section" id="sb-config-section">
+          <div class="sb-title">Configuration</div>
+          <span class="sb-link" id="nav-auditlog">&#9658; Audit Log</span>
+          <span class="sb-link" id="nav-announcements">&#9658; Announcements</span>
           <span class="sb-link" id="nav-adminlog">&#9658; Administrator</span>
         </div>
       </div>
@@ -209,7 +236,7 @@ select{height:16px;border-top:1px solid #707070;border-left:1px solid #707070;bo
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, set, get, push, remove, update, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, set, get, push, remove, update, onValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -229,24 +256,36 @@ const auth = getAuth(fbApp);
 const OPERATOR_CODE = '3655125652373';
 
 const DEFAULT_PERMS = {
-  canViewUserAdmin:'INTERN',canModerateUsers:'MODERATOR',
-  canViewStaff:'SUPER ADMINISTRATOR',canManageStaff:'SUPER ADMINISTRATOR',
-  canSuspendStaff:'ADMINISTRATOR',canTerminateStaff:'SUPER ADMINISTRATOR',
-  canViewModLog:'MODERATOR',canViewRevokeLogs:'MODERATOR',
-  canViewSuspendLogs:'ADMINISTRATOR',canViewTerminateLogs:'ADMINISTRATOR',
+  canViewUserAdmin:'INTERN', canModerateUsers:'MODERATOR',
+  canViewStaff:'SUPER ADMINISTRATOR', canManageStaff:'SUPER ADMINISTRATOR',
+  canSuspendStaff:'ADMINISTRATOR', canTerminateStaff:'SUPER ADMINISTRATOR',
+  canViewModLog:'MODERATOR', canViewRevokeLogs:'MODERATOR',
+  canViewSuspendLogs:'ADMINISTRATOR', canViewTerminateLogs:'ADMINISTRATOR',
+  canViewLoginLog:'ADMINISTRATOR', canViewContentModeration:'MODERATOR',
+  canViewStaffActivity:'ADMINISTRATOR',
 };
-const LEVEL_RANK={'INTERN':1,'MODERATOR':2,'ADMINISTRATOR':3,'SUPER ADMINISTRATOR':4};
 
-let ME='',MY_LEVEL='',MY_AUTH_USER=null,currentPassword='';
-let page='useradmin',dlgCallback=null,opCallback=null;
-let currentUserId=null,currentStaffId=null;
-let USERS={},STAFF={},MOD_LOG={},REVOKE_LOG={},SUSPEND_LOG={},TERMINATE_LOG={};
+const DEFAULT_REP_POINTS = { 'Remind':1, 'Warn':2, 'Ban 1 Day':3, 'Ban 3 Days':3, 'Ban 7 Days':5, 'Ban 14 Days':5, 'Suspend':4, 'Ban Permanent':10 };
+
+const LEVEL_RANK = {'INTERN':1,'MODERATOR':2,'ADMINISTRATOR':3,'SUPER ADMINISTRATOR':4};
+
+let ME='', MY_LEVEL='', currentPassword='';
+let page='useradmin', dlgCallback=null, opCallback=null;
+let currentUserId=null, currentStaffId=null;
+let USERS={}, STAFF={}, MOD_LOG={}, REVOKE_LOG={}, SUSPEND_LOG={}, TERMINATE_LOG={}, LOGIN_LOG={}, AUDIT_LOG={}, APPEAL_LOG={};
 let PERMS={...DEFAULT_PERMS};
+let REP_POINTS={...DEFAULT_REP_POINTS};
+let ANNOUNCEMENTS={};
 
-function today(){return new Date().toLocaleDateString();}
-function rankOf(l){return LEVEL_RANK[l]||0;}
-function canDo(k){return rankOf(MY_LEVEL)>=rankOf(PERMS[k]||'SUPER ADMINISTRATOR');}
-function isSuperAdmin(){return MY_LEVEL==='SUPER ADMINISTRATOR';}
+function today(){ return new Date().toLocaleDateString(); }
+function nowStr(){ return new Date().toLocaleString(); }
+function rankOf(l){ return LEVEL_RANK[l]||0; }
+function canDo(k){ return rankOf(MY_LEVEL)>=rankOf(PERMS[k]||'SUPER ADMINISTRATOR'); }
+function isSuperAdmin(){ return MY_LEVEL==='SUPER ADMINISTRATOR'; }
+
+function auditLog(action, detail){
+  push(ref(db,'logs/audit'), {action, detail, by:ME, date:nowStr()});
+}
 
 function statusBadge(s){
   if(s==='active') return '<span class="ok">OK</span>';
@@ -258,29 +297,47 @@ function levelBadge(l){
   const cls=l==='INTERN'?'intern':l==='MODERATOR'?'moderator':l==='ADMINISTRATOR'?'administrator':'superadmin';
   return `<span class="badge ${cls}">${l}</span>`;
 }
-function avatarHTML(u,size){
+function avatarHTML(u, size){
   const sz=size||60;
   if(u&&u.avatarUrl) return `<img src="${u.avatarUrl}" width="${sz}" height="${sz}" onerror="this.style.display='none'"/>`;
   return `<span style="font-size:9px;color:#555;">NO AVATAR</span>`;
 }
 function accountAge(dateStr){
   if(!dateStr||dateStr==='Never') return 'Unknown';
-  const d=new Date(dateStr),now=new Date();
+  const d=new Date(dateStr), now=new Date();
   const diff=now-d; if(diff<0) return 'Just now';
   const days=Math.floor(diff/(1000*60*60*24));
-  const y=Math.floor(days/365),m=Math.floor((days%365)/30),rd=days%30;
+  const y=Math.floor(days/365), m=Math.floor((days%365)/30), rd=days%30;
   const p=[];
-  if(y>0)p.push(`${y} year${y>1?'s':''}`);
-  if(m>0)p.push(`${m} month${m>1?'s':''}`);
-  if(rd>0||p.length===0)p.push(`${rd} day${rd!==1?'s':''}`);
+  if(y>0) p.push(`${y} year${y>1?'s':''}`);
+  if(m>0) p.push(`${m} month${m>1?'s':''}`);
+  if(rd>0||p.length===0) p.push(`${rd} day${rd!==1?'s':''}`);
   return p.join(', ')+' old';
+}
+
+function calcReputation(u){
+  if(!u.punishments) return 0;
+  let score=0;
+  Object.values(u.punishments).forEach(p=>{ score += REP_POINTS[p.action]||0; });
+  return score;
+}
+
+function repBar(score){
+  const max=30;
+  const pct=Math.min(100, Math.round(score/max*100));
+  const cls=score<=5?'low':score<=15?'mid':'';
+  let label=score<=5?'Good Standing':score<=15?'Caution':'High Risk';
+  return `<div style="display:flex;align-items:center;gap:6px;">
+    <div class="rep-bar" style="width:100px;"><div class="rep-fill ${cls}" style="width:${pct}%;"></div></div>
+    <span style="font-size:11px;color:#000;">${score} pts &mdash; ${label}</span>
+  </div>`;
 }
 
 async function fetchRobloxInfo(username){
   try{
     const proxy='https://corsproxy.io/?';
     const r1=await fetch(proxy+encodeURIComponent('https://users.roblox.com/v1/usernames/users'),{
-      method:'POST',headers:{'Content-Type':'application/json'},
+      method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({usernames:[username],excludeBannedUsers:false})
     });
     const d1=await r1.json();
@@ -288,8 +345,26 @@ async function fetchRobloxInfo(username){
     const robloxId=d1.data[0].id;
     const r2=await fetch(proxy+encodeURIComponent(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${robloxId}&size=150x150&format=Png&isCircular=false`));
     const d2=await r2.json();
-    return{robloxId:String(robloxId),avatarUrl:d2.data&&d2.data[0]?d2.data[0].imageUrl:''};
-  }catch(e){return null;}
+    return {robloxId:String(robloxId), avatarUrl:d2.data&&d2.data[0]?d2.data[0].imageUrl:''};
+  }catch(e){ return null; }
+}
+
+async function fetchRobloxFriends(robloxId){
+  try{
+    const proxy='https://corsproxy.io/?';
+    const r=await fetch(proxy+encodeURIComponent(`https://friends.roblox.com/v1/users/${robloxId}/friends?limit=50`));
+    const d=await r.json();
+    return d.data?d.data.map(f=>({id:String(f.id),name:f.name})):[];
+  }catch(e){ return []; }
+}
+
+async function fetchRobloxGroups(robloxId){
+  try{
+    const proxy='https://corsproxy.io/?';
+    const r=await fetch(proxy+encodeURIComponent(`https://groups.roblox.com/v1/users/${robloxId}/groups/roles`));
+    const d=await r.json();
+    return d.data?d.data.map(g=>({id:String(g.group.id),name:g.group.name})):[];
+  }catch(e){ return []; }
 }
 
 async function getNextPlayerId(){
@@ -306,15 +381,31 @@ function updateTopInfo(){
     `Players: <b>${ua.filter(u=>u.status==='active').length}</b> &nbsp;|&nbsp; Suspended: <b>${ua.filter(u=>u.status==='suspended').length}</b> &nbsp;|&nbsp; Banned: <b>${ua.filter(u=>u.status==='banned').length}</b> &nbsp;|&nbsp; Staff: <b>${Object.keys(STAFF).length}</b>`;
 }
 
+function updateAnnouncements(){
+  const bar=document.getElementById('announceBar');
+  if(!bar) return;
+  const active=Object.values(ANNOUNCEMENTS).filter(a=>a.active);
+  if(!active.length){ bar.style.display='none'; return; }
+  const latest=active[active.length-1];
+  bar.style.display='block';
+  bar.innerHTML=`<b>&#128276; Notice from ${latest.by} (${latest.date}):</b> ${latest.message}`;
+}
+
 function updateSidebar(){
-  const ss=document.getElementById('sb-staff-section');
-  if(ss) ss.style.display=canDo('canViewStaff')?'':'none';
-  if(document.getElementById('nav-adminlog')) document.getElementById('nav-adminlog').style.display=isSuperAdmin()?'':'none';
-  if(document.getElementById('nav-suspendlog')) document.getElementById('nav-suspendlog').style.display=canDo('canViewSuspendLogs')?'':'none';
-  if(document.getElementById('nav-terminatelog')) document.getElementById('nav-terminatelog').style.display=canDo('canViewTerminateLogs')?'':'none';
-  if(document.getElementById('nav-moderate')) document.getElementById('nav-moderate').style.display=canDo('canModerateUsers')?'':'none';
-  if(document.getElementById('nav-modlog')) document.getElementById('nav-modlog').style.display=canDo('canViewModLog')?'':'none';
-  if(document.getElementById('nav-revokelog')) document.getElementById('nav-revokelog').style.display=canDo('canViewRevokeLogs')?'':'none';
+  const show=(id,cond)=>{ const el=document.getElementById(id); if(el) el.style.display=cond?'':'none'; };
+  const showSection=(id,cond)=>{ const el=document.getElementById(id); if(el) el.style.display=cond?'':'none'; };
+  showSection('sb-staff-section', canDo('canViewStaff'));
+  showSection('sb-content-section', canDo('canViewContentModeration'));
+  showSection('sb-config-section', true);
+  show('nav-moderate', canDo('canModerateUsers'));
+  show('nav-modlog', canDo('canViewModLog'));
+  show('nav-revokelog', canDo('canViewRevokeLogs'));
+  show('nav-suspendlog', canDo('canViewSuspendLogs'));
+  show('nav-terminatelog', canDo('canViewTerminateLogs'));
+  show('nav-loginlog', canDo('canViewLoginLog'));
+  show('nav-activity', canDo('canViewStaffActivity'));
+  show('nav-auditlog', isSuperAdmin());
+  show('nav-adminlog', isSuperAdmin());
 }
 
 function nav(p){
@@ -326,21 +417,28 @@ function nav(p){
 }
 
 function render(){
-  updateTopInfo();updateSidebar();
+  updateTopInfo(); updateSidebar(); updateAnnouncements();
   const c=document.getElementById('content');
   const denied='<div class="ptitle">Access Denied</div><i style="padding:8px;display:block;color:#880000;">You do not have permission to view this page.</i>';
-  if(page==='useradmin'){canDo('canViewUserAdmin')?renderUA(c):c.innerHTML=denied;}
-  else if(page==='moderate'){canDo('canModerateUsers')?renderMod(c):c.innerHTML=denied;}
+  if(page==='useradmin'){ canDo('canViewUserAdmin')?renderUA(c):c.innerHTML=denied; }
+  else if(page==='moderate'){ canDo('canModerateUsers')?renderMod(c):c.innerHTML=denied; }
   else if(page==='accounts') renderAccounts(c);
-  else if(page==='staff'){canDo('canViewStaff')?renderStaff(c):c.innerHTML=denied;}
-  else if(page==='modlog'){canDo('canViewModLog')?renderModLog(c):c.innerHTML=denied;}
-  else if(page==='revokelog'){canDo('canViewRevokeLogs')?renderRevokeLog(c):c.innerHTML=denied;}
-  else if(page==='suspendlog'){canDo('canViewSuspendLogs')?renderSuspendLog(c):c.innerHTML=denied;}
-  else if(page==='terminatelog'){canDo('canViewTerminateLogs')?renderTerminateLog(c):c.innerHTML=denied;}
-  else if(page==='adminlog'){isSuperAdmin()?renderAdminLog(c):c.innerHTML=denied;}
+  else if(page==='reputation'){ canDo('canViewContentModeration')?renderReputation(c):c.innerHTML=denied; }
+  else if(page==='appeals'){ canDo('canViewContentModeration')?renderAppeals(c):c.innerHTML=denied; }
+  else if(page==='altdetect'){ canDo('canViewContentModeration')?renderAltDetect(c):c.innerHTML=denied; }
+  else if(page==='staff'){ canDo('canViewStaff')?renderStaff(c):c.innerHTML=denied; }
+  else if(page==='activity'){ canDo('canViewStaffActivity')?renderActivity(c):c.innerHTML=denied; }
+  else if(page==='modlog'){ canDo('canViewModLog')?renderModLog(c):c.innerHTML=denied; }
+  else if(page==='revokelog'){ canDo('canViewRevokeLogs')?renderRevokeLog(c):c.innerHTML=denied; }
+  else if(page==='suspendlog'){ canDo('canViewSuspendLogs')?renderSuspendLog(c):c.innerHTML=denied; }
+  else if(page==='terminatelog'){ canDo('canViewTerminateLogs')?renderTerminateLog(c):c.innerHTML=denied; }
+  else if(page==='loginlog'){ canDo('canViewLoginLog')?renderLoginLog(c):c.innerHTML=denied; }
+  else if(page==='auditlog'){ isSuperAdmin()?renderAuditLog(c):c.innerHTML=denied; }
+  else if(page==='announcements') renderAnnouncements(c);
+  else if(page==='adminlog'){ isSuperAdmin()?renderAdminLog(c):c.innerHTML=denied; }
 }
 
-// ── OPERATOR CODE DIALOG ──
+// ── OPERATOR CODE ──
 function openOpDialog(warningMsg, cb){
   document.getElementById('opWarning').textContent=warningMsg||'To continue with this action please insert your operator code.';
   document.getElementById('opCodeInput').value='';
@@ -349,12 +447,11 @@ function openOpDialog(warningMsg, cb){
   document.getElementById('opOverlay').classList.add('show');
   setTimeout(()=>{ const el=document.getElementById('opCodeInput'); if(el) el.focus(); },150);
 }
-function closeOpDialog(){document.getElementById('opOverlay').classList.remove('show');opCallback=null;}
+function closeOpDialog(){ document.getElementById('opOverlay').classList.remove('show'); opCallback=null; }
 function submitOpCode(){
   const val=document.getElementById('opCodeInput').value.trim();
-  if(val!==OPERATOR_CODE){document.getElementById('opErr').textContent='Incorrect operator code.';return;}
-  const cb=opCallback;
-  opCallback=null;
+  if(val!==OPERATOR_CODE){ document.getElementById('opErr').textContent='Incorrect operator code.'; return; }
+  const cb=opCallback; opCallback=null;
   document.getElementById('opOverlay').classList.remove('show');
   if(cb) cb();
 }
@@ -363,13 +460,29 @@ document.getElementById('opCancel').onclick=closeOpDialog;
 document.getElementById('opSubmit').onclick=submitOpCode;
 document.getElementById('opCodeInput').onkeydown=e=>{ if(e.key==='Enter') submitOpCode(); };
 
+// ── DELETE LOG BTN ──
+function deleteLogBtn(logPath, lid){
+  return isSuperAdmin()?`<button class="btn red small del-log-btn" data-path="${logPath}" data-lid="${lid}">DELETE</button>`:'';
+}
+function bindDeleteLogBtns(c){
+  c.querySelectorAll('.del-log-btn').forEach(btn=>{
+    btn.onclick=()=>{
+      const path=btn.dataset.path, lid=btn.dataset.lid;
+      openOpDialog('To continue with this action please insert your operator code.',
+        async()=>{ await remove(ref(db,`${path}/${lid}`)); auditLog('Log Entry Deleted',`Path: ${path}/${lid}`); render(); }
+      );
+    };
+  });
+}
+
 // ── USER ADMIN ──
 function renderUA(c){
   const uArr=Object.entries(USERS).sort((a,b)=>(a[1].playerId||0)-(b[1].playerId||0));
   if(!currentUserId||!USERS[currentUserId]) currentUserId=uArr.length?uArr[0][0]:null;
-  if(!currentUserId){c.innerHTML='<div class="ptitle">User Admin</div><i style="padding:8px;display:block;color:#444;">No players yet.</i>';return;}
+  if(!currentUserId){ c.innerHTML='<div class="ptitle">User Admin</div><i style="padding:8px;display:block;color:#444;">No players yet.</i>'; return; }
   const u=USERS[currentUserId];
   const punishments=u.punishments?Object.entries(u.punishments):[];
+  const repScore=calcReputation(u);
   c.innerHTML=`
   <div class="ptitle">User Admin &mdash; ${u.username}</div>
   <div style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -383,9 +496,11 @@ function renderUA(c){
             <div class="row"><label>Player ID:</label><span>${u.playerId||'—'}</span></div>
             <div class="row"><label>User ID (Roblox):</label><span>${u.robloxId||'—'}</span></div>
             <div class="row"><label>Status:</label>${statusBadge(u.status)}</div>
+            <div class="row"><label>Reputation:</label>${repBar(repScore)}</div>
             <div class="row"><label>System Entry:</label><span>${u.created}</span></div>
             ${u.robloxAccountCreated?`<div class="row"><label>Account Created:</label><span>${u.robloxAccountCreated} &mdash; ${accountAge(u.robloxAccountCreated)}</span></div>`:''}
             <div class="row"><label>Last Login:</label><span>${u.lastLogin}</span></div>
+            ${u.alts&&u.alts.length?`<div class="row"><label>Linked Alts:</label><span style="color:#880000;">${u.alts.join(', ')}</span></div>`:''}
           </div>
         </div>
         <div style="display:flex;gap:3px;flex-wrap:wrap;align-items:center;">
@@ -420,6 +535,15 @@ function renderUA(c){
         <div id="fuErr" style="color:#880000;font-size:11px;margin-top:2px;"></div>
         <div id="fuResult" style="margin-top:4px;"></div>
       </div></div>
+      <div class="sbox"><div class="stitle">Appeal Status</div><div class="sbody">
+        <div class="row"><label>Status:</label><span>${u.appealStatus?`<span class="badge appeal-${u.appealStatus.toLowerCase().replace(' ','-')}">${u.appealStatus}</span>`:'None'}</span></div>
+        ${canDo('canModerateUsers')?`
+        <div style="margin-top:4px;display:flex;gap:3px;flex-wrap:wrap;">
+          <button class="btn small" id="btn-appeal-open">Open</button>
+          <button class="btn small" id="btn-appeal-approve">Approve</button>
+          <button class="btn small red" id="btn-appeal-deny">Deny</button>
+        </div>`:''}
+      </div></div>
     </div>
   </div>`;
 
@@ -427,64 +551,55 @@ function renderUA(c){
   document.getElementById('btn-refresh').onclick=()=>refreshRoblox(currentUserId);
   document.getElementById('btn-savenote').onclick=()=>saveNote(currentUserId);
   document.getElementById('btn-find').onclick=doFindU;
-  document.getElementById('fuInput').onkeydown=e=>{if(e.key==='Enter')doFindU();};
+  document.getElementById('fuInput').onkeydown=e=>{ if(e.key==='Enter') doFindU(); };
   document.querySelectorAll('.revoke-btn').forEach(btn=>{btn.onclick=()=>revokeP(btn.dataset.uid,btn.dataset.pid);});
-  if(isSuperAdmin()){
-    document.getElementById('btn-wipe').onclick=()=>{
-      const uid=currentUserId;
-      const uname=USERS[uid]?USERS[uid].username:'this account';
-      openOpDialog(`WARNING: This will permanently purge all data for "${uname}" including their account, punishments, and all log entries. This account will be replaced with [WIPED] in all logs. This CANNOT be undone. Enter your operator code to continue.`,
-        async()=>{
-          await wipeUser(uid,uname);
-        }
-      );
-    };
+  if(isSuperAdmin()) document.getElementById('btn-wipe').onclick=()=>{
+    openOpDialog(`WARNING: This will permanently purge all data for "${u.username}". They will appear as [WIPED] in all logs. This CANNOT be undone.`,
+      async()=>{ await wipeUser(currentUserId,u.username); }
+    );
+  };
+  if(canDo('canModerateUsers')){
+    document.getElementById('btn-appeal-open').onclick=()=>setAppealStatus(currentUserId,'Open');
+    document.getElementById('btn-appeal-approve').onclick=()=>setAppealStatus(currentUserId,'Approved');
+    document.getElementById('btn-appeal-deny').onclick=()=>setAppealStatus(currentUserId,'Denied');
   }
+}
+
+async function setAppealStatus(uid, status){
+  const u=USERS[uid]; if(!u) return;
+  await update(ref(db,`users/${uid}`),{appealStatus:status});
+  await push(ref(db,'logs/appeals'),{user:u.username,status,by:ME,date:today(),note:''});
+  auditLog('Appeal Status Changed',`${u.username} -> ${status}`);
 }
 
 async function wipeUser(uid, uname){
-  // Replace username in all logs with [WIPED]
   const wipeName='[WIPED]';
-  // Mod log
-  const modSnap=await get(ref(db,'logs/moderation'));
-  if(modSnap.exists()){
-    const entries=modSnap.val();
-    for(const[lid,e] of Object.entries(entries)){
-      if(e.user===uname) await update(ref(db,`logs/moderation/${lid}`),{user:wipeName});
-    }
-  }
-  // Revoke log
-  const rvSnap=await get(ref(db,'logs/revoke'));
-  if(rvSnap.exists()){
-    const entries=rvSnap.val();
-    for(const[lid,e] of Object.entries(entries)){
-      if(e.user===uname) await update(ref(db,`logs/revoke/${lid}`),{user:wipeName});
-    }
-  }
-  // Remove user
+  for(const [lid,e] of Object.entries(MOD_LOG)) if(e.user===uname) await update(ref(db,`logs/moderation/${lid}`),{user:wipeName});
+  for(const [lid,e] of Object.entries(REVOKE_LOG)) if(e.user===uname) await update(ref(db,`logs/revoke/${lid}`),{user:wipeName});
   await remove(ref(db,`users/${uid}`));
-  currentUserId=null;
-  nav('accounts');
+  await push(ref(db,'logs/audit'),{action:'Account Wiped',detail:`${uname} permanently deleted`,by:ME,date:nowStr()});
+  currentUserId=null; nav('accounts');
 }
 
 async function refreshRoblox(uid){
-  const u=USERS[uid];if(!u)return;
+  const u=USERS[uid]; if(!u) return;
   const el=document.getElementById('refreshMsg');
   if(el) el.textContent='Fetching...';
   const info=await fetchRobloxInfo(u.robloxUsername||u.username);
-  if(!info){if(el)el.textContent='Not found on Roblox.';return;}
+  if(!info){ if(el) el.textContent='Not found on Roblox.'; return; }
   await update(ref(db,`users/${uid}`),{robloxId:info.robloxId,avatarUrl:info.avatarUrl});
-  if(el){el.textContent='Updated!';setTimeout(()=>{if(el)el.textContent='';},2000);}
+  auditLog('Roblox Data Refreshed',`${u.username}`);
+  if(el){ el.textContent='Updated!'; setTimeout(()=>{ if(el) el.textContent=''; },2000); }
 }
 
 function doFindU(){
   const q=document.getElementById('fuInput').value.trim();
   const resultEl=document.getElementById('fuResult');
   const errEl=document.getElementById('fuErr');
-  errEl.textContent='';resultEl.innerHTML='';
+  errEl.textContent=''; resultEl.innerHTML='';
   if(!q) return;
   const entry=Object.entries(USERS).find(([,u])=>u.username.toLowerCase()===q.toLowerCase()||String(u.playerId)===q);
-  if(entry){currentUserId=entry[0];render();return;}
+  if(entry){ currentUserId=entry[0]; render(); return; }
   resultEl.innerHTML=`
     <div style="font-size:11px;color:#880000;margin-bottom:3px;">Not found in system.</div>
     <div style="font-size:11px;color:#000;margin-bottom:3px;">Search Roblox for "<b>${q}</b>"?</div>
@@ -502,22 +617,17 @@ async function lookupAndAdd(username){
   const preview=document.getElementById('lookupPreview');
   const avatarBox=document.getElementById('lookupAvatar');
   const infoEl=document.getElementById('lookupInfo');
-  msgEl.style.color='#000080';msgEl.textContent='Looking up on Roblox...';
+  msgEl.style.color='#000080'; msgEl.textContent='Looking up on Roblox...';
   preview.style.display='flex';
   avatarBox.innerHTML='<span style="font-size:8px;">...</span>';
   const[info,playerId]=await Promise.all([fetchRobloxInfo(username),getNextPlayerId()]);
   const newUser={username,robloxUsername:username,robloxId:info?info.robloxId:'',avatarUrl:info?info.avatarUrl:'',playerId,status:'active',created:today(),lastLogin:'Never',notes:'',punishments:{}};
-  if(info){
-    avatarBox.innerHTML=`<img src="${info.avatarUrl}" width="36" height="36"/>`;
-    infoEl.innerHTML=`<b>${username}</b><br>Roblox ID: ${info.robloxId}<br>Player #${playerId}`;
-    msgEl.style.color='#006600';msgEl.textContent='Found! Adding...';
-  }else{
-    preview.style.display='none';
-    msgEl.style.color='#995500';msgEl.textContent=`Not on Roblox — adding as Player #${playerId}.`;
-  }
+  if(info){ avatarBox.innerHTML=`<img src="${info.avatarUrl}" width="36" height="36"/>`; infoEl.innerHTML=`<b>${username}</b><br>Roblox ID: ${info.robloxId}`; msgEl.style.color='#006600'; msgEl.textContent='Found! Adding...'; }
+  else { preview.style.display='none'; msgEl.style.color='#995500'; msgEl.textContent=`Not on Roblox — adding as Player #${playerId}.`; }
   const newRef=push(ref(db,'users'));
   await set(newRef,newUser);
-  setTimeout(()=>{currentUserId=newRef.key;nav('useradmin');},1200);
+  auditLog('Player Added',`${username} (Player #${playerId})`);
+  setTimeout(()=>{ currentUserId=newRef.key; nav('useradmin'); },1200);
 }
 
 // ── MODERATE ──
@@ -577,11 +687,11 @@ function renderAccounts(c){
   <div class="sbox"><div class="stitle">Player List</div><div class="sbody">
     ${uArr.length===0?'<i style="color:#444;">No players yet.</i>':`
     <div class="tbl-wrap"><table class="tbl">
-      <tr><th>Player ID</th><th>Username</th><th>Roblox Username</th><th>Roblox ID</th><th>Status</th><th>System Entry</th><th>Action</th></tr>
+      <tr><th>Player ID</th><th>Username</th><th>Roblox ID</th><th>Status</th><th>Rep</th><th>System Entry</th><th>Action</th></tr>
       ${uArr.map(([uid,u])=>`<tr>
         <td>${u.playerId||'—'}</td><td><b>${u.username}</b></td>
-        <td>${u.robloxUsername||'N/A'}</td><td>${u.robloxId||'—'}</td>
-        <td>${statusBadge(u.status)}</td><td>${u.created}</td>
+        <td>${u.robloxId||'—'}</td><td>${statusBadge(u.status)}</td>
+        <td>${calcReputation(u)} pts</td><td>${u.created}</td>
         <td style="display:flex;gap:3px;align-items:center;">
           <button class="btn view-user-btn" data-uid="${uid}">View</button>
           ${isSuperAdmin()?`<button class="btn red small wipe-user-btn" data-uid="${uid}" data-uname="${u.username}">DELETE</button>`:''}
@@ -601,18 +711,12 @@ function renderAccounts(c){
       <div id="nuPreviewInfo" style="font-size:11px;color:#000;"></div>
     </div>
   </div></div>`;
-
-  document.querySelectorAll('.view-user-btn').forEach(btn=>{btn.onclick=()=>{currentUserId=btn.dataset.uid;nav('useradmin');};});
+  document.querySelectorAll('.view-user-btn').forEach(btn=>{btn.onclick=()=>{ currentUserId=btn.dataset.uid; nav('useradmin'); };});
   document.querySelectorAll('.wipe-user-btn').forEach(btn=>{
-    btn.onclick=()=>{
-      const uid=btn.dataset.uid,uname=btn.dataset.uname;
-      openOpDialog(`WARNING: This will permanently purge all data for "${uname}" including their account, punishments, and all associated log entries. They will appear as [WIPED] in all logs. This CANNOT be undone.`,
-        async()=>{ await wipeUser(uid,uname); }
-      );
-    };
+    btn.onclick=()=>{ openOpDialog(`WARNING: Permanently purge all data for "${btn.dataset.uname}"?`, async()=>{ await wipeUser(btn.dataset.uid,btn.dataset.uname); }); };
   });
   document.getElementById('btn-adduser').onclick=addUser;
-  document.getElementById('nuUser').onkeydown=e=>{if(e.key==='Enter')addUser();};
+  document.getElementById('nuUser').onkeydown=e=>{ if(e.key==='Enter') addUser(); };
 }
 
 async function addUser(){
@@ -621,26 +725,132 @@ async function addUser(){
   const preview=document.getElementById('nuPreview');
   const avatarBox=document.getElementById('nuAvatarBox');
   const previewInfo=document.getElementById('nuPreviewInfo');
-  if(!rawUsername){el.style.color='#880000';el.textContent='Enter a Roblox username.';return;}
-  if(Object.values(USERS).find(u=>u.username.toLowerCase()===rawUsername.toLowerCase())){el.style.color='#880000';el.textContent='Player already exists.';return;}
-  el.style.color='#000080';el.textContent='Looking up Roblox account...';
+  if(!rawUsername){ el.style.color='#880000'; el.textContent='Enter a Roblox username.'; return; }
+  if(Object.values(USERS).find(u=>u.username.toLowerCase()===rawUsername.toLowerCase())){ el.style.color='#880000'; el.textContent='Player already exists.'; return; }
+  el.style.color='#000080'; el.textContent='Looking up Roblox account...';
   preview.style.display='flex';
   avatarBox.innerHTML='<span style="font-size:9px;">...</span>';
   previewInfo.textContent='Fetching...';
   const[info,playerId]=await Promise.all([fetchRobloxInfo(rawUsername),getNextPlayerId()]);
   const newUser={username:rawUsername,robloxUsername:rawUsername,robloxId:info?info.robloxId:'',avatarUrl:info?info.avatarUrl:'',playerId,status:'active',created:today(),lastLogin:'Never',notes:'',punishments:{}};
-  if(info){
-    avatarBox.innerHTML=`<img src="${info.avatarUrl}" width="40" height="40"/>`;
-    previewInfo.innerHTML=`<b>${rawUsername}</b><br>Roblox ID: ${info.robloxId}<br>Player #${playerId}`;
-    el.style.color='#006600';el.textContent='Found! Adding player...';
-  }else{
-    preview.style.display='none';
-    el.style.color='#995500';el.textContent=`Not found on Roblox — added as Player #${playerId}.`;
-  }
+  if(info){ avatarBox.innerHTML=`<img src="${info.avatarUrl}" width="40" height="40"/>`; previewInfo.innerHTML=`<b>${rawUsername}</b><br>Roblox ID: ${info.robloxId}<br>Player #${playerId}`; el.style.color='#006600'; el.textContent='Found! Adding player...'; }
+  else { preview.style.display='none'; el.style.color='#995500'; el.textContent=`Not found on Roblox — added as Player #${playerId}.`; }
   const newRef=push(ref(db,'users'));
   await set(newRef,newUser);
+  auditLog('Player Added',`${rawUsername} (Player #${playerId})`);
   document.getElementById('nuUser').value='';
-  setTimeout(()=>{el.textContent='';preview.style.display='none';},2500);
+  setTimeout(()=>{ el.textContent=''; preview.style.display='none'; },2500);
+}
+
+// ── REPUTATION ──
+function renderReputation(c){
+  const uArr=Object.entries(USERS).sort((a,b)=>calcReputation(b[1])-calcReputation(a[1]));
+  c.innerHTML=`
+  <div class="ptitle">Reputation System</div>
+  <div class="sbox"><div class="stitle">Player Reputation Scores</div><div class="sbody">
+    ${uArr.length===0?'<i style="color:#444;">No players yet.</i>':`
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>Player</th><th>Score</th><th>Standing</th><th>Punishments</th><th>Action</th></tr>
+      ${uArr.map(([uid,u])=>{
+        const score=calcReputation(u);
+        const standing=score<=5?'<span class="ok">Good</span>':score<=15?'<span class="sus">Caution</span>':'<span class="ban">High Risk</span>';
+        const pCount=u.punishments?Object.keys(u.punishments).length:0;
+        return `<tr>
+          <td><b>${u.username}</b></td><td>${score} pts</td><td>${standing}</td><td>${pCount}</td>
+          <td><button class="btn view-user-btn" data-uid="${uid}">View</button></td>
+        </tr>`;
+      }).join('')}
+    </table></div>`}
+  </div></div>`;
+  document.querySelectorAll('.view-user-btn').forEach(btn=>{btn.onclick=()=>{ currentUserId=btn.dataset.uid; nav('useradmin'); };});
+}
+
+// ── APPEALS ──
+function renderAppeals(c){
+  const entries=Object.entries(APPEAL_LOG).sort((a,b)=>a[1].date>b[1].date?-1:1);
+  c.innerHTML=`
+  <div class="ptitle">Appeal Log</div>
+  <div class="sbox"><div class="stitle">All Appeals</div><div class="sbody">
+    ${entries.length===0?'<i style="color:#444;">No appeals on record.</i>':`
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>User</th><th>Status</th><th>Reviewed By</th><th>Date</th><th>Note</th>${isSuperAdmin()?'<th>Admin</th>':''}</tr>
+      ${entries.map(([lid,r])=>`<tr>
+        <td><b>${r.user}</b></td>
+        <td><span class="badge appeal-${(r.status||'open').toLowerCase().replace(' ','-')}">${r.status||'Open'}</span></td>
+        <td>${r.by}</td><td>${r.date}</td><td>${r.note||''}</td>
+        ${isSuperAdmin()?`<td>${deleteLogBtn('logs/appeals',lid)}</td>`:''}
+      </tr>`).join('')}
+    </table></div>`}
+  </div></div>`;
+  bindDeleteLogBtns(c);
+}
+
+// ── ALT DETECTION ──
+function renderAltDetect(c){
+  c.innerHTML=`
+  <div class="ptitle">Alt Detection</div>
+  <div class="sbox"><div class="stitle">Scan for Potential Alts</div><div class="sbody">
+    <div style="font-size:11px;color:#000;margin-bottom:6px;">Enter a player's username to scan their Roblox friends and groups against your player database.</div>
+    <div style="display:flex;gap:4px;align-items:center;margin-bottom:6px;">
+      <input type="text" id="altInput" style="width:140px;" placeholder="Roblox username"/>
+      <button class="btn" id="btn-altscan">Scan</button>
+    </div>
+    <div id="altResults"></div>
+  </div></div>
+  <div class="sbox"><div class="stitle">Manually Linked Alts</div><div class="sbody">
+    <div style="font-size:11px;color:#555;margin-bottom:4px;">Link alt accounts manually on each player's profile via the Appeal Status section.</div>
+    ${Object.values(USERS).filter(u=>u.alts&&u.alts.length).length===0?'<i style="color:#444;">No linked alts.</i>':
+    `<div class="tbl-wrap"><table class="tbl">
+      <tr><th>Player</th><th>Linked Alts</th><th>Action</th></tr>
+      ${Object.entries(USERS).filter(([,u])=>u.alts&&u.alts.length).map(([uid,u])=>`<tr>
+        <td><b>${u.username}</b></td><td>${u.alts.join(', ')}</td>
+        <td><button class="btn view-user-btn" data-uid="${uid}">View</button></td>
+      </tr>`).join('')}
+    </table></div>`}
+  </div></div>`;
+  document.getElementById('btn-altscan').onclick=runAltScan;
+  document.querySelectorAll('.view-user-btn').forEach(btn=>{btn.onclick=()=>{ currentUserId=btn.dataset.uid; nav('useradmin'); };});
+}
+
+async function runAltScan(){
+  const username=document.getElementById('altInput').value.trim();
+  const resultsEl=document.getElementById('altResults');
+  if(!username){ resultsEl.innerHTML='<span style="color:#880000;font-size:11px;">Enter a username.</span>'; return; }
+  const target=Object.values(USERS).find(u=>u.username.toLowerCase()===username.toLowerCase());
+  if(!target||!target.robloxId){ resultsEl.innerHTML='<span style="color:#880000;font-size:11px;">Player not found or no Roblox ID. Add them first.</span>'; return; }
+  resultsEl.innerHTML='<i style="font-size:11px;color:#000080;">Fetching friends and groups...</i>';
+  const[friends,groups]=await Promise.all([fetchRobloxFriends(target.robloxId),fetchRobloxGroups(target.robloxId)]);
+  const allPlayers=Object.values(USERS).filter(u=>u.username!==username&&u.robloxId);
+  const potentials=[];
+  for(const player of allPlayers){
+    const reasons=[];
+    const pGroups=await fetchRobloxGroups(player.robloxId);
+    const sharedGroups=groups.filter(g=>pGroups.some(pg=>pg.id===g.id));
+    if(sharedGroups.length) reasons.push(`Shared group(s): ${sharedGroups.map(g=>g.name).join(', ')}`);
+    if(friends.some(f=>f.id===player.robloxId)) reasons.push('Friends on Roblox');
+    if(reasons.length) potentials.push({player,reasons});
+  }
+  if(!potentials.length){ resultsEl.innerHTML='<i style="font-size:11px;color:#444;">No potential alts found.</i>'; return; }
+  resultsEl.innerHTML=`
+    <div style="font-size:11px;font-weight:bold;color:#000;margin-bottom:4px;">Potential alts found (${potentials.length}):</div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>Player</th><th>Reasons</th><th>Link as Alt</th></tr>
+      ${potentials.map(({player,reasons})=>`<tr>
+        <td><b>${player.username}</b></td>
+        <td>${reasons.join(' | ')}</td>
+        <td><button class="btn small link-alt-btn" data-main="${username}" data-alt="${player.username}">Link</button></td>
+      </tr>`).join('')}
+    </table></div>`;
+  resultsEl.querySelectorAll('.link-alt-btn').forEach(btn=>{
+    btn.onclick=async()=>{
+      const mainEntry=Object.entries(USERS).find(([,u])=>u.username===btn.dataset.main);
+      if(!mainEntry) return;
+      const [uid,u]=mainEntry;
+      const alts=u.alts||[];
+      if(!alts.includes(btn.dataset.alt)){ alts.push(btn.dataset.alt); await update(ref(db,`users/${uid}`),{alts}); auditLog('Alt Account Linked',`${btn.dataset.main} <-> ${btn.dataset.alt}`); }
+      btn.textContent='Linked!'; btn.disabled=true;
+    };
+  });
 }
 
 // ── STAFF ──
@@ -650,7 +860,7 @@ function renderStaff(c){
   const canTerminate=canDo('canTerminateStaff');
   const sArr=Object.entries(STAFF);
   if(!currentStaffId||!STAFF[currentStaffId]) currentStaffId=sArr.length?sArr[0][0]:null;
-  if(!currentStaffId){c.innerHTML='<div class="ptitle">Staff Registry</div><i style="padding:8px;display:block;">No staff yet.</i>';return;}
+  if(!currentStaffId){ c.innerHTML='<div class="ptitle">Staff Registry</div><i style="padding:8px;display:block;">No staff yet.</i>'; return; }
   const s=STAFF[currentStaffId];
   c.innerHTML=`
   <div class="ptitle">Staff Registry</div>
@@ -658,10 +868,11 @@ function renderStaff(c){
     <div style="flex:1;min-width:220px;">
       <div class="sbox"><div class="stitle">Staff Members</div><div class="sbody">
         <div class="tbl-wrap"><table class="tbl">
-          <tr><th>Username</th><th>Level</th><th>Status</th><th>Action</th></tr>
+          <tr><th>Username</th><th>Level</th><th>Status</th><th>Last Active</th><th>Action</th></tr>
           ${sArr.map(([sid2,s2])=>`<tr>
             <td><b>${s2.username}</b></td><td>${levelBadge(s2.level)}</td>
             <td>${s2.suspended?'<span class="sus">SUSPENDED</span>':'<span class="ok">OK</span>'}</td>
+            <td style="font-size:10px;">${s2.lastActive||'Never'}</td>
             <td>${canManage?`<button class="btn view-staff-btn" data-sid="${sid2}">View</button>`:'<span class="invalid-cred">INVALID CREDENTIALS</span>'}</td>
           </tr>`).join('')}
         </table></div>
@@ -682,9 +893,10 @@ function renderStaff(c){
       <div class="sbox"><div class="stitle">Staff Profile &mdash; ${s.username}</div><div class="sbody">
         ${s.avatarUrl?`<div style="display:flex;justify-content:center;margin-bottom:6px;"><div class="avatar-box" style="width:60px;height:60px;">${avatarHTML(s)}</div></div>`:''}
         <div class="row"><label>Username:</label><b>${s.username}</b></div>
-        <div class="row"><label>Level:</label><span>Rank ${LEVEL_RANK[s.level]||'?'} &mdash; ${s.level}</span></div>
+        <div class="row"><label>Level:</label><span>Rank ${LEVEL_RANK[s.level]||'?'}</span></div>
         <div class="row"><label>Joined:</label><span>${s.joined}</span></div>
         <div class="row"><label>Status:</label>${s.suspended?'<span class="sus">SUSPENDED</span>':'<span class="ok">OK</span>'}</div>
+        <div class="row"><label>Last Active:</label><span style="font-size:10px;">${s.lastActive||'Never'}</span></div>
         ${s.avatarRobloxUser?`<div class="row"><label>Avatar Source:</label><span>${s.avatarRobloxUser}</span></div>`:''}
         <div style="font-size:11px;margin:3px 0 2px;color:#000;">Notes:</div>
         <textarea id="snTA" style="width:100%;height:40px;">${s.notes||''}</textarea>
@@ -709,9 +921,8 @@ function renderStaff(c){
       </div></div>
     </div>
   </div>`;
-
   if(canManage){
-    document.querySelectorAll('.view-staff-btn').forEach(btn=>{btn.onclick=()=>{currentStaffId=btn.dataset.sid;nav('staff');};});
+    document.querySelectorAll('.view-staff-btn').forEach(btn=>{btn.onclick=()=>{ currentStaffId=btn.dataset.sid; nav('staff'); };});
     document.getElementById('btn-addstaff').onclick=addStaff;
   }
   document.getElementById('btn-savestaffnote').onclick=()=>saveStaffNote(currentStaffId);
@@ -723,26 +934,31 @@ function renderStaff(c){
     document.getElementById('btn-terminate').onclick=()=>promptTerminateStaff(currentStaffId);
 }
 
+// ── STAFF ACTIVITY ──
+function renderActivity(c){
+  const sArr=Object.entries(STAFF).sort((a,b)=>(b[1].lastActive||'')>(a[1].lastActive||'')?1:-1);
+  c.innerHTML=`
+  <div class="ptitle">Staff Activity Tracker</div>
+  <div class="sbox"><div class="stitle">Current Activity</div><div class="sbody">
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>Username</th><th>Level</th><th>Status</th><th>Last Active</th><th>Last Action</th></tr>
+      ${sArr.map(([,s])=>{
+        const lastActive=s.lastActive||'Never';
+        const isRecent=s.lastActive&&(new Date()-new Date(s.lastActive))<3600000;
+        const dot=s.suspended?'offline':isRecent?'active':'idle';
+        return `<tr>
+          <td><span class="activity-dot ${dot}"></span><b>${s.username}</b></td>
+          <td>${levelBadge(s.level)}</td>
+          <td>${s.suspended?'<span class="sus">SUSPENDED</span>':'<span class="ok">OK</span>'}</td>
+          <td style="font-size:10px;">${lastActive}</td>
+          <td style="font-size:10px;">${s.lastAction||'—'}</td>
+        </tr>`;
+      }).join('')}
+    </table></div>
+  </div></div>`;
+}
+
 // ── LOGS ──
-function deleteLogBtn(logPath, lid){
-  return isSuperAdmin()?`<button class="btn red small del-log-btn" data-path="${logPath}" data-lid="${lid}">DELETE</button>`:'';
-}
-
-function bindDeleteLogBtns(c){
-  c.querySelectorAll('.del-log-btn').forEach(btn=>{
-    btn.onclick=()=>{
-      const path=btn.dataset.path;
-      const lid=btn.dataset.lid;
-      openOpDialog('To continue with this action please insert your operator code.',
-        async()=>{
-          await remove(ref(db,`${path}/${lid}`));
-          render();
-        }
-      );
-    };
-  });
-}
-
 function renderModLog(c){
   const entries=Object.entries(MOD_LOG).sort((a,b)=>a[1].date>b[1].date?-1:1);
   const tbl=entries.length===0?'<i style="color:#444;">No moderation actions on record.</i>':`
@@ -754,7 +970,7 @@ function renderModLog(c){
       ${isSuperAdmin()?`<td>${deleteLogBtn('logs/moderation',lid)}</td>`:''}
     </tr>`).join('')}
   </table></div>`;
-  c.innerHTML=`<div class="ptitle">Moderation Log</div><div class="sbox"><div class="stitle">All Moderation Actions</div><div class="sbody">${tbl}</div></div>`;
+  c.innerHTML=`<div class="ptitle">Moderation Log</div><div class="sbox"><div class="stitle">All Player Moderation Actions</div><div class="sbody">${tbl}</div></div>`;
   bindDeleteLogBtns(c);
 }
 
@@ -794,7 +1010,7 @@ function renderTerminateLog(c){
   const entries=Object.entries(TERMINATE_LOG).sort((a,b)=>a[1].date>b[1].date?-1:1);
   const tbl=entries.length===0?'<i style="color:#444;">No terminations on record.</i>':`
   <div class="tbl-wrap"><table class="tbl">
-    <tr><th>Username</th><th>Type</th><th>Terminated By</th><th>Date</th><th>Reason</th><th>Mod Note</th><th>Offensive Item</th>${isSuperAdmin()?'<th>Admin</th>':''}</tr>
+    <tr><th>Username</th><th>Type</th><th>By</th><th>Date</th><th>Reason</th><th>Mod Note</th><th>Offensive Item</th>${isSuperAdmin()?'<th>Admin</th>':''}</tr>
     ${entries.map(([lid,r])=>`<tr>
       <td><b>${r.username}</b></td><td>${r.type||'Staff'}</td><td>${r.by}</td><td>${r.date}</td>
       <td>${r.reason||''}</td><td>${r.modNote||''}</td><td>${r.offensiveItem||''}</td>
@@ -805,8 +1021,37 @@ function renderTerminateLog(c){
   bindDeleteLogBtns(c);
 }
 
+function renderLoginLog(c){
+  const entries=Object.entries(LOGIN_LOG).sort((a,b)=>a[1].date>b[1].date?-1:1).slice(0,100);
+  const tbl=entries.length===0?'<i style="color:#444;">No logins recorded yet.</i>':`
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>Username</th><th>Level</th><th>Date/Time</th><th>Result</th>${isSuperAdmin()?'<th>Admin</th>':''}</tr>
+    ${entries.map(([lid,r])=>`<tr>
+      <td><b>${r.username}</b></td><td>${r.level||'—'}</td><td>${r.date}</td>
+      <td>${r.result==='success'?'<span class="ok">Success</span>':'<span class="ban">'+r.result+'</span>'}</td>
+      ${isSuperAdmin()?`<td>${deleteLogBtn('logs/login',lid)}</td>`:''}
+    </tr>`).join('')}
+  </table></div>`;
+  c.innerHTML=`<div class="ptitle">Login Log</div><div class="sbox"><div class="stitle">Staff Login History (last 100)</div><div class="sbody">${tbl}</div></div>`;
+  bindDeleteLogBtns(c);
+}
+
+function renderAuditLog(c){
+  const entries=Object.entries(AUDIT_LOG).sort((a,b)=>a[1].date>b[1].date?-1:1).slice(0,200);
+  const tbl=entries.length===0?'<i style="color:#444;">No audit entries yet.</i>':`
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>Action</th><th>Detail</th><th>By</th><th>Date</th>${isSuperAdmin()?'<th>Admin</th>':''}</tr>
+    ${entries.map(([lid,r])=>`<tr>
+      <td>${r.action}</td><td>${r.detail||''}</td><td>${r.by}</td><td>${r.date}</td>
+      ${isSuperAdmin()?`<td>${deleteLogBtn('logs/audit',lid)}</td>`:''}
+    </tr>`).join('')}
+  </table></div>`;
+  c.innerHTML=`<div class="ptitle">Audit Log</div><div class="sbox"><div class="stitle">All Admin Actions</div><div class="sbody">${tbl}</div></div>`;
+  bindDeleteLogBtns(c);
+}
+
 function openEditSuspend(lid){
-  const r=SUSPEND_LOG[lid];if(!r)return;
+  const r=SUSPEND_LOG[lid]; if(!r) return;
   openDialog('Edit Suspension Log',`Edit suspension record for <b>${r.username}</b>:`,`
     <div style="margin-bottom:4px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;">Reason:</label>
       <input type="text" id="editReason" style="width:100%;" value="${r.reason||''}"/></div>
@@ -825,13 +1070,60 @@ function openEditSuspend(lid){
   );
 }
 
+// ── ANNOUNCEMENTS ──
+function renderAnnouncements(c){
+  const entries=Object.entries(ANNOUNCEMENTS).sort((a,b)=>a[1].date>b[1].date?-1:1);
+  c.innerHTML=`
+  <div class="ptitle">Staff Announcements</div>
+  ${isSuperAdmin()||canDo('canManageStaff')?`
+  <div class="sbox"><div class="stitle">Post Announcement</div><div class="sbody">
+    <textarea id="newAnnounce" style="width:100%;height:50px;" placeholder="Type your announcement here..."></textarea>
+    <div style="display:flex;gap:4px;margin-top:4px;">
+      <button class="btn" id="btn-postannounce">Post</button>
+      <button class="btn" id="btn-clearannounce">Clear Active</button>
+    </div>
+    <div id="announceMsg" style="font-size:11px;margin-top:3px;color:#006600;"></div>
+  </div></div>`:''}
+  <div class="sbox"><div class="stitle">Announcement History</div><div class="sbody">
+    ${entries.length===0?'<i style="color:#444;">No announcements yet.</i>':`
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>Message</th><th>By</th><th>Date</th><th>Active</th>${isSuperAdmin()?'<th>Admin</th>':''}</tr>
+      ${entries.map(([lid,a])=>`<tr>
+        <td style="max-width:200px;white-space:normal;">${a.message}</td>
+        <td>${a.by}</td><td>${a.date}</td>
+        <td>${a.active?'<span class="ok">Yes</span>':'<span style="color:#808080;">No</span>'}</td>
+        ${isSuperAdmin()?`<td>${deleteLogBtn('announcements',lid)}</td>`:''}
+      </tr>`).join('')}
+    </table></div>`}
+  </div></div>`;
+  if(isSuperAdmin()||canDo('canManageStaff')){
+    document.getElementById('btn-postannounce').onclick=async()=>{
+      const msg=document.getElementById('newAnnounce').value.trim();
+      if(!msg) return;
+      const entries2=Object.entries(ANNOUNCEMENTS);
+      for(const[lid] of entries2) await update(ref(db,`announcements/${lid}`),{active:false});
+      await push(ref(db,'announcements'),{message:msg,by:ME,date:today(),active:true});
+      auditLog('Announcement Posted',msg.substring(0,50));
+      document.getElementById('newAnnounce').value='';
+      const el=document.getElementById('announceMsg');
+      el.textContent='Posted!'; setTimeout(()=>{ if(el) el.textContent=''; },1500);
+    };
+    document.getElementById('btn-clearannounce').onclick=async()=>{
+      for(const[lid] of Object.entries(ANNOUNCEMENTS)) await update(ref(db,`announcements/${lid}`),{active:false});
+      auditLog('Announcements Cleared','All announcements deactivated');
+    };
+  }
+  bindDeleteLogBtns(c);
+}
+
 // ── ADMIN LOG ──
 function renderAdminLog(c){
   const sArr=Object.entries(STAFF);
   const counts={'INTERN':0,'MODERATOR':0,'ADMINISTRATOR':0,'SUPER ADMINISTRATOR':0};
-  sArr.forEach(([,s])=>{if(counts[s.level]!==undefined)counts[s.level]++;});
+  sArr.forEach(([,s])=>{ if(counts[s.level]!==undefined) counts[s.level]++; });
   const permKeys=Object.keys(DEFAULT_PERMS);
   const levelOptions=['INTERN','MODERATOR','ADMINISTRATOR','SUPER ADMINISTRATOR'];
+  const repKeys=Object.keys(DEFAULT_REP_POINTS);
   c.innerHTML=`
   <div class="ptitle">Administrator</div>
   <div style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -844,6 +1136,16 @@ function renderAdminLog(c){
           <tr><td>${levelBadge('ADMINISTRATOR')}</td><td>3</td><td>${counts['ADMINISTRATOR']}</td></tr>
           <tr><td>${levelBadge('SUPER ADMINISTRATOR')}</td><td>4</td><td>${counts['SUPER ADMINISTRATOR']}</td></tr>
         </table>
+      </div></div>
+      <div class="sbox"><div class="stitle">Reputation Point Values</div><div class="sbody">
+        <div style="font-size:11px;color:#555;margin-bottom:5px;">Points added per punishment action.</div>
+        ${repKeys.map(k=>`
+          <div style="display:flex;align-items:center;margin-bottom:3px;gap:6px;font-size:11px;">
+            <label style="width:120px;flex-shrink:0;color:#000;">${k}:</label>
+            <input type="number" id="rep-${k.replace(/ /g,'_')}" value="${REP_POINTS[k]||0}" style="width:50px;height:16px;" min="0" max="100"/>
+          </div>`).join('')}
+        <button class="btn" id="btn-saverep" style="margin-top:5px;">Save Values</button>
+        <div id="repMsg" style="font-size:11px;margin-top:3px;color:#006600;"></div>
       </div></div>
     </div>
     <div style="flex:2;min-width:260px;">
@@ -862,44 +1164,56 @@ function renderAdminLog(c){
     </div>
   </div>`;
   document.getElementById('btn-saveperms').onclick=savePerms;
+  document.getElementById('btn-saverep').onclick=saveRepPoints;
 }
 
-function formatPermKey(k){return k.replace(/([A-Z])/g,' $1').replace(/^can /i,'Can ').trim();}
+function formatPermKey(k){ return k.replace(/([A-Z])/g,' $1').replace(/^can /i,'Can ').trim(); }
 
 async function savePerms(){
   const newPerms={};
-  Object.keys(DEFAULT_PERMS).forEach(key=>{
-    const el=document.getElementById('perm-'+key);
-    if(el) newPerms[key]=el.value;
-  });
+  Object.keys(DEFAULT_PERMS).forEach(key=>{ const el=document.getElementById('perm-'+key); if(el) newPerms[key]=el.value; });
   await set(ref(db,'meta/permissions'),newPerms);
   PERMS={...newPerms};
+  auditLog('Permissions Updated','Permission settings changed');
   const el=document.getElementById('permMsg');
-  el.textContent='Permissions saved!';updateSidebar();
-  setTimeout(()=>{if(el)el.textContent='';},2000);
+  el.textContent='Permissions saved!'; updateSidebar(); setTimeout(()=>{ if(el) el.textContent=''; },2000);
+}
+
+async function saveRepPoints(){
+  const newRep={};
+  Object.keys(DEFAULT_REP_POINTS).forEach(k=>{
+    const el=document.getElementById('rep-'+k.replace(/ /g,'_'));
+    if(el) newRep[k]=parseInt(el.value)||0;
+  });
+  await set(ref(db,'meta/repPoints'),newRep);
+  REP_POINTS={...newRep};
+  auditLog('Reputation Points Updated','Point values changed');
+  const el=document.getElementById('repMsg');
+  el.textContent='Saved!'; setTimeout(()=>{ if(el) el.textContent=''; },2000);
 }
 
 // ── ACTIONS ──
-async function revokeP(uid,pid){
-  const u=USERS[uid];if(!u||!u.punishments||!u.punishments[pid])return;
+async function revokeP(uid, pid){
+  const u=USERS[uid]; if(!u||!u.punishments||!u.punishments[pid]) return;
   const p=u.punishments[pid];
   await push(ref(db,'logs/revoke'),{user:u.username,action:p.action,origMod:p.mod,revokedBy:ME,date:today(),note:p.note||''});
   await remove(ref(db,`users/${uid}/punishments/${pid}`));
   await update(ref(db,`users/${uid}`),{status:'active'});
+  auditLog('Punishment Revoked',`${u.username}: ${p.action}`);
 }
 
 function checkModUser(val){
   const statusEl=document.getElementById('modUserStatus');
   const infoEl=document.getElementById('modTargetInfo');
-  if(!val.trim()){statusEl.innerHTML='';return;}
+  if(!val.trim()){ statusEl.innerHTML=''; return; }
   const entry=Object.entries(USERS).find(([,u])=>u.username===val.trim());
   if(!entry){
     statusEl.innerHTML='<span class="nonexistent">NON-EXISTENT</span>';
-    if(infoEl)infoEl.innerHTML='<span class="nonexistent">User not found.</span>';
+    if(infoEl) infoEl.innerHTML='<span class="nonexistent">User not found.</span>';
   }else{
     const[,u]=entry;
     statusEl.innerHTML='<span class="ok">&#10003; Found</span>';
-    if(infoEl)infoEl.innerHTML=`
+    if(infoEl) infoEl.innerHTML=`
       <div style="display:flex;gap:8px;align-items:center;">
         <div class="avatar-box" style="width:40px;height:40px;">${avatarHTML(u,40)}</div>
         <div><div class="row"><label>Username:</label><b>${u.username}</b></div>
@@ -912,7 +1226,7 @@ async function submitMod(){
   const val=document.getElementById('modUserInput').value.trim();
   const entry=Object.entries(USERS).find(([,u])=>u.username===val);
   const el=document.getElementById('mResult');
-  if(!entry){el.style.color='#880000';el.textContent='User does not exist.';return;}
+  if(!entry){ el.style.color='#880000'; el.textContent='User does not exist.'; return; }
   const[uid,u]=entry;
   const action=document.querySelector('input[name="mact"]:checked').value;
   const reason=document.getElementById('mReason').value;
@@ -921,11 +1235,11 @@ async function submitMod(){
     const newStatus=action==='Suspend'?'suspended':action.startsWith('Ban')?'banned':u.status;
     await update(ref(db,`users/${uid}`),{status:newStatus});
     await push(ref(db,`users/${uid}/punishments`),{action,mod:ME,created:today(),expiry:action.includes('Day')?'Varies':'Permanent',note:note||reason});
-    // Log to moderation log
     await push(ref(db,'logs/moderation'),{user:u.username,action,mod:ME,date:today(),reason:reason||'',note:note||''});
+    auditLog('Player Moderated',`${u.username}: ${action}`);
   }
   currentUserId=uid;
-  el.style.color='#006600';el.textContent=action==='None'?'No action taken.':`"${action}" applied to ${u.username}.`;
+  el.style.color='#006600'; el.textContent=action==='None'?'No action taken.':`"${action}" applied to ${u.username}.`;
   setTimeout(()=>nav('useradmin'),1000);
 }
 
@@ -933,7 +1247,7 @@ async function saveNote(uid){
   const note=document.getElementById('noteTA').value;
   await update(ref(db,`users/${uid}`),{notes:note});
   const el=document.getElementById('noteMsg');
-  el.textContent='Saved!';setTimeout(()=>{if(el)el.textContent='';},1500);
+  el.textContent='Saved!'; setTimeout(()=>{ if(el) el.textContent=''; },1500);
 }
 
 async function addStaff(){
@@ -942,53 +1256,54 @@ async function addStaff(){
   const l=document.getElementById('nsLevel').value;
   const avatarUser=document.getElementById('nsAvatar').value.trim();
   const el=document.getElementById('nsMsg');
-  if(!u){el.style.color='#880000';el.textContent='Username required.';return;}
-  if(!p){el.style.color='#880000';el.textContent='Password required.';return;}
-  if(Object.values(STAFF).find(s=>s.username===u)){el.style.color='#880000';el.textContent='Already exists.';return;}
-  el.style.color='#000080';el.textContent='Creating account...';
-  try{
-    await createUserWithEmailAndPassword(auth,`${u}@admin.com`,p);
-    await signInWithEmailAndPassword(auth,`${ME}@admin.com`,currentPassword);
-  }catch(e){}
+  if(!u){ el.style.color='#880000'; el.textContent='Username required.'; return; }
+  if(!p){ el.style.color='#880000'; el.textContent='Password required.'; return; }
+  if(Object.values(STAFF).find(s=>s.username===u)){ el.style.color='#880000'; el.textContent='Already exists.'; return; }
+  el.style.color='#000080'; el.textContent='Creating account...';
+  try{ await createUserWithEmailAndPassword(auth,`${u}@admin.com`,p); await signInWithEmailAndPassword(auth,`${ME}@admin.com`,currentPassword); }catch(e){}
   let avatarUrl='';
-  if(avatarUser){el.textContent='Fetching avatar...';const info=await fetchRobloxInfo(avatarUser);if(info)avatarUrl=info.avatarUrl;}
-  await set(ref(db,`staff/${u}`),{username:u,level:l,joined:today(),notes:'',suspended:false,password:p,avatarRobloxUser:avatarUser,avatarUrl});
-  el.style.color='#006600';el.textContent=`${u} added as ${l}.`;
-  setTimeout(()=>{el.textContent='';},3000);
+  if(avatarUser){ el.textContent='Fetching avatar...'; const info=await fetchRobloxInfo(avatarUser); if(info) avatarUrl=info.avatarUrl; }
+  await set(ref(db,`staff/${u}`),{username:u,level:l,joined:today(),notes:'',suspended:false,password:p,avatarRobloxUser:avatarUser,avatarUrl,lastActive:'Never',lastAction:'—'});
+  auditLog('Staff Added',`${u} as ${l}`);
+  el.style.color='#006600'; el.textContent=`${u} added as ${l}.`;
+  setTimeout(()=>{ el.textContent=''; },3000);
 }
 
 async function saveStaffNote(sid){
   const note=document.getElementById('snTA').value;
   await update(ref(db,`staff/${sid}`),{notes:note});
   const el=document.getElementById('spMsg');
-  el.style.color='#006600';el.textContent='Note saved!';setTimeout(()=>{if(el)el.textContent='';},1500);
+  el.style.color='#006600'; el.textContent='Note saved!'; setTimeout(()=>{ if(el) el.textContent=''; },1500);
 }
 
 async function updateStaffPass(sid){
   const np=document.getElementById('spInput').value.trim();
   const el=document.getElementById('spMsg');
-  if(!np){el.style.color='#880000';el.textContent='Enter a password.';return;}
+  if(!np){ el.style.color='#880000'; el.textContent='Enter a password.'; return; }
   await update(ref(db,`staff/${sid}`),{password:np});
-  el.style.color='#006600';el.textContent='Password updated.';
-  setTimeout(()=>{if(el)el.textContent='';},2000);
+  auditLog('Staff Password Updated',`${STAFF[sid]?STAFF[sid].username:sid}`);
+  el.style.color='#006600'; el.textContent='Password updated.';
+  setTimeout(()=>{ if(el) el.textContent=''; },2000);
 }
 
 async function updateStaffLevel(sid){
   const s=STAFF[sid];
   if(s&&s.username===ME&&!isSuperAdmin()){
     const el=document.getElementById('spMsg');
-    el.style.color='#880000';el.textContent='Cannot change your own level.';
-    setTimeout(()=>{if(el)el.textContent='';},2000);return;
+    el.style.color='#880000'; el.textContent='Cannot change your own level.';
+    setTimeout(()=>{ if(el) el.textContent=''; },2000); return;
   }
   const l=document.getElementById('slInput').value;
+  const oldLevel=s?s.level:'?';
   await update(ref(db,`staff/${sid}`),{level:l});
+  auditLog('Staff Level Changed',`${s?s.username:sid}: ${oldLevel} -> ${l}`);
   const el=document.getElementById('spMsg');
-  el.style.color='#006600';el.textContent=`Level set to ${l}.`;
-  setTimeout(()=>{if(el)el.textContent='';},1500);
+  el.style.color='#006600'; el.textContent=`Level set to ${l}.`;
+  setTimeout(()=>{ if(el) el.textContent=''; },1500);
 }
 
-function promptSuspendStaff(sid,isCurrentlySuspended){
-  const s=STAFF[sid];if(!s)return;
+function promptSuspendStaff(sid, isCurrentlySuspended){
+  const s=STAFF[sid]; if(!s) return;
   if(isCurrentlySuspended){
     openDialog('Unsuspend Staff',`Unsuspend staff member <b>${s.username}</b>?`,
       `<div style="font-size:11px;color:#000;margin-bottom:3px;">Reason:</div><textarea id="dlgReason" style="width:100%;height:36px;"></textarea>`,
@@ -996,6 +1311,7 @@ function promptSuspendStaff(sid,isCurrentlySuspended){
         const reason=document.getElementById('dlgReason').value.trim()||'No reason given.';
         await update(ref(db,`staff/${sid}`),{suspended:false,suspendInfo:null});
         await push(ref(db,'logs/suspend'),{username:s.username,action:'Unsuspend',by:ME,date:today(),reason,modNote:'',offensiveItem:''});
+        auditLog('Staff Unsuspended',s.username);
       }
     );
   }else{
@@ -1015,13 +1331,14 @@ function promptSuspendStaff(sid,isCurrentlySuspended){
         const suspInfo={date:today(),reason,modNote,offensiveItem,by:ME};
         await update(ref(db,`staff/${sid}`),{suspended:true,suspendInfo:suspInfo});
         await push(ref(db,'logs/suspend'),{username:s.username,action:'Suspend',by:ME,date:today(),reason,modNote,offensiveItem});
+        auditLog('Staff Suspended',`${s.username}: ${reason}`);
       }
     );
   }
 }
 
 function promptTerminateStaff(sid){
-  const s=STAFF[sid];if(!s)return;
+  const s=STAFF[sid]; if(!s) return;
   openDialog('Terminate Account',`Terminate staff account <b>${s.username}</b>?<br><span style="color:#880000;font-size:11px;">This will permanently remove their access.</span>`,`
     <div style="margin-bottom:4px;"><label style="font-size:11px;color:#000;display:block;margin-bottom:2px;">Reason:</label>
       <select id="termReasonSel" style="width:100%;font-family:inherit;font-size:11px;height:16px;">
@@ -1036,29 +1353,31 @@ function promptTerminateStaff(sid){
       const modNote=document.getElementById('termModNoteIn').value.trim();
       const offensiveItem=document.getElementById('termOffItemIn').value.trim();
       await push(ref(db,'logs/terminate'),{username:s.username,type:'Staff',by:ME,date:today(),reason,modNote,offensiveItem});
+      auditLog('Staff Terminated',`${s.username}: ${reason}`);
       await remove(ref(db,`staff/${sid}`));
-      currentStaffId=null;nav('staff');
+      currentStaffId=null; nav('staff');
     }
   );
 }
 
-function openDialog(title,body,extraHTML,cb){
+function openDialog(title, body, extraHTML, cb){
   document.getElementById('dlgTitle').textContent=title;
   document.getElementById('dlgBody').innerHTML=body;
   document.getElementById('dlgExtra').innerHTML=extraHTML||'';
   dlgCallback=cb;
   document.getElementById('overlay').classList.add('show');
 }
-function closeDialog(){document.getElementById('overlay').classList.remove('show');dlgCallback=null;}
+function closeDialog(){ document.getElementById('overlay').classList.remove('show'); dlgCallback=null; }
 document.getElementById('dlgClose').onclick=closeDialog;
 document.getElementById('dlgCancel').onclick=closeDialog;
-document.getElementById('dlgOK').onclick=()=>{if(dlgCallback)dlgCallback();closeDialog();};
+document.getElementById('dlgOK').onclick=()=>{ if(dlgCallback) dlgCallback(); closeDialog(); };
 
 // ── LOGIN / LOGOUT ──
 document.getElementById('loginBtn').onclick=doLogin;
-document.getElementById('loginPass').onkeydown=e=>{if(e.key==='Enter')doLogin();};
-document.getElementById('loginUser').onkeydown=e=>{if(e.key==='Enter')doLogin();};
+document.getElementById('loginPass').onkeydown=e=>{ if(e.key==='Enter') doLogin(); };
+document.getElementById('loginUser').onkeydown=e=>{ if(e.key==='Enter') doLogin(); };
 document.getElementById('logoutBtn').onclick=doLogout;
+document.getElementById('suspOKBtn').onclick=()=>document.getElementById('suspOverlay').classList.remove('show');
 
 async function doLogin(){
   const u=document.getElementById('loginUser').value.trim();
@@ -1069,15 +1388,11 @@ async function doLogin(){
     await signInWithEmailAndPassword(auth,`${u}@admin.com`,p);
     const staffSnap=await get(ref(db,`staff/${u}`));
     if(!staffSnap.exists()){
-      // Check terminate log to see if they were terminated
       const termSnap=await get(ref(db,'logs/terminate'));
       let termInfo=null;
-      if(termSnap.exists()){
-        const entries=Object.values(termSnap.val());
-        termInfo=entries.find(e=>e.username===u&&e.type==='Staff');
-      }
+      if(termSnap.exists()){ const entries=Object.values(termSnap.val()); termInfo=entries.find(e=>e.username===u&&e.type==='Staff'); }
+      await signOut(auth);
       if(termInfo){
-        await signOut(auth);
         document.getElementById('suspReviewed').textContent=termInfo.date||'Unknown';
         document.getElementById('suspReason').textContent=termInfo.reason||'No reason provided.';
         document.getElementById('suspModNote').textContent=termInfo.modNote||'None.';
@@ -1087,10 +1402,8 @@ async function doLogin(){
         document.getElementById('suspPopupMsg').textContent='Your staff account has been permanently terminated by administration. You no longer have access to this system.';
         status.textContent='TERMINATED';
         document.getElementById('suspOverlay').classList.add('show');
-      } else {
-        status.textContent='INVALID!';
-      }
-      await signOut(auth);
+      }else{ status.textContent='INVALID!'; }
+      await push(ref(db,'logs/login'),{username:u,level:'—',date:nowStr(),result:'invalid'});
       return;
     }
     const staffData=staffSnap.val();
@@ -1106,25 +1419,28 @@ async function doLogin(){
       document.getElementById('suspPopupMsg').textContent='Our content administration has determined your behavior has been in violation of our Terms of Use.';
       status.textContent='SUSPENDED';
       document.getElementById('suspOverlay').classList.add('show');
+      await push(ref(db,'logs/login'),{username:u,level:staffData.level||'—',date:nowStr(),result:'suspended'});
       return;
     }
-    ME=u;MY_LEVEL=staffData.level;currentPassword=p;
-    const permsSnap=await get(ref(db,'meta/permissions'));
+    ME=u; MY_LEVEL=staffData.level; currentPassword=p;
+    const[permsSnap,repSnap]=await Promise.all([get(ref(db,'meta/permissions')),get(ref(db,'meta/repPoints'))]);
     PERMS=permsSnap.exists()?{...DEFAULT_PERMS,...permsSnap.val()}:{...DEFAULT_PERMS};
+    REP_POINTS=repSnap.exists()?{...DEFAULT_REP_POINTS,...repSnap.val()}:{...DEFAULT_REP_POINTS};
+    await push(ref(db,'logs/login'),{username:u,level:MY_LEVEL,date:nowStr(),result:'success'});
+    await update(ref(db,`staff/${u}`),{lastActive:nowStr(),lastAction:'Logged in'});
     status.textContent='';
     document.getElementById('loginScreen').style.display='none';
-    document.getElementById('adminScreen').style.display='block';
+    document.getElementById('adminScreen').style.display='flex';
     document.getElementById('topbarTitle').textContent=`Administration Panel \u2014 ${ME} [${MY_LEVEL}]`;
     startListeners();
     nav('useradmin');
-  }catch(e){
-    status.textContent='INVALID!';
-  }
+  }catch(e){ status.textContent='INVALID!'; await push(ref(db,'logs/login'),{username:u,level:'—',date:nowStr(),result:'failed'}).catch(()=>{}); }
 }
 
 async function doLogout(){
+  if(ME) await update(ref(db,`staff/${ME}`),{lastActive:nowStr(),lastAction:'Logged out'}).catch(()=>{});
   await signOut(auth);
-  ME='';MY_LEVEL='';currentPassword='';
+  ME=''; MY_LEVEL=''; currentPassword='';
   document.getElementById('adminScreen').style.display='none';
   document.getElementById('loginScreen').style.display='flex';
   document.getElementById('loginUser').value='';
@@ -1132,22 +1448,26 @@ async function doLogout(){
 }
 
 function startListeners(){
-  onValue(ref(db,'users'),snap=>{USERS=snap.val()||{};if(page)render();});
-  onValue(ref(db,'staff'),snap=>{STAFF=snap.val()||{};if(page)render();});
-  onValue(ref(db,'logs/moderation'),snap=>{MOD_LOG=snap.val()||{};if(page==='modlog')render();});
-  onValue(ref(db,'logs/revoke'),snap=>{REVOKE_LOG=snap.val()||{};if(page==='revokelog')render();});
-  onValue(ref(db,'logs/suspend'),snap=>{SUSPEND_LOG=snap.val()||{};if(page==='suspendlog')render();});
-  onValue(ref(db,'logs/terminate'),snap=>{TERMINATE_LOG=snap.val()||{};if(page==='terminatelog')render();});
+  onValue(ref(db,'users'),snap=>{ USERS=snap.val()||{}; if(page) render(); });
+  onValue(ref(db,'staff'),snap=>{ STAFF=snap.val()||{}; if(page) render(); });
+  onValue(ref(db,'logs/moderation'),snap=>{ MOD_LOG=snap.val()||{}; if(page==='modlog') render(); });
+  onValue(ref(db,'logs/revoke'),snap=>{ REVOKE_LOG=snap.val()||{}; if(page==='revokelog') render(); });
+  onValue(ref(db,'logs/suspend'),snap=>{ SUSPEND_LOG=snap.val()||{}; if(page==='suspendlog') render(); });
+  onValue(ref(db,'logs/terminate'),snap=>{ TERMINATE_LOG=snap.val()||{}; if(page==='terminatelog') render(); });
+  onValue(ref(db,'logs/login'),snap=>{ LOGIN_LOG=snap.val()||{}; if(page==='loginlog') render(); });
+  onValue(ref(db,'logs/audit'),snap=>{ AUDIT_LOG=snap.val()||{}; if(page==='auditlog') render(); });
+  onValue(ref(db,'logs/appeals'),snap=>{ APPEAL_LOG=snap.val()||{}; if(page==='appeals') render(); });
+  onValue(ref(db,'announcements'),snap=>{ ANNOUNCEMENTS=snap.val()||{}; updateAnnouncements(); if(page==='announcements') render(); });
 }
 
 (async()=>{
   try{
     const snap=await get(ref(db,'staff/rpatoff'));
-    if(!snap.exists()) await set(ref(db,'staff/rpatoff'),{username:'rpatoff',level:'SUPER ADMINISTRATOR',joined:today(),notes:'Founder.',suspended:false,password:'6445229',avatarUrl:'',avatarRobloxUser:''});
+    if(!snap.exists()) await set(ref(db,'staff/rpatoff'),{username:'rpatoff',level:'SUPER ADMINISTRATOR',joined:today(),notes:'Founder.',suspended:false,password:'6445229',avatarUrl:'',avatarRobloxUser:'',lastActive:'Never',lastAction:'—'});
   }catch(e){}
 })();
 
-['useradmin','moderate','accounts','staff','modlog','revokelog','suspendlog','terminatelog','adminlog'].forEach(p=>{
+['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','loginlog','auditlog','announcements','adminlog'].forEach(p=>{
   const el=document.getElementById('nav-'+p);
   if(el) el.onclick=()=>nav(p);
 });
