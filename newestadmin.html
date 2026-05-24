@@ -100,8 +100,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,san
 .topinfo{font-size:11px;color:var(--c-text2);padding:4px 16px;border-bottom:1px solid var(--c-border);background:var(--bg-topinfo);}
 
 /* ── ANNOUNCE BAR ── */
-.announce-bar{background:var(--bg-announce);border-bottom:1px solid #b08800;padding:4px 16px;font-size:11px;color:var(--c-text);display:none;}
-.announce-bar b{color:#7a6000;}
+.announce-bar{padding:4px 16px;font-size:12px;display:none;font-weight:500;}
 
 /* ── MAIN LAYOUT ── */
 .main{display:flex;flex:1;min-height:0;}
@@ -246,7 +245,7 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
     </div>
     <div style="padding:14px 16px 12px;">
       <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;">
-        <div style="font-size:28px;flex-shrink:0;">&#9888;</div>
+        <div style="font-size:26px;flex-shrink:0;line-height:1;">🚫</div>
         <div>
           <div style="font-size:13px;font-weight:bold;color:var(--c-text);margin-bottom:4px;" id="suspPopupHeading">Account Suspended</div>
           <div style="font-size:11px;color:var(--c-text);line-height:1.6;" id="suspPopupMsg"></div>
@@ -265,8 +264,9 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
   </div>
 </div>
 
-<div id="adminScreen">
-  <div class="shell">
+<div id="adminScreen" style="position:relative;">
+  <canvas id="shellBg" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0;transition:opacity 0.5s;"></canvas>
+  <div class="shell" style="position:relative;z-index:1;">
     <div class="topbar" id="mainTopbar">
       <span id="topbarTitle">Administration Panel</span>
       <div id="siteStatusBar" style="display:none;align-items:center;gap:5px;font-size:11px;color:var(--c-topbar-text);margin-left:10px;">
@@ -344,7 +344,7 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
             <span style="font-size:11px;font-weight:800;color:var(--c-link);letter-spacing:0.5px;">SAMARITAN</span>
             <span style="color:var(--c-border);font-size:12px;">|</span>
-            <span style="font-size:10px;font-weight:500;color:var(--c-text2);letter-spacing:0.3px;">PANEL</span>
+            <span style="font-size:10px;font-weight:500;color:var(--c-text2);letter-spacing:0.3px;">MODERATION</span>
           </div>
           <span class="sb-link" id="nav-home" style="padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;display:block;margin:-2px -4px 0;">&#9632; Dashboard</span>
         </div>
@@ -433,6 +433,7 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
       <div class="content" id="content"><div style="padding:10px;color:var(--c-text2);font-style:italic;">Loading data...</div></div>
     </div>
   </div>
+  </div>
 </div>
 
 <!-- ADVANCED SEARCH OVERLAY -->
@@ -500,14 +501,14 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
 <div class="overlay" id="wipedOverlay">
   <div class="susp-popup">
     <div style="background:#cf222e;color:#fff;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
-      <div class="titlebar-title">ACCOUNT WIPED</div>
-      <div class="win-btns"><div class="wcb">&#10005;</div></div>
+      <div style="font-size:13px;font-weight:600;">⛔ ACCOUNT WIPED</div>
+      <div style="cursor:pointer;opacity:0.7;font-size:16px;line-height:1;">&#10005;</div>
     </div>
     <div style="padding:14px 16px 12px;">
       <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;">
-        <div style="font-size:28px;flex-shrink:0;">&#9888;</div>
+        <div style="font-size:26px;flex-shrink:0;line-height:1;">⛔</div>
         <div>
-          <div style="font-size:13px;font-weight:bold;color:#880000;margin-bottom:4px;">Account Wiped</div>
+          <div style="font-size:13px;font-weight:bold;color:var(--c-ban);margin-bottom:4px;">Account Wiped</div>
           <div style="font-size:11px;color:var(--c-text);line-height:1.6;">Your staff account has been permanently removed from the system by an administrator.</div>
         </div>
       </div>
@@ -531,11 +532,11 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
       <div id="resetNoticeClose" style="cursor:pointer;color:#fff;opacity:0.7;font-size:16px;line-height:1;">&#10005;</div>
     </div>
     <div style="padding:12px 14px 12px;">
-      <div style="background:#fde8e8;border:1px solid #cc6666;padding:8px;margin-bottom:10px;font-size:11px;color:#880000;font-weight:bold;line-height:1.6;">
-        This system was recently factory reset. All previous data has been permanently erased.
+      <div style="background:rgba(248,81,73,0.12);border:1px solid rgba(248,81,73,0.4);padding:8px;margin-bottom:10px;font-size:11px;color:var(--c-ban);font-weight:bold;line-height:1.6;border-radius:4px;">
+        ⚠ This system was recently factory reset. All previous data has been permanently erased.
       </div>
       <div style="margin-bottom:8px;"><div style="font-size:11px;font-weight:bold;color:var(--c-text);margin-bottom:4px;">Reset Reason:</div>
-        <div id="resetNoticeReason" style="font-size:11px;color:var(--c-text);background:#f4f0e8;border:1px solid #c0bcb4;padding:6px;min-height:30px;line-height:1.6;"></div>
+        <div id="resetNoticeReason" style="font-size:11px;color:var(--c-text);background:var(--bg-tbl-odd);border:1px solid var(--c-border);padding:6px;min-height:30px;line-height:1.6;border-radius:4px;"></div>
       </div>
       <div style="margin-bottom:4px;"><div style="font-size:11px;font-weight:bold;color:var(--c-text);margin-bottom:4px;">Reset By / Date:</div>
         <div id="resetNoticeBy" style="font-size:11px;color:var(--c-text);"></div>
@@ -556,7 +557,7 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
       <div id="factoryResetClose" style="cursor:pointer;color:#fff;opacity:0.7;font-size:16px;line-height:1;">&#10005;</div>
     </div>
     <div style="padding:12px 14px 12px;">
-      <div style="background:#fde8e8;border:1px solid #cc6666;padding:8px;margin-bottom:10px;font-size:11px;color:#880000;font-weight:bold;line-height:1.6;">
+      <div style="background:rgba(248,81,73,0.12);border:1px solid rgba(248,81,73,0.4);padding:8px;margin-bottom:10px;font-size:11px;color:var(--c-ban);font-weight:bold;line-height:1.6;border-radius:4px;">
         ⚠ This will permanently delete ALL data including every user, every staff member except rpatoff and SOFTWARE MANAGER accounts, all logs, alerts, messages, and requests. This CANNOT be undone.
       </div>
       <div style="margin-bottom:5px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;font-weight:bold;">Reason for Reset:</label>
@@ -582,13 +583,13 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
 <!-- PROTECTED USER POPUP -->
 <div class="overlay" id="protectedOverlay">
   <div class="dialog" style="width:400px;">
-    <div class="titlebar">
-      <div class="titlebar-title">&#9651; Protected User</div>
-      <div class="win-btns"><div class="wcb" id="protClose">&#10005;</div></div>
+    <div style="background:var(--bg-stitle);color:var(--c-stitle-text);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-size:13px;font-weight:600;">🛡 Protected User</div>
+      <div id="protClose" style="cursor:pointer;color:var(--c-stitle-text);opacity:0.7;font-size:16px;line-height:1;">&#10005;</div>
     </div>
     <div style="padding:12px 14px 10px;">
-      <div style="background:#e8d0d0;border:1px solid #cc6666;padding:8px 10px;margin-bottom:10px;">
-        <div style="font-size:12px;font-weight:bold;color:#880000;margin-bottom:4px;">PROTECTED USER</div>
+      <div style="background:rgba(248,81,73,0.12);border:1px solid rgba(248,81,73,0.4);padding:8px 10px;margin-bottom:10px;border-radius:6px;">
+        <div style="font-size:12px;font-weight:bold;color:var(--c-ban);margin-bottom:4px;">🛡 PROTECTED USER</div>
         <div style="font-size:11px;color:var(--c-text);line-height:1.6;" id="protMsg"></div>
       </div>
       <div style="font-size:11px;color:var(--c-text);margin-bottom:8px;font-weight:bold;">How would you like to proceed?</div>
@@ -1054,13 +1055,37 @@ function updateAnnouncements(){
   const active=Object.values(SITE_ALERTS).filter(a=>a.active&&!(a.expiresAt&&a.expiresAt>0&&now>a.expiresAt));
   if(!active.length){ bar.style.display='none'; return; }
   const latest=active[active.length-1];
-  const typeColors={warning:'#fff0cc',critical:'#ffd0d0',info:'#d0e8ff'};
-  const borderColors={warning:'#c8a800',critical:'#cc0000',info:'#4488cc'};
-  bar.style.background=typeColors[latest.type]||'#fff0cc';
-  bar.style.borderBottomColor=borderColors[latest.type]||'#c8a800';
+  // Dark-mode-friendly: semi-transparent tinted backgrounds with strong colored text
+  const isDark=document.body.classList.contains('gh-dark');
+  const typeConfig={
+    warning:{
+      bg:isDark?'rgba(227,179,65,0.15)':'#fff8d0',
+      border:isDark?'rgba(227,179,65,0.5)':'#c8a800',
+      textColor:isDark?'#e3b341':'#7a5500',
+      icon:'⚠',
+      label:'WARNING ALERT'
+    },
+    critical:{
+      bg:isDark?'rgba(248,81,73,0.15)':'#ffd0d0',
+      border:isDark?'rgba(248,81,73,0.5)':'#cc0000',
+      textColor:isDark?'#f85149':'#880000',
+      icon:'🚨',
+      label:'CRITICAL ALERT'
+    },
+    info:{
+      bg:isDark?'rgba(88,166,255,0.12)':'#d0e8ff',
+      border:isDark?'rgba(88,166,255,0.4)':'#4488cc',
+      textColor:isDark?'#58a6ff':'#003388',
+      icon:'ℹ',
+      label:'INFO'
+    },
+  };
+  const cfg=typeConfig[latest.type]||typeConfig.warning;
+  bar.style.background=cfg.bg;
+  bar.style.borderBottom=`1px solid ${cfg.border}`;
   bar.style.display='block';
-  const typeLabel=latest.type?latest.type.toUpperCase()+' ALERT':'ALERT';
-  bar.innerHTML=`<b>${typeLabel} from ${latest.by} (${latest.date}):</b> ${latest.message}`;
+  bar.style.padding='6px 16px';
+  bar.innerHTML=`<span style="font-size:14px;margin-right:6px;vertical-align:middle;">${cfg.icon}</span><span style="font-weight:700;color:${cfg.textColor};">${cfg.label}</span><span style="color:${cfg.textColor};opacity:0.75;font-size:11px;"> from ${latest.by} (${latest.date}):</span> <span style="color:${cfg.textColor};font-weight:500;">${latest.message}</span>`;
 }
 
 function updateSidebar(){
@@ -1422,18 +1447,18 @@ function renderHome(c){
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
     <div class="sbox" style="flex:1;min-width:130px;"><div class="stitle">Players</div><div class="sbody">
       <div style="font-size:18px;font-weight:bold;color:var(--c-link);">${totalPlayers}</div>
-      <div style="font-size:11px;margin-top:3px;">
-        <span class="ok">&#9679;</span> Active: <b>${activePlayers}</b><br>
-        <span class="sus">&#9679;</span> Suspended: <b>${suspended}</b><br>
-        <span class="ban">&#9679;</span> Banned: <b>${banned}</b>
+      <div style="font-size:11px;margin-top:3px;line-height:1.8;">
+        <span class="ok">&#9679; Active: <b>${activePlayers}</b></span><br>
+        <span class="sus">&#9679; Suspended: <b>${suspended}</b></span><br>
+        <span class="ban">&#9679; Banned: <b>${banned}</b></span>
       </div>
       <div style="margin-top:4px;"><button class="btn small" onclick="nav('accounts')">View All</button></div>
     </div></div>
     <div class="sbox" style="flex:1;min-width:130px;"><div class="stitle">Staff</div><div class="sbody">
       <div style="font-size:18px;font-weight:bold;color:var(--c-link);">${totalStaff}</div>
-      <div style="font-size:11px;margin-top:3px;">
-        <span class="activity-dot active" style="width:7px;height:7px;"></span> Online: <b>${onlineStaff}</b><br>
-        <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#cc8800;margin-right:4px;vertical-align:middle;"></span><span class="sus">Suspended:</span> <b>${suspendedStaff}</b>
+      <div style="font-size:11px;margin-top:3px;line-height:1.8;">
+        <span class="ok"><span class="activity-dot active" style="width:7px;height:7px;display:inline-block;"></span> Online: <b>${onlineStaff}</b></span><br>
+        <span class="sus">&#9679; Suspended: <b>${suspendedStaff}</b></span>
       </div>
       ${canDo('canViewStaff')?`<div style="margin-top:4px;"><button class="btn small" onclick="nav('activity')">Activity</button></div>`:''}
     </div></div>
@@ -3808,6 +3833,7 @@ async function doLogin(){
     document.getElementById('topbarTitle').innerHTML=`<span style='color:#58a6ff;font-weight:800;letter-spacing:-0.5px;font-size:14px;'>SAMARITAN</span><span style='color:var(--c-topbar-sub);font-weight:400;font-size:12px;'> | Internal</span> <span style='color:var(--c-topbar-sub);font-size:11px;font-weight:400;'>&mdash; ${ME}</span> <span style='color:var(--c-topbar-text);font-size:11px;font-weight:600;'>[${MY_LEVEL}]</span>`;
     startListeners();
     startHeartbeat();
+    if(typeof window.initShellBg==='function') setTimeout(window.initShellBg,300);
     loadNotifPrefs();
     lastRefreshed=nowStr();
     // Check if there's a pending reset notice this user hasn't seen
@@ -5012,6 +5038,7 @@ function applyTheme(){
     btn.textContent = darkMode ? '☀' : '☽';
   }
   try { localStorage.setItem('ghTheme', darkMode ? 'dark' : 'light'); } catch(e){}
+  if(typeof updateAnnouncements==='function') setTimeout(updateAnnouncements,10);
 }
 applyTheme();
 
@@ -5036,6 +5063,62 @@ function openNotifSettings(){
 });
 </script>
 
+<script>
+// ── SHELL BACKGROUND (subtle animated grid for admin panel) ──
+(function(){
+  let shellAnimId=null;
+  window.initShellBg = function(){
+    const canvas=document.getElementById('shellBg');
+    if(!canvas) return;
+    if(shellAnimId) cancelAnimationFrame(shellAnimId);
+    const ctx=canvas.getContext('2d');
+    let W=canvas.width=window.innerWidth;
+    let H=canvas.height=window.innerHeight;
+    window.addEventListener('resize',()=>{W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;});
+    canvas.style.opacity='1';
+    let t=0;
+    // Orb positions (subtle, slow)
+    const orbs=[
+      {x:W*0.8, y:H*0.15, r:300, speedX:0.15, speedY:0.1},
+      {x:W*0.1, y:H*0.8,  r:250, speedX:-0.12,speedY:0.08},
+      {x:W*0.5, y:H*0.5,  r:200, speedX:0.1,  speedY:-0.12},
+    ];
+    function draw(){
+      const isDark=document.body.classList.contains('gh-dark');
+      if(!isDark){ canvas.style.opacity='0'; shellAnimId=requestAnimationFrame(draw); return; }
+      canvas.style.opacity='1';
+      // Clear
+      ctx.clearRect(0,0,W,H);
+      // Very subtle orbs
+      orbs.forEach((o,i)=>{
+        o.x+=Math.sin(t*0.2+i*2)*o.speedX;
+        o.y+=Math.cos(t*0.15+i*2)*o.speedY;
+        const g=ctx.createRadialGradient(o.x,o.y,0,o.x,o.y,o.r);
+        g.addColorStop(0,'rgba(88,166,255,0.03)');
+        g.addColorStop(1,'transparent');
+        ctx.fillStyle=g;
+        ctx.fillRect(0,0,W,H);
+      });
+      // Dot grid — very faint
+      const STEP=60;
+      for(let x=0;x<W+STEP;x+=STEP){
+        for(let y=0;y<H+STEP;y+=STEP){
+          const pulse=Math.sin(t*0.3+x*0.04+y*0.03)*0.5+0.5;
+          ctx.beginPath();
+          ctx.arc(x,y,0.8+pulse*0.4,0,Math.PI*2);
+          ctx.fillStyle=`rgba(88,166,255,${0.05+pulse*0.04})`;
+          ctx.fill();
+        }
+      }
+      t+=0.008;
+      shellAnimId=requestAnimationFrame(draw);
+    }
+    draw();
+  };
+  // Start after login
+  document.addEventListener('DOMContentLoaded',()=>{ setTimeout(window.initShellBg,200); });
+})();
+</script>
 <script>
 // ── LOGIN BACKGROUND ANIMATION ──
 (function(){
