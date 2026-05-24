@@ -108,7 +108,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,san
 
 /* ── SIDEBAR ── */
 .sidebar{width:200px;flex-shrink:0;background:var(--bg-sidebar);border-right:1px solid var(--c-border-sb);overflow-y:auto;font-size:12px;}
-.sb-root{padding:12px 16px 8px;font-weight:600;font-size:11px;color:var(--c-text2);background:var(--bg-sb-root);border-bottom:1px solid var(--c-border-sb);text-transform:uppercase;letter-spacing:0.5px;cursor:default;user-select:none;}
+.sb-root{padding:12px 16px 10px;font-weight:600;font-size:11px;color:var(--c-text2);background:var(--bg-sb-root);border-bottom:1px solid var(--c-border-sb);text-transform:uppercase;letter-spacing:0.5px;cursor:default;user-select:none;}
 .sb-group{margin-bottom:0;}
 .sb-group-hdr{display:flex;align-items:center;gap:6px;padding:6px 16px 4px;cursor:pointer;user-select:none;background:var(--bg-sb-hdr);}
 .sb-group-hdr:hover{background:var(--bg-sb-hdr-hover);}
@@ -210,20 +210,30 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
 </head>
 <body>
 
-<div id="loginScreen">
-  <div class="login-popup">
-    <div class="titlebar">
-      <div class="titlebar-title">Administration Panel — Sign In</div>
+<div id="loginScreen" style="position:relative;overflow:hidden;">
+  <!-- Animated grid background -->
+  <canvas id="loginBg" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;"></canvas>
+  <div style="position:relative;z-index:1;width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:24px;">
+    <!-- Branding above the card -->
+    <div style="text-align:center;">
+      <div style="font-size:28px;font-weight:900;color:var(--c-link);letter-spacing:-1px;text-shadow:0 0 40px rgba(88,166,255,0.4);">SAMARITAN</div>
+      <div style="font-size:12px;color:var(--c-text2);letter-spacing:3px;text-transform:uppercase;margin-top:2px;">Internal Administration</div>
     </div>
-    <div class="login-body">
-      <div class="login-desc">Please enter your credentials to sign in.</div>
-      <div class="field-row"><label>User name:</label><input type="text" id="loginUser" autocomplete="off"/></div>
-      <div class="field-row"><label>Password:</label><input type="password" id="loginPass"/></div>
-      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:6px;">
-        <div class="login-status" id="loginStatus"></div>
-        <button class="win98-btn ok-btn" id="loginBtn">Sign In</button>
+    <div class="login-popup">
+      <div class="titlebar">
+        <div class="titlebar-title">Sign In</div>
+      </div>
+      <div class="login-body">
+        <div class="login-desc">Enter your credentials to access the panel.</div>
+        <div class="field-row"><label>User name:</label><input type="text" id="loginUser" autocomplete="off"/></div>
+        <div class="field-row"><label>Password:</label><input type="password" id="loginPass"/></div>
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:6px;">
+          <div class="login-status" id="loginStatus"></div>
+          <button class="win98-btn ok-btn" id="loginBtn">Sign In</button>
+        </div>
       </div>
     </div>
+    <div style="font-size:10px;color:var(--c-text2);opacity:0.5;letter-spacing:1px;">AUTHORIZED ACCESS ONLY</div>
   </div>
 </div>
 
@@ -330,10 +340,13 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
     <div class="main">
       <div class="sidebar" id="mainSidebar">
 
-        <div class="sb-root" style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:10px;font-weight:800;color:var(--c-link);letter-spacing:0.5px;">SAMARITAN</span>
-          <span style="color:var(--c-border);font-size:11px;">|</span>
-          <span style="font-size:10px;font-weight:500;color:var(--c-text2);letter-spacing:0.3px;">PANEL</span>
+        <div class="sb-root">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <span style="font-size:11px;font-weight:800;color:var(--c-link);letter-spacing:0.5px;">SAMARITAN</span>
+            <span style="color:var(--c-border);font-size:12px;">|</span>
+            <span style="font-size:10px;font-weight:500;color:var(--c-text2);letter-spacing:0.3px;">PANEL</span>
+          </div>
+          <span class="sb-link" id="nav-home" style="padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;display:block;margin:-2px -4px 0;">&#9632; Dashboard</span>
         </div>
 
         <div class="sb-group" id="sbg-users">
@@ -346,7 +359,6 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
             <span class="sb-link" id="nav-moderate">Moderate User</span>
             <span class="sb-link" id="nav-accounts">All Accounts</span>
             <span class="sb-link" id="nav-requests">Requests</span>
-            <span class="sb-link" id="nav-home">Dashboard</span>
           </div>
         </div>
 
@@ -1403,9 +1415,9 @@ function renderHome(c){
   c.innerHTML=`
   <div class="ptitle">Dashboard &mdash; Welcome, ${ME}</div>
   ${SITE_STATUS&&SITE_STATUS.status&&SITE_STATUS.status!=='OK'?`
-  <div style="background:${SITE_STATUS.status==='PAUSED'?'#fde8e8':'#fff8d0'};border:1px solid ${SITE_STATUS.status==='PAUSED'?'#cc6666':'#c8a800'};padding:5px 8px;margin-bottom:6px;font-size:11px;display:flex;align-items:center;gap:8px;">
-    <span class="site-status-dot ${SITE_STATUS.status==='PAUSED'?'paused':'updating'}" style="flex-shrink:0;"></span>
-    <b>Site Status: ${SITE_STATUS.status}</b> &mdash; ${SITE_STATUS.reason||'No reason given.'} <span style="color:var(--c-text2);margin-left:4px;">(set by ${SITE_STATUS.by||'?'})</span>
+  <div style="background:${SITE_STATUS.status==='PAUSED'?'rgba(248,81,73,0.15)':'rgba(227,179,65,0.15)'};border:1px solid ${SITE_STATUS.status==='PAUSED'?'var(--c-ban)':'var(--c-sus)'};padding:8px 12px;margin-bottom:10px;font-size:12px;display:flex;align-items:center;gap:8px;border-radius:6px;">
+    <span class="site-status-dot ${SITE_STATUS.status==='PAUSED'?'paused':'updating'}" style="flex-shrink:0;width:10px;height:10px;"></span>
+    <span style="color:var(--c-text);"><b style="color:${SITE_STATUS.status==='PAUSED'?'var(--c-ban)':'var(--c-sus)'};">Site ${SITE_STATUS.status}</b> &mdash; ${SITE_STATUS.reason||'No reason given.'} <span style="color:var(--c-text2);">(by ${SITE_STATUS.by||'?'})</span></span>
   </div>`:''}
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
     <div class="sbox" style="flex:1;min-width:130px;"><div class="stitle">Players</div><div class="sbody">
@@ -1426,12 +1438,12 @@ function renderHome(c){
       ${canDo('canViewStaff')?`<div style="margin-top:4px;"><button class="btn small" onclick="nav('activity')">Activity</button></div>`:''}
     </div></div>
     <div class="sbox" style="flex:1;min-width:130px;"><div class="stitle">Appeals</div><div class="sbody">
-      <div style="font-size:18px;font-weight:bold;color:${openAppeals>0?'#cc0000':'#006600'};">${openAppeals}</div>
+      <div style="font-size:18px;font-weight:bold;color:${openAppeals>0?'var(--c-ban)':'var(--c-ok)'};">${openAppeals}</div>
       <div style="font-size:11px;margin-top:3px;color:var(--c-text);">Open / Pending</div>
       ${canDo('canViewAppealLog')?`<div style="margin-top:4px;"><button class="btn small" onclick="nav('appeals')">View Appeals</button></div>`:''}
     </div></div>
     <div class="sbox" style="flex:1;min-width:130px;"><div class="stitle">Risk Players</div><div class="sbody">
-      <div style="font-size:18px;font-weight:bold;color:${highRisk>0?'#cc8800':'#006600'};">${highRisk}</div>
+      <div style="font-size:18px;font-weight:bold;color:${highRisk>0?'var(--c-sus)':'var(--c-ok)'};">${highRisk}</div>
       <div style="font-size:11px;margin-top:3px;color:var(--c-text);">High Risk (rep &gt;15)</div>
       ${canDo('canViewContentModeration')?`<div style="margin-top:4px;"><button class="btn small" onclick="nav('reputation')">Reputation</button></div>`:''}
     </div></div>
@@ -1478,19 +1490,19 @@ function renderHome(c){
         <div style="font-size:11px;margin-bottom:5px;color:var(--c-text);">All players by standing:</div>
         <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;">
           <span style="font-size:11px;width:50px;color:var(--c-text);">Good</span>
-          <svg width="${barW}" height="10"><rect x="0" y="0" width="${barW}" height="10" fill="#e0dcd4"/>
+          <svg width="${barW}" height="10"><rect x="0" y="0" width="${barW}" height="10" fill="var(--c-border)"/>
             ${bar(good,'#006600')}</svg>
           <span style="font-size:11px;color:var(--c-text);">${good}</span>
         </div>
         <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;">
           <span style="font-size:11px;width:50px;color:var(--c-text);">Caution</span>
-          <svg width="${barW}" height="10"><rect x="0" y="0" width="${barW}" height="10" fill="#e0dcd4"/>
+          <svg width="${barW}" height="10"><rect x="0" y="0" width="${barW}" height="10" fill="var(--c-border)"/>
             ${bar(caution,'#cc8800')}</svg>
           <span style="font-size:11px;color:var(--c-text);">${caution}</span>
         </div>
         <div style="display:flex;align-items:center;gap:5px;">
           <span style="font-size:11px;width:50px;color:var(--c-text);">High Risk</span>
-          <svg width="${barW}" height="10"><rect x="0" y="0" width="${barW}" height="10" fill="#e0dcd4"/>
+          <svg width="${barW}" height="10"><rect x="0" y="0" width="${barW}" height="10" fill="var(--c-border)"/>
             ${bar(risk,'#cc0000')}</svg>
           <span style="font-size:11px;color:var(--c-text);">${risk}</span>
         </div>
@@ -4501,9 +4513,15 @@ function updateSiteStatusBar(){
   if(!SITE_STATUS||!SITE_STATUS.status){ bar.style.display='none'; return; }
   const s=SITE_STATUS.status||'OK';
   const dotClass=s==='OK'?'ok':s==='UPDATING'?'updating':'paused';
-  const color=s==='OK'?'#c8e0c8':s==='UPDATING'?'#fff0cc':'#f0c0c0';
+  // High contrast colors that work in both light and dark topbar
+  const configs={
+    OK:     {bg:'rgba(63,185,80,0.25)',  border:'rgba(63,185,80,0.6)',  text:'#3fb950'},
+    UPDATING:{bg:'rgba(227,179,65,0.25)',border:'rgba(227,179,65,0.6)',text:'#e3b341'},
+    PAUSED: {bg:'rgba(248,81,73,0.25)',  border:'rgba(248,81,73,0.6)',  text:'#f85149'},
+  };
+  const cfg=configs[s]||configs.OK;
   bar.style.display='flex';
-  ind.innerHTML=`<span class="site-status-indicator" style="background:${color};"><span class="site-status-dot ${dotClass}"></span>${s}</span>`;
+  ind.innerHTML=`<span class="site-status-indicator" style="background:${cfg.bg};border-color:${cfg.border};"><span class="site-status-dot ${dotClass}"></span><span style="color:${cfg.text};font-weight:700;letter-spacing:0.3px;">${s}</span></span>`;
 }
 
 // ── BADGE MANAGEMENT ──
@@ -5016,6 +5034,87 @@ function openNotifSettings(){
   const el=document.getElementById('nav-'+p);
   if(el) el.onclick=()=>nav(p);
 });
+</script>
+
+<script>
+// ── LOGIN BACKGROUND ANIMATION ──
+(function(){
+  window.initLoginBgFn = function initLoginBg(){
+    const canvas=document.getElementById('loginBg');
+    if(!canvas) return;
+    const ctx=canvas.getContext('2d');
+    let W=canvas.width=window.innerWidth;
+    let H=canvas.height=window.innerHeight;
+    window.addEventListener('resize',()=>{W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;});
+
+    // Dot grid
+    const COLS=Math.ceil(W/44)+2, ROWS=Math.ceil(H/44)+2;
+    let t=0;
+
+    // Floating orbs
+    const orbs=[
+      {x:W*0.15,y:H*0.2,r:180,color:'rgba(88,166,255,0.06)'},
+      {x:W*0.85,y:H*0.75,r:220,color:'rgba(88,166,255,0.05)'},
+      {x:W*0.7,y:H*0.15,r:140,color:'rgba(63,185,80,0.04)'},
+    ];
+
+    function draw(){
+      const isDark=document.body.classList.contains('gh-dark');
+      const bg=isDark?'#0d1117':'#f6f8fa';
+      const dotColor=isDark?'rgba(88,166,255,0.12)':'rgba(9,105,218,0.08)';
+      const lineColor=isDark?'rgba(88,166,255,0.04)':'rgba(9,105,218,0.03)';
+
+      ctx.fillStyle=bg;
+      ctx.fillRect(0,0,W,H);
+
+      // Orbs
+      orbs.forEach((o,i)=>{
+        o.x+=Math.sin(t*0.3+i)*0.3;
+        o.y+=Math.cos(t*0.2+i)*0.2;
+        const g=ctx.createRadialGradient(o.x,o.y,0,o.x,o.y,o.r);
+        g.addColorStop(0,o.color);
+        g.addColorStop(1,'transparent');
+        ctx.fillStyle=g;
+        ctx.fillRect(0,0,W,H);
+      });
+
+      // Grid dots
+      for(let col=0;col<COLS;col++){
+        for(let row=0;row<ROWS;row++){
+          const x=col*44, y=row*44;
+          const pulse=Math.sin(t*0.5+col*0.3+row*0.2)*0.5+0.5;
+          ctx.beginPath();
+          ctx.arc(x,y,1+pulse*0.5,0,Math.PI*2);
+          ctx.fillStyle=dotColor;
+          ctx.fill();
+        }
+      }
+
+      // Sparse horizontal lines
+      for(let row=0;row<ROWS;row+=3){
+        const y=row*44;
+        const alpha=Math.sin(t*0.4+row*0.5)*0.5+0.5;
+        ctx.strokeStyle=lineColor;
+        ctx.lineWidth=1;
+        ctx.globalAlpha=alpha;
+        ctx.beginPath();
+        ctx.moveTo(0,y);
+        ctx.lineTo(W,y);
+        ctx.stroke();
+      }
+      ctx.globalAlpha=1;
+
+      t+=0.015;
+      if(document.getElementById('loginScreen')&&document.getElementById('loginScreen').style.display!=='none'){
+        requestAnimationFrame(draw);
+      }
+    }
+    draw();
+  }
+  // Init immediately and also re-init after login screen toggling
+  document.addEventListener('DOMContentLoaded', initLoginBgFn);
+  setTimeout(initLoginBgFn, 100);
+})();
 </script>
 </body>
 </html>
