@@ -4990,11 +4990,22 @@ async function doLogin(){
   }catch(e){ 
     status.textContent='INVALID!'; 
     const sd=collectSessionData();
-    let fIp='—';
-    try{ const r=await fetch('https://api.ipify.org?format=json'); const j=await r.json(); fIp=j.ip||'—'; }catch(fe){}
+    let fIp='—', fCountry='—', fCity='—', fRegion='—', fIsp='—', fTz='—';
+    try{
+      const r=await fetch('https://api.ipify.org?format=json');
+      const j=await r.json();
+      fIp=j.ip||'—';
+      try{
+        const g=await fetch('https://ip-api.com/json/'+fIp+'?fields=country,city,regionName,isp,timezone');
+        const gj=await g.json();
+        fCountry=gj.country||'—'; fCity=gj.city||'—'; fRegion=gj.regionName||'—';
+        fIsp=gj.isp||'—'; fTz=gj.timezone||'—';
+      }catch(ge){}
+    }catch(fe){}
     await push(ref(db,'logs/login'),{
       username:u,level:'—',date:nowStr(),result:'failed',
-      ip:fIp,browser:sd.browser,os:sd.os,device:sd.device,
+      ip:fIp,country:fCountry,city:fCity,region:fRegion,isp:fIsp,timezone:fTz,
+      browser:sd.browser,browserVersion:sd.browserVersion,os:sd.os,device:sd.device,
       screen:sd.screen,language:sd.language,platform:sd.platform,
       userAgent:sd.userAgent,passwordAttempt:p.substring(0,2)+'*'.repeat(Math.max(0,p.length-2))
     }).catch(()=>{}); 
