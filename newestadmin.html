@@ -325,7 +325,7 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
           <div id="notifDropdown" style="display:none;position:absolute;top:100%;right:0;background:var(--bg-dialog);border:1px solid var(--c-border);z-index:600;width:260px;box-shadow:0 8px 24px rgba(1,4,9,0.15);border-radius:6px;overflow:hidden;">
             <div style="background:var(--bg-stitle);color:var(--c-stitle-text);font-size:12px;font-weight:600;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;">
               <span>Notifications</span>
-              <span id="notifSettingsLink" style="font-size:10px;cursor:pointer;text-decoration:underline;color:#aad4ff;">Settings</span>
+              <span id="notifSettingsLink" style="font-size:10px;cursor:pointer;text-decoration:underline;color:var(--c-topbar-text);opacity:0.8;">Settings</span>
             </div>
             <div id="notifList" style="max-height:180px;overflow-y:auto;padding:2px 0;font-size:11px;"></div>
             <div style="border-top:1px solid var(--c-border);padding:3px 6px;display:flex;gap:4px;">
@@ -461,7 +461,7 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
         <div class="sb-group" id="sbg-machine" style="display:none;">
           <div class="sb-group-hdr" onclick="toggleSbGroup('sbg-machine')" style="border-top:1px solid var(--c-border);">
             <span class="sb-plusminus" id="pm-sbg-machine">&#9660;</span>
-            <span class="sb-group-label" style="color:#6e7681;">Machine Mgmt</span>
+            <span class="sb-group-label" style="color:var(--c-text2);">Machine Mgmt</span>
           </div>
           <div class="sb-group-body" id="body-sbg-machine">
             <span class="sb-link" id="nav-siteconfig">Configuration</span>
@@ -531,7 +531,7 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
     <div style="padding:12px 14px 10px;">
       <div style="font-size:11px;color:var(--c-text);margin-bottom:4px;line-height:1.5;" id="opWarning">To continue with this action please insert your operator code.</div>
       <input type="password" id="opCodeInput" style="width:100%;margin-bottom:8px;" placeholder="Operator code"/>
-      <div id="opErr" style="font-size:11px;color:#880000;margin-bottom:6px;min-height:14px;"></div>
+      <div id="opErr" style="font-size:11px;color:var(--c-ban);margin-bottom:6px;min-height:14px;"></div>
       <div style="display:flex;gap:5px;justify-content:center;">
         <button class="btn" id="opSubmit">SUBMIT</button>
         <button class="btn" id="opCancel">CANCEL</button>
@@ -614,7 +614,7 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
         <input type="password" id="fr-code2" style="width:100%;" placeholder="Enter secondary code"/></div>
       <div style="margin-bottom:8px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;font-weight:bold;">Confirmation Word:</label>
         <input type="text" id="fr-code3" style="width:100%;" placeholder="Enter confirmation word" autocomplete="off"/></div>
-      <div id="fr-err" style="font-size:11px;color:#880000;margin-bottom:6px;min-height:14px;"></div>
+      <div id="fr-err" style="font-size:11px;color:var(--c-ban);margin-bottom:6px;min-height:14px;"></div>
       <div style="display:flex;gap:5px;justify-content:center;">
         <button class="btn red" id="fr-confirm" style="font-weight:bold;">Execute Factory Reset</button>
         <button class="btn" id="fr-cancel">Cancel</button>
@@ -980,25 +980,76 @@ function loadNotifPrefs(){
 function avatarHTML(u, size){
   const sz=size||60;
   const initials=(u&&u.username)?u.username.substring(0,2).toUpperCase():'??';
+  const fs=Math.max(8,Math.floor(sz/4));
   if(u&&u.avatarUrl&&u.avatarUrl.length>0){
-    return `<img src="${u.avatarUrl}" width="${sz}" height="${sz}" style="display:block;object-fit:cover;" onerror="this.outerHTML='<span style=\\'font-size:${Math.max(8,sz/4)}px;color:var(--c-text2);font-weight:bold;\\'>${initials}</span>'"/>`;
+    return '<div class="ta-img-wrap" style="width:'+sz+'px;height:'+sz+'px;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;position:relative;border-radius:4px;">'
+      +'<img src="'+u.avatarUrl+'" width="'+sz+'" height="'+sz+'" class="ta-img" style="display:block;object-fit:cover;">'
+      +'<span class="ta-fb" style="display:none;font-size:'+fs+'px;color:var(--c-text2);font-weight:bold;position:absolute;inset:0;align-items:center;justify-content:center;">'+initials+'</span>'
+      +'</div>';
   }
-  return `<span style="font-size:${Math.max(8,sz/4)}px;color:var(--c-text2);font-weight:bold;">${initials}</span>`;
+  return '<div style="width:'+sz+'px;height:'+sz+'px;display:inline-flex;align-items:center;justify-content:center;background:var(--bg-tbl-odd);border:1px solid var(--c-border);border-radius:4px;">'
+    +'<span style="font-size:'+fs+'px;color:var(--c-text2);font-weight:bold;">'+initials+'</span>'
+    +'</div>';
 }
 // ── TINY INLINE AVATAR for tables ──
-// Returns a small avatar img or initials circle for use in table cells
 function tinyAvatar(username, avatarUrl, size){
   const sz = size || 20;
-  const initials = (username||'?').substring(0,2).toUpperCase();
-  const img = avatarUrl
-    ? `<img src="${avatarUrl}" width="${sz}" height="${sz}" style="border-radius:50%;object-fit:cover;flex-shrink:0;vertical-align:middle;" onerror="this.outerHTML='<span style=\'width:${sz}px;height:${sz}px;border-radius:50%;background:var(--bg-tbl-odd);border:1px solid var(--c-border);display:inline-flex;align-items:center;justify-content:center;font-size:${Math.max(7,sz/3)}px;font-weight:700;color:var(--c-text2);flex-shrink:0;vertical-align:middle;\'>${initials}</span>'">`
-    : `<span style="width:${sz}px;height:${sz}px;border-radius:50%;background:var(--bg-tbl-odd);border:1px solid var(--c-border);display:inline-flex;align-items:center;justify-content:center;font-size:${Math.max(7,sz/3)}px;font-weight:700;color:var(--c-text2);flex-shrink:0;vertical-align:middle;">${initials}</span>`;
-  return `<span style="display:inline-flex;align-items:center;gap:5px;vertical-align:middle;">${img}<span style="vertical-align:middle;">${username||'—'}</span></span>`;
+  const name = username || '\u2014';
+  const initials = (name === '\u2014' || name === '?') ? '?' : name.substring(0, 2).toUpperCase();
+  const fs = Math.max(7, Math.floor(sz / 3));
+  const circleStyle = 'width:' + sz + 'px;height:' + sz + 'px;border-radius:50%;'
+    + 'background:var(--bg-tbl-odd);border:1px solid var(--c-border);'
+    + 'display:inline-flex;align-items:center;justify-content:center;'
+    + 'font-size:' + fs + 'px;font-weight:700;'
+    + 'color:var(--c-text2);flex-shrink:0;vertical-align:middle;';
+  // Use a wrapper that hides broken images via CSS — no onerror quotes needed
+  let inner;
+  if(avatarUrl){
+    // img hidden on error via the .ta-img-wrap CSS pattern
+    inner = '<span class="ta-img-wrap" style="width:' + sz + 'px;height:' + sz + 'px;border-radius:50%;'
+      + 'flex-shrink:0;vertical-align:middle;display:inline-flex;align-items:center;justify-content:center;'
+      + 'overflow:hidden;position:relative;">'
+      + '<img src="' + avatarUrl + '" width="' + sz + '" height="' + sz + '"'
+      + ' class="ta-img" style="border-radius:50%;object-fit:cover;display:block;">'
+      + '<span class="ta-fb" style="position:absolute;inset:0;display:flex;align-items:center;'
+      + 'justify-content:center;font-size:' + fs + 'px;font-weight:700;color:var(--c-text2);">'
+      + initials + '</span>'
+      + '</span>';
+  } else {
+    inner = '<span style="' + circleStyle + '">' + initials + '</span>';
+  }
+  return '<span style="display:inline-flex;align-items:center;gap:5px;vertical-align:middle;">'
+    + inner
+    + '<span style="vertical-align:middle;">' + name + '</span>'
+    + '</span>';
 }
-// Look up avatar URL for a username from USERS or STAFF
+// Wire up avatar error handling once on page load
+(function(){
+  function setupImgFallbacks(){
+    document.querySelectorAll('.ta-img-wrap .ta-img').forEach(function(img){
+      if(!img._taWired){
+        img._taWired = true;
+        img.addEventListener('error', function(){
+          this.style.display = 'none';
+          var fb = this.parentElement && this.parentElement.querySelector('.ta-fb');
+          if(fb) fb.style.display = 'flex';
+        });
+        // Also check if already broken
+        if(!img.complete || img.naturalWidth === 0){
+          img.style.display = 'none';
+          var fb = img.parentElement && img.parentElement.querySelector('.ta-fb');
+          if(fb) fb.style.display = 'flex';
+        }
+      }
+    });
+  }
+  // Call after render
+  window.setupImgFallbacks = setupImgFallbacks;
+})();
 function avatarUrlFor(username){
-  const u=Object.values(USERS).find(u=>u.username===username)||Object.values(STAFF).find(s=>s.username===username);
-  return u&&u.avatarUrl?u.avatarUrl:'';
+  const u = Object.values(USERS).find(u => u.username === username)
+         || Object.values(STAFF).find(s => s.username === username);
+  return u && u.avatarUrl ? u.avatarUrl : '';
 }
 
 function accountAge(dateStr){
@@ -1347,14 +1398,14 @@ document.addEventListener('keydown',e=>{
 function render(){
   updateTopInfo(); updateSidebar(); updateAnnouncements();
   const c=document.getElementById('content');
-  const denied='<div class="ptitle">Access Denied</div><i style="padding:8px;display:block;color:#880000;">You do not have permission to view this page.</i>';
+  const denied='<div class="ptitle">Access Denied</div><i style="padding:8px;display:block;color:var(--c-ban);">You do not have permission to view this page.</i>';
 
   // PAUSED enforcement — non-SW managers can only see a locked screen
   if(SITE_STATUS&&SITE_STATUS.status==='PAUSED'&&!isSoftwareManager()){
     c.innerHTML=`
       <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;padding:20px;">
         <div style="background:#fde8e8;border:2px solid #cc0000;padding:20px 30px;text-align:center;max-width:420px;">
-          <div style="font-size:18px;font-weight:bold;color:#880000;margin-bottom:8px;letter-spacing:1px;">ERROR — SYSTEM PAUSED</div>
+          <div style="font-size:18px;font-weight:bold;color:var(--c-ban);margin-bottom:8px;letter-spacing:1px;">ERROR — SYSTEM PAUSED</div>
           <div style="font-size:11px;color:var(--c-text);margin-bottom:10px;line-height:1.7;">The system has been paused by a Software Manager. All actions are temporarily disabled.</div>
           <div style="border:1px solid #cc8888;background:#fff0f0;padding:8px 10px;margin-bottom:8px;font-size:11px;text-align:left;">
             <div><b>Reason:</b> ${SITE_STATUS.reason||'No reason provided.'}</div>
@@ -1527,7 +1578,7 @@ function renderSiteConfig(c){
             <span style="font-size:11px;color:var(--c-text);">m</span>
           </div></div>
         <button class="btn" id="btn-setsitestatus">Apply Status Change</button>
-        <div id="statusMsg" style="font-size:11px;margin-top:4px;color:#006600;"></div>
+        <div id="statusMsg" style="font-size:11px;margin-top:4px;color:var(--c-ok);"></div>
       </div></div>
       <div class="sbox" style="border:2px solid #0066aa;"><div class="stitle" style="background:#004466;color:#fff;">Site Text Configuration</div><div class="sbody">
         <div style="font-size:11px;color:var(--c-text2);margin-bottom:8px;">Edit the visible text of any part of the panel. Changes save to Firebase and apply immediately for all users.</div>
@@ -1540,7 +1591,7 @@ function renderSiteConfig(c){
           <button class="btn" id="btn-savesc">Save All Changes</button>
           <button class="btn" id="btn-resetsc">Reset to Defaults</button>
         </div>
-        <div id="scMsg" style="font-size:11px;margin-top:4px;color:#006600;"></div>
+        <div id="scMsg" style="font-size:11px;margin-top:4px;color:var(--c-ok);"></div>
       </div></div>
     </div>
     <div style="flex:1;min-width:200px;">
@@ -1655,7 +1706,7 @@ function renderSiteConfig(c){
     </div></div>
 
     <div class="sbox" style="border:2px solid #880000;"><div class="stitle" style="background:#880000;color:#fff;">&#9888; Data Management</div><div class="sbody">
-      <div style="font-size:11px;color:#880000;font-weight:bold;margin-bottom:6px;">These actions are irreversible. All deletions are permanently logged.</div>
+      <div style="font-size:11px;color:var(--c-ban);font-weight:bold;margin-bottom:6px;">These actions are irreversible. All deletions are permanently logged.</div>
       <div style="font-size:11px;font-weight:bold;color:var(--c-text);margin-bottom:4px;">Erase Log Category</div>
       <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">
         <button class="btn red small" id="btn-erase-modlog">Erase Mod Log</button>
@@ -1674,11 +1725,11 @@ function renderSiteConfig(c){
         <button class="btn red" id="btn-wipe-all-users" style="width:100%;margin-bottom:8px;">Wipe All Player Data</button>
       </div>
       <div style="border-top:1px solid #880000;padding-top:8px;">
-        <div style="font-size:12px;font-weight:bold;color:#880000;margin-bottom:4px;">&#128308; Factory Reset</div>
+        <div style="font-size:12px;font-weight:bold;color:var(--c-ban);margin-bottom:4px;">&#128308; Factory Reset</div>
         <div style="font-size:11px;color:var(--c-text2);margin-bottom:6px;">Deletes ALL data including users, staff (except rpatoff), all logs, alerts, messages, and requests. Requires three confirmation codes.</div>
         <button class="btn red" id="btn-factory-reset" style="width:100%;font-weight:bold;">FACTORY RESET</button>
       </div>
-      <div id="dataManageMsg" style="font-size:11px;margin-top:5px;color:#006600;min-height:14px;"></div>
+      <div id="dataManageMsg" style="font-size:11px;margin-top:5px;color:var(--c-ok);min-height:14px;"></div>
     </div></div>
   </div>`;
 
@@ -1694,7 +1745,7 @@ function renderSiteConfig(c){
       durationMins=d*1440+h*60+m;
     } else { durationMins=parseInt(durationVal)||0; }
     const statusMsgEl=document.getElementById('statusMsg');
-    if(!reason){ statusMsgEl.style.color='#880000'; statusMsgEl.textContent='Reason is required.'; return; }
+    if(!reason){ statusMsgEl.style.color='var(--c-ban)'; statusMsgEl.textContent='Reason is required.'; return; }
     const prevStatus=(SITE_STATUS&&SITE_STATUS.status)||'OK';
     const newStatusObj={status:newStatus,reason,by:ME,date:nowStr(),expiresAt:durationMins>0?Date.now()+durationMins*60000:0};
     await set(ref(db,'meta/siteStatus'),newStatusObj);
@@ -1780,8 +1831,8 @@ function renderSiteConfig(c){
     const date=document.getElementById('ulDate').value.trim();
     const entries=document.getElementById('ulEntries').value.split('\n').map(l=>l.trim()).filter(l=>l);
     const msgEl=document.getElementById('ulMsg');
-    if(!version){ msgEl.style.color='#880000'; msgEl.textContent='Version required.'; return; }
-    if(!entries.length){ msgEl.style.color='#880000'; msgEl.textContent='At least one entry required.'; return; }
+    if(!version){ msgEl.style.color='var(--c-ban)'; msgEl.textContent='Version required.'; return; }
+    if(!entries.length){ msgEl.style.color='var(--c-ban)'; msgEl.textContent='At least one entry required.'; return; }
     const newLog=[{version,date:date||'Current',entries},...UPDATE_LOG];
     await set(ref(db,'meta/updateLog'),newLog);
     UPDATE_LOG=newLog;
@@ -2062,7 +2113,7 @@ function renderUA(c){
               const val=(u.customData&&u.customData[f.name])||'—';
               return `<div class="row"><label>${f.name}:</label><span>${val}</span></div>`;
             }).join(''):''}
-            ${u.alts&&u.alts.length?`<div class="row"><label>Linked Alts:</label><span style="color:#880000;">${u.alts.join(', ')}</span></div>`:''}
+            ${u.alts&&u.alts.length?`<div class="row"><label>Linked Alts:</label><span style="color:var(--c-ban);">${u.alts.join(', ')}</span></div>`:''}
           </div>
         </div>
         <div style="display:flex;gap:3px;flex-wrap:wrap;align-items:center;">
@@ -2070,7 +2121,7 @@ function renderUA(c){
           <button class="btn" id="btn-refresh">Refresh Roblox Data</button>
           ${canDo('canViewCustomFields')&&CUSTOM_FIELDS.length?`<button class="btn" id="btn-manageuser">Manage User</button>`:''}
           ${isSuperAdmin()?`<button class="btn red" id="btn-wipe">Delete Account</button>`:''}
-          <span id="refreshMsg" style="font-size:11px;color:#006600;"></span>
+          <span id="refreshMsg" style="font-size:11px;color:var(--c-ok);"></span>
         </div>
       </div></div>
       <div class="sbox"><div class="stitle">Punishments</div><div class="sbody">
@@ -2088,14 +2139,14 @@ function renderUA(c){
       <div class="sbox"><div class="stitle">User Notes</div><div class="sbody">
         <textarea id="noteTA" style="width:100%;height:52px;">${u.notes||''}</textarea>
         <button class="btn" id="btn-savenote" style="margin-top:3px;">Save Note</button>
-        <div id="noteMsg" style="color:#006600;font-size:11px;margin-top:1px;"></div>
+        <div id="noteMsg" style="color:var(--c-ok);font-size:11px;margin-top:1px;"></div>
       </div></div>
       <div class="sbox"><div class="stitle">Find Player</div><div class="sbody">
         <div style="display:flex;gap:3px;">
           <input type="text" id="fuInput" style="width:95px;" placeholder="username or ID"/>
           <button class="btn" id="btn-find">Go</button>
         </div>
-        <div id="fuErr" style="color:#880000;font-size:11px;margin-top:2px;"></div>
+        <div id="fuErr" style="color:var(--c-ban);font-size:11px;margin-top:2px;"></div>
         <div id="fuResult" style="margin-top:4px;"></div>
       </div></div>
       <div class="sbox"><div class="stitle">Appeal Status</div><div class="sbody">
@@ -2163,7 +2214,7 @@ function openRepHistoryDialog(uid){
   openDialog(`Rep History — ${u.username}`,'',`
     <div style="font-size:11px;color:var(--c-text);margin-bottom:4px;">Cumulative reputation score over time:</div>
     ${svgChart}
-    <div style="font-size:11px;font-weight:bold;color:#880000;margin-bottom:4px;">Current Score: ${points[points.length-1].score} pts</div>
+    <div style="font-size:11px;font-weight:bold;color:var(--c-ban);margin-bottom:4px;">Current Score: ${points[points.length-1].score} pts</div>
     <div class="tbl-wrap"><table class="tbl" style="width:100%;">
       <tr><th>Action</th><th>Date</th><th>Points</th></tr>
       ${tableRows}
@@ -2298,7 +2349,7 @@ function doFindU(){
   const entry=Object.entries(USERS).find(([,u])=>u.username.toLowerCase()===q.toLowerCase()||String(u.playerId)===q);
   if(entry){ currentUserId=entry[0]; render(); return; }
   resultEl.innerHTML=`
-    <div style="font-size:11px;color:#880000;margin-bottom:3px;">Not found in system.</div>
+    <div style="font-size:11px;color:var(--c-ban);margin-bottom:3px;">Not found in system.</div>
     <div style="font-size:11px;color:var(--c-text);margin-bottom:3px;">Search Roblox for "<b>${q}</b>"?</div>
     <button class="btn" id="btn-lookupAdd">Look Up &amp; Add User</button>
     <div id="lookupMsg" style="font-size:11px;margin-top:3px;"></div>
@@ -2491,8 +2542,8 @@ function renderAccounts(c){
       const reason=document.getElementById('bulk-reason').value;
       const bulkNote=document.getElementById('bulk-note').value.trim();
       const msgEl=document.getElementById('bulk-msg');
-      if(!selected.length){ msgEl.style.color='#880000'; msgEl.textContent='No users selected.'; return; }
-      if(!action){ msgEl.style.color='#880000'; msgEl.textContent='Select an action.'; return; }
+      if(!selected.length){ msgEl.style.color='var(--c-ban)'; msgEl.textContent='No users selected.'; return; }
+      if(!action){ msgEl.style.color='var(--c-ban)'; msgEl.textContent='Select an action.'; return; }
       const noteTag=bulkNote?`${bulkNote} - [BLK]`:'[BLK]';
       openDialog(`Bulk Action: ${action}`,`Apply "${action}" to ${selected.length} player(s)?<br><span style="font-size:10px;color:var(--c-text2);">Note tag: ${noteTag}</span>`,'',async()=>{
         let done=0;
@@ -2517,8 +2568,8 @@ async function addUser(){
   const preview=document.getElementById('nuPreview');
   const avatarBox=document.getElementById('nuAvatarBox');
   const previewInfo=document.getElementById('nuPreviewInfo');
-  if(!rawUsername){ el.style.color='#880000'; el.textContent='Enter a username.'; return; }
-  if(Object.values(USERS).find(u=>u.username.toLowerCase()===rawUsername.toLowerCase())){ el.style.color='#880000'; el.textContent='Player already exists.'; return; }
+  if(!rawUsername){ el.style.color='var(--c-ban)'; el.textContent='Enter a username.'; return; }
+  if(Object.values(USERS).find(u=>u.username.toLowerCase()===rawUsername.toLowerCase())){ el.style.color='var(--c-ban)'; el.textContent='Player already exists.'; return; }
   el.style.color='#000080'; el.textContent='Adding player...';
   preview.style.display='none';
   // Get player ID first so it's assigned regardless of Roblox outcome
@@ -2668,7 +2719,7 @@ function openReviewPanel(lid){
 
   document.getElementById('btn-approve-appeal').onclick=async()=>{
     const note=document.getElementById('reviewNote').value.trim();
-    if(!note){ document.getElementById('reviewResult').style.color='#880000'; document.getElementById('reviewResult').textContent='Please enter a review note.'; return; }
+    if(!note){ document.getElementById('reviewResult').style.color='var(--c-ban)'; document.getElementById('reviewResult').textContent='Please enter a review note.'; return; }
     await update(ref(db,`logs/appeals/${lid}`),{status:'Approved',reviewedBy:ME,reviewNote:note});
     // Auto-revoke the punishment
     if(r.uid&&r.punishId&&USERS[r.uid]&&USERS[r.uid].punishments&&USERS[r.uid].punishments[r.punishId]){
@@ -2688,12 +2739,12 @@ function openReviewPanel(lid){
 
   document.getElementById('btn-deny-appeal').onclick=async()=>{
     const note=document.getElementById('reviewNote').value.trim();
-    if(!note){ document.getElementById('reviewResult').style.color='#880000'; document.getElementById('reviewResult').textContent='Please enter a review note.'; return; }
+    if(!note){ document.getElementById('reviewResult').style.color='var(--c-ban)'; document.getElementById('reviewResult').textContent='Please enter a review note.'; return; }
     await update(ref(db,`logs/appeals/${lid}`),{status:'Denied',reviewedBy:ME,reviewNote:note});
     if(r.uid) await update(ref(db,`users/${r.uid}`),{appealStatus:'Denied'});
     auditLog('Appeal Denied',`${r.user} by ${ME}: ${note}`);
     pushNotif('appealReviewed',`Appeal denied: ${r.user} by ${ME}`);
-    document.getElementById('reviewResult').style.color='#880000';
+    document.getElementById('reviewResult').style.color='var(--c-ban)';
     document.getElementById('reviewResult').textContent='Appeal denied.';
     setTimeout(()=>closeDialog(),1200);
   };
@@ -2729,9 +2780,9 @@ function renderAltDetect(c){
 async function runAltScan(){
   const username=document.getElementById('altInput').value.trim();
   const resultsEl=document.getElementById('altResults');
-  if(!username){ resultsEl.innerHTML='<span style="color:#880000;font-size:11px;">Enter a username.</span>'; return; }
+  if(!username){ resultsEl.innerHTML='<span style="color:var(--c-ban);font-size:11px;">Enter a username.</span>'; return; }
   const target=Object.values(USERS).find(u=>u.username.toLowerCase()===username.toLowerCase());
-  if(!target||!target.robloxId){ resultsEl.innerHTML='<span style="color:#880000;font-size:11px;">Player not found or no Roblox ID. Add them first.</span>'; return; }
+  if(!target||!target.robloxId){ resultsEl.innerHTML='<span style="color:var(--c-ban);font-size:11px;">Player not found or no Roblox ID. Add them first.</span>'; return; }
   resultsEl.innerHTML='<i style="font-size:11px;color:var(--c-link);">Fetching friends and groups...</i>';
   const[friends,groups]=await Promise.all([fetchRobloxFriends(target.robloxId),fetchRobloxGroups(target.robloxId)]);
   const allPlayers=Object.values(USERS).filter(u=>u.username!==username&&u.robloxId);
@@ -2785,7 +2836,7 @@ function renderStaff(c){
           <tr><th>Username</th><th>Level</th><th>Status</th><th>Last Active</th><th>Action</th></tr>
           ${sArr.map(([sid2,s2])=>`<tr>
             <td>${tinyAvatar(s2.username||'—',s2.avatarUrl)}${s2.nickname?`<span style="font-size:9px;color:var(--c-text2);display:block;margin-top:1px;">"${s2.nickname}"</span>`:''}</td><td>${s2.level?levelBadge(s2.level):'—'}</td>
-            <td>${(()=>{ const la2=s2.lastActive&&s2.lastActive!=='Never'?new Date(s2.lastActive):null; const diff2=la2?(new Date()-la2):Infinity; if(s2.suspended) return '<span class="sus">SUSPENDED</span>'; if(s2.secured) return '<span class="ban">SECURED</span>'; if(!la2||s2.lastAction==='Logged out') return '<span style="color:var(--c-text2);">Logged Out</span>'; if(diff2<300000) return '<span class="ok">Active</span>'; if(diff2<1200000) return '<span style="color:#cc8800;">Idle</span>'; return '<span style="color:var(--c-text2);">Offline</span>'; })()}</td>
+            <td>${(()=>{ const la2=s2.lastActive&&s2.lastActive!=='Never'?new Date(s2.lastActive):null; const diff2=la2?(new Date()-la2):Infinity; if(s2.suspended) return '<span class="sus">SUSPENDED</span>'; if(s2.secured) return '<span class="ban">SECURED</span>'; if(!la2||s2.lastAction==='Logged out') return '<span style="color:var(--c-text2);">Logged Out</span>'; if(diff2<300000) return '<span class="ok">Active</span>'; if(diff2<1200000) return '<span style="color:var(--c-sus);">Idle</span>'; return '<span style="color:var(--c-text2);">Offline</span>'; })()}</td>
             <td style="font-size:10px;">${s2.lastActive||'Never'}</td>
             <td>${canManage?`<button class="btn view-staff-btn" data-sid="${sid2}">View</button>`:'<span class="invalid-cred">INVALID CREDENTIALS</span>'}</td>
           </tr>`).join('')}
@@ -2807,13 +2858,13 @@ function renderStaff(c){
       ${canDo('canViewStaffProfile')?`
       <div class="sbox"><div class="stitle">Staff Profile &mdash; ${s.username}</div><div class="sbody" style="overflow:hidden;">
         <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;">
-          <div class="avatar-box" style="width:52px;height:52px;flex-shrink:0;overflow:hidden;">
-            ${s.avatarUrl?`<img src="${s.avatarUrl}" style="width:52px;height:52px;object-fit:cover;display:block;" onerror="this.parentElement.innerHTML='<span style=\\'font-size:14px;font-weight:bold;color:var(--c-text2);\\'>${(s.username||'?').substring(0,2).toUpperCase()}</span>'">`:`<span style="font-size:14px;font-weight:bold;color:var(--c-text2);">${(s.username||'?').substring(0,2).toUpperCase()}</span>`}
+          <div class="avatar-box" style="width:52px;height:52px;flex-shrink:0;overflow:hidden;border-radius:6px;background:var(--bg-tbl-odd);display:flex;align-items:center;justify-content:center;">
+            <span class="ta-img-wrap" style="width:52px;height:52px;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;position:relative;border-radius:6px;">${s.avatarUrl?'<img src="'+s.avatarUrl+'" width="52" height="52" class="ta-img" style="object-fit:cover;display:block;"><span class="ta-fb" style="position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-size:14px;font-weight:bold;color:var(--c-text2);">'+(s.username||'?').substring(0,2).toUpperCase()+'</span>':'<span style="font-size:14px;font-weight:bold;color:var(--c-text2);">'+(s.username||'?').substring(0,2).toUpperCase()+'</span>'}</span>
           </div>
           <div style="min-width:0;flex:1;overflow:hidden;">
             <div style="font-size:11px;font-weight:bold;color:var(--c-text);word-break:break-all;">${s.username}${s.nickname?` <span style="font-size:10px;color:var(--c-text2);font-weight:400;">"${s.nickname}"</span>`:''}</div>
             <div style="margin-top:2px;">${levelBadge(s.level)}</div>
-            <div style="font-size:10px;color:var(--c-text);margin-top:2px;">${(()=>{ const la=s.lastActive&&s.lastActive!=='Never'?new Date(s.lastActive):null; const diffMs=la?(new Date()-la):Infinity; if(s.suspended) return '<span class="sus">&#9679; SUSPENDED</span>'; if(s.secured) return '<span class="ban">&#9679; SECURED</span>'; if(!la||s.lastAction==='Logged out') return '<span style="color:var(--c-text2);">&#9679; Logged Out</span>'; if(diffMs<300000) return '<span class="ok">&#9679; Active</span>'; if(diffMs<1200000) return '<span style="color:#cc8800;font-weight:bold;">&#9679; Idle</span>'; return '<span style="color:var(--c-text2);">&#9679; Logged Out</span>'; })()}</div>
+            <div style="font-size:10px;color:var(--c-text);margin-top:2px;">${(()=>{ const la=s.lastActive&&s.lastActive!=='Never'?new Date(s.lastActive):null; const diffMs=la?(new Date()-la):Infinity; if(s.suspended) return '<span class="sus">&#9679; SUSPENDED</span>'; if(s.secured) return '<span class="ban">&#9679; SECURED</span>'; if(!la||s.lastAction==='Logged out') return '<span style="color:var(--c-text2);">&#9679; Logged Out</span>'; if(diffMs<300000) return '<span class="ok">&#9679; Active</span>'; if(diffMs<1200000) return '<span style="color:var(--c-sus);font-weight:bold;">&#9679; Idle</span>'; return '<span style="color:var(--c-text2);">&#9679; Logged Out</span>'; })()}</div>
           </div>
         </div>
         <div style="font-size:11px;color:var(--c-text2);margin-bottom:1px;">Joined: <span style="color:var(--c-text);">${s.joined||'—'}</span></div>
@@ -2854,7 +2905,7 @@ function renderStaff(c){
         ${canTerminate?`<button class="btn red" id="btn-terminate" style="width:100%;">Terminate Account</button>`:''}
         `:''}
       </div></div>
-      `:'<div class="sbox"><div class="stitle">Staff Profile</div><div class="sbody"><i style="color:#880000;">You do not have permission to view staff profiles.</i></div></div>'}
+      `:'<div class="sbox"><div class="stitle">Staff Profile</div><div class="sbody"><i style="color:var(--c-ban);">You do not have permission to view staff profiles.</i></div></div>'}
     </div>
   </div>`;
   if(canManage){
@@ -3314,7 +3365,7 @@ function renderMessaging(c){
         <div style="margin-bottom:3px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:1px;">Message:</label>
           <textarea id="msgBody" style="width:100%;height:60px;" placeholder="Write your message..."></textarea></div>
         <button class="btn" id="btn-sendmsg" style="width:100%;">Send</button>
-        <div id="msgSendResult" style="font-size:11px;margin-top:2px;color:#006600;"></div>
+        <div id="msgSendResult" style="font-size:11px;margin-top:2px;color:var(--c-ok);"></div>
       </div></div>
     </div>
     <div style="flex:1;min-width:220px;">
@@ -3338,7 +3389,7 @@ function renderMessaging(c){
     const subject=document.getElementById('msgSubject').value.trim();
     const body=document.getElementById('msgBody').value.trim();
     const res=document.getElementById('msgSendResult');
-    if(!body){ res.style.color='#880000'; res.textContent='Message body required.'; return; }
+    if(!body){ res.style.color='var(--c-ban)'; res.textContent='Message body required.'; return; }
     await push(ref(db,'staffMessages'),{from:ME,to,subject,body,date:nowStr(),read:false});
     auditLog('Staff Message Sent',`To: ${to==='__all__'?'All Staff':to} — ${subject}`);
     document.getElementById('msgSubject').value='';
@@ -3422,7 +3473,7 @@ function openReviewRequest(lid){
   document.getElementById('dlgCancel').textContent='Close';
   document.getElementById('btn-approve-req').onclick=async()=>{
     const note=document.getElementById('reqReviewNote').value.trim();
-    if(!note){ document.getElementById('reqResult').style.color='#880000'; document.getElementById('reqResult').textContent='Review note required.'; return; }
+    if(!note){ document.getElementById('reqResult').style.color='var(--c-ban)'; document.getElementById('reqResult').textContent='Review note required.'; return; }
     const entry=Object.entries(USERS).find(([,u])=>u.username===r.targetUser);
     if(entry){
       const[uid,u]=entry;
@@ -3438,10 +3489,10 @@ function openReviewRequest(lid){
   };
   document.getElementById('btn-deny-req').onclick=async()=>{
     const note=document.getElementById('reqReviewNote').value.trim();
-    if(!note){ document.getElementById('reqResult').style.color='#880000'; document.getElementById('reqResult').textContent='Review note required.'; return; }
+    if(!note){ document.getElementById('reqResult').style.color='var(--c-ban)'; document.getElementById('reqResult').textContent='Review note required.'; return; }
     await update(ref(db,`modRequests/${lid}`),{status:'Denied',reviewedBy:ME,reviewNote:note});
     auditLog('Mod Request Denied',`${r.targetUser} by ${ME}: ${note}`);
-    document.getElementById('reqResult').style.color='#880000'; document.getElementById('reqResult').textContent='Request denied.';
+    document.getElementById('reqResult').style.color='var(--c-ban)'; document.getElementById('reqResult').textContent='Request denied.';
     setTimeout(()=>closeDialog(),1200);
   };
 }
@@ -3468,7 +3519,7 @@ function renderUserConfig(c){
         <td>${tinyAvatar(u.username,u.avatarUrl)}</td>
         <td>${statusBadge(u.status)}</td>
         <td>${u.points||0}</td>
-        <td>${u.protected?'<span style="color:#880000;font-weight:bold;">&#9632; YES</span>':'<span style="color:var(--c-text2);">No</span>'}</td>
+        <td>${u.protected?'<span style="color:var(--c-ban);font-weight:bold;">&#9632; YES</span>':'<span style="color:var(--c-text2);">No</span>'}</td>
         <td>${calcReputation(u)} pts</td>
         <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;font-size:10px;">${u.notes||'—'}</td>
         <td>${canManage?`<button class="btn small cfg-user-btn" data-uid="${uid}">Configure</button>`:'<span style="color:var(--c-text2);font-size:10px;">No access</span>'}</td>
@@ -3785,6 +3836,7 @@ function renderInformation(c){
     </div>
   </div>
 
+`;
 }
 
 // ── ADMIN LOG ──
@@ -3957,8 +4009,8 @@ function renderAdminLog(c){
     const name=document.getElementById('tplName').value.trim();
     const message=document.getElementById('tplMsg').value.trim();
     const msgEl=document.getElementById('tplMsg2');
-    if(!name){ msgEl.style.color='#880000'; msgEl.textContent='Template name required.'; return; }
-    if(!message){ msgEl.style.color='#880000'; msgEl.textContent='Message required.'; return; }
+    if(!name){ msgEl.style.color='var(--c-ban)'; msgEl.textContent='Template name required.'; return; }
+    if(!message){ msgEl.style.color='var(--c-ban)'; msgEl.textContent='Message required.'; return; }
     const newTpls=[...BAN_TEMPLATES,{name,message}];
     await set(ref(db,'meta/banTemplates'),newTpls);
     BAN_TEMPLATES=newTpls;
@@ -4066,12 +4118,12 @@ async function addCustomField(){
   const name=document.getElementById('cfName').value.trim();
   const type=document.getElementById('cfType').value;
   const el=document.getElementById('cfMsg');
-  if(!name){ el.style.color='#880000'; el.textContent='Field name required.'; return; }
-  if(CUSTOM_FIELDS.find(f=>f.name===name)){ el.style.color='#880000'; el.textContent='Field already exists.'; return; }
+  if(!name){ el.style.color='var(--c-ban)'; el.textContent='Field name required.'; return; }
+  if(CUSTOM_FIELDS.find(f=>f.name===name)){ el.style.color='var(--c-ban)'; el.textContent='Field already exists.'; return; }
   const field={name,type};
   if(type==='select'){
     const opts=document.getElementById('cfOptions').value.split(',').map(o=>o.trim()).filter(o=>o);
-    if(!opts.length){ el.style.color='#880000'; el.textContent='Add at least one option.'; return; }
+    if(!opts.length){ el.style.color='var(--c-ban)'; el.textContent='Add at least one option.'; return; }
     field.options=opts;
   }
   const newFields=[...CUSTOM_FIELDS,field];
@@ -4116,7 +4168,7 @@ async function submitMod(){
   const val=document.getElementById('modUserInput').value.trim();
   const entry=Object.entries(USERS).find(([,u])=>u.username===val);
   const el=document.getElementById('mResult');
-  if(!entry){ el.style.color='#880000'; el.textContent='User does not exist.'; return; }
+  if(!entry){ el.style.color='var(--c-ban)'; el.textContent='User does not exist.'; return; }
   const[uid,u]=entry;
   const action=document.querySelector('input[name="mact"]:checked').value;
   const reason=document.getElementById('mReason').value;
@@ -4219,7 +4271,7 @@ function openProtectedUserDialog(uid, u, action, reason, note){
       await executeModAction(uid, u, action, reason, `[OVR] ${note||reason||''}`);
       auditLog('Protected User Override',`${ME} bypassed protection on ${u.username}: ${action}`);
       const el=document.getElementById('mResult');
-      if(el){ el.style.color='#880000'; el.textContent=`Warning override: "${action}" applied to ${u.username}.`; }
+      if(el){ el.style.color='var(--c-ban)'; el.textContent=`Warning override: "${action}" applied to ${u.username}.`; }
       setTimeout(()=>nav('useradmin'),1200);
     }
   };
@@ -4247,9 +4299,9 @@ async function addStaff(){
   const l=document.getElementById('nsLevel').value;
   const avatarUser=document.getElementById('nsAvatar').value.trim();
   const el=document.getElementById('nsMsg');
-  if(!u){ el.style.color='#880000'; el.textContent='Username required.'; return; }
-  if(!p){ el.style.color='#880000'; el.textContent='Password required.'; return; }
-  if(Object.values(STAFF).find(s=>s.username===u)){ el.style.color='#880000'; el.textContent='Already exists.'; return; }
+  if(!u){ el.style.color='var(--c-ban)'; el.textContent='Username required.'; return; }
+  if(!p){ el.style.color='var(--c-ban)'; el.textContent='Password required.'; return; }
+  if(Object.values(STAFF).find(s=>s.username===u)){ el.style.color='var(--c-ban)'; el.textContent='Already exists.'; return; }
   el.style.color='#000080'; el.textContent='Creating account...';
 
   // Step 1: Create Firebase Auth account (this briefly signs in as new user)
@@ -4259,14 +4311,14 @@ async function addStaff(){
     authCreated=true;
   }catch(e){
     if(e.code==='auth/email-already-in-use') authCreated=true; // already exists, that's fine
-    else{ el.style.color='#880000'; el.textContent=`Auth error: ${e.message}`; return; }
+    else{ el.style.color='var(--c-ban)'; el.textContent=`Auth error: ${e.message}`; return; }
   }
 
   // Step 2: Immediately sign back in as ME so DB write is authenticated as admin
   try{
     await signInWithEmailAndPassword(auth,`${ME}@admin.com`,currentPassword);
   }catch(e){
-    el.style.color='#880000'; el.textContent='Session expired — please log out and back in, then try again.'; return;
+    el.style.color='var(--c-ban)'; el.textContent='Session expired — please log out and back in, then try again.'; return;
   }
 
   // Step 3: Fetch avatar while signed in as ME
@@ -4289,7 +4341,7 @@ async function addStaff(){
   try{
     await set(ref(db,`staff/${u}`),staffRecord);
   }catch(e){
-    el.style.color='#880000';
+    el.style.color='var(--c-ban)';
     el.textContent=`Account created but DB write failed (${e.code||e.message}). Check Firebase Database rules — authenticated users need write access to /staff/.`;
     return;
   }
@@ -4311,18 +4363,18 @@ async function updateStaffLevel(sid){
   const s=STAFF[sid];
   if(s&&s.level==='SOFTWARE MANAGER'){
     const el=document.getElementById('spMsg');
-    el.style.color='#880000'; el.textContent='Cannot change SOFTWARE MANAGER level.';
+    el.style.color='var(--c-ban)'; el.textContent='Cannot change SOFTWARE MANAGER level.';
     setTimeout(()=>{ if(el) el.textContent=''; },2500); return;
   }
   if(s&&s.username===ME&&!isSuperAdmin()){
     const el=document.getElementById('spMsg');
-    el.style.color='#880000'; el.textContent='Cannot change your own level.';
+    el.style.color='var(--c-ban)'; el.textContent='Cannot change your own level.';
     setTimeout(()=>{ if(el) el.textContent=''; },2000); return;
   }
   const l=document.getElementById('slInput').value;
   if(l==='SOFTWARE MANAGER'){
     const el=document.getElementById('spMsg');
-    el.style.color='#880000'; el.textContent='Cannot assign SOFTWARE MANAGER via panel.';
+    el.style.color='var(--c-ban)'; el.textContent='Cannot assign SOFTWARE MANAGER via panel.';
     setTimeout(()=>{ if(el) el.textContent=''; },2500); return;
   }
   const oldLevel=s?s.level:'?';
@@ -4337,12 +4389,12 @@ async function updateStaffPass(sid){
   const s=STAFF[sid];
   if(s&&s.level==='SOFTWARE MANAGER'){
     const el=document.getElementById('spMsg');
-    el.style.color='#880000'; el.textContent='Cannot change SOFTWARE MANAGER password via panel.';
+    el.style.color='var(--c-ban)'; el.textContent='Cannot change SOFTWARE MANAGER password via panel.';
     setTimeout(()=>{ if(el) el.textContent=''; },2500); return;
   }
   const np=document.getElementById('spInput').value.trim();
   const el=document.getElementById('spMsg');
-  if(!np){ el.style.color='#880000'; el.textContent='Enter a password.'; return; }
+  if(!np){ el.style.color='var(--c-ban)'; el.textContent='Enter a password.'; return; }
   await update(ref(db,`staff/${sid}`),{password:np});
   auditLog('Staff Password Updated',`${s?s.username:sid}`);
   el.style.color='#006600'; el.textContent='Password updated.';
@@ -4352,7 +4404,7 @@ async function updateStaffPass(sid){
 function promptSuspendStaff(sid, isCurrentlySuspended){
   const s=STAFF[sid]; if(!s) return;
   if(s.level==='SOFTWARE MANAGER'){
-    openDialog('Action Blocked','<span style="color:#880000;font-weight:bold;">SOFTWARE MANAGER accounts cannot be suspended.</span><br><br>This account has system-level access and is protected from all administrative actions via the panel.','',null);
+    openDialog('Action Blocked','<span style="color:var(--c-ban);font-weight:bold;">SOFTWARE MANAGER accounts cannot be suspended.</span><br><br>This account has system-level access and is protected from all administrative actions via the panel.','',null);
     document.getElementById('dlgOK').style.display='none';
     document.getElementById('dlgCancel').textContent='Close';
     return;
@@ -4416,7 +4468,7 @@ function promptForceLogout(sid){
 function promptSecureStaff(sid, isCurrentlySecured){
   const s=STAFF[sid]; if(!s) return;
   if(s.level==='SOFTWARE MANAGER'){
-    openDialog('Action Blocked','<span style="color:#880000;font-weight:bold;">SOFTWARE MANAGER accounts cannot be secured via the panel.</span>','',null);
+    openDialog('Action Blocked','<span style="color:var(--c-ban);font-weight:bold;">SOFTWARE MANAGER accounts cannot be secured via the panel.</span>','',null);
     document.getElementById('dlgOK').style.display='none'; document.getElementById('dlgCancel').textContent='Close'; return;
   }
   if(isCurrentlySecured){
@@ -4436,7 +4488,7 @@ function promptSecureStaff(sid, isCurrentlySecured){
       });
   } else {
     openDialog('Secure Account',`Lock account <b>${s.username}</b> due to suspected compromise?`,`
-      <div style="background:#fde8e8;border:1px solid #cc6666;padding:6px;margin-bottom:8px;font-size:11px;color:#880000;">Securing an account prevents login until unsecured by an administrator. This action is permanently logged.</div>
+      <div style="background:#fde8e8;border:1px solid #cc6666;padding:6px;margin-bottom:8px;font-size:11px;color:var(--c-ban);">Securing an account prevents login until unsecured by an administrator. This action is permanently logged.</div>
       <div style="margin-bottom:4px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Reason:</label>
         <select id="secureReason" style="width:100%;font-family:inherit;font-size:11px;height:16px;">
           <option>Suspected Compromise</option><option>Unauthorized Access</option><option>Password Sharing</option><option>Other</option>
@@ -4454,12 +4506,12 @@ function promptSecureStaff(sid, isCurrentlySecured){
 
 function promptTerminateStaff(sid){  const s=STAFF[sid]; if(!s) return;
   if(s.level==='SOFTWARE MANAGER'){
-    openDialog('Action Blocked','<span style="color:#880000;font-weight:bold;">SOFTWARE MANAGER accounts cannot be terminated.</span><br><br>This account has system-level access and is protected from all administrative actions via the panel.','',null);
+    openDialog('Action Blocked','<span style="color:var(--c-ban);font-weight:bold;">SOFTWARE MANAGER accounts cannot be terminated.</span><br><br>This account has system-level access and is protected from all administrative actions via the panel.','',null);
     document.getElementById('dlgOK').style.display='none';
     document.getElementById('dlgCancel').textContent='Close';
     return;
   }
-  openDialog('Terminate Account',`Terminate staff account <b>${s.username}</b>?<br><span style="color:#880000;font-size:11px;">This will permanently remove their access.</span>`,`
+  openDialog('Terminate Account',`Terminate staff account <b>${s.username}</b>?<br><span style="color:var(--c-ban);font-size:11px;">This will permanently remove their access.</span>`,`
     <div style="margin-bottom:4px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Reason:</label>
       <select id="termReasonSel" style="width:100%;font-family:inherit;font-size:11px;height:16px;">
         <option>-- Select --</option><option>Misconduct</option><option>Inactivity</option><option>Abuse of Power</option><option>Terms of Use Violation</option><option>Other</option>
@@ -4899,8 +4951,8 @@ function renderSuggestions(c){
       const body=document.getElementById('suggBody').value.trim();
       const category=document.getElementById('suggCategory').value;
       const msgEl=document.getElementById('suggMsg');
-      if(!subject){ msgEl.style.color='#880000'; msgEl.textContent='Subject required.'; return; }
-      if(!body){ msgEl.style.color='#880000'; msgEl.textContent='Description required.'; return; }
+      if(!subject){ msgEl.style.color='var(--c-ban)'; msgEl.textContent='Subject required.'; return; }
+      if(!body){ msgEl.style.color='var(--c-ban)'; msgEl.textContent='Description required.'; return; }
       await push(ref(db,'suggestions'),{subject,body,category,from:ME,date:nowStr(),status:'Pending',reviewNote:'',reviewedBy:''});
       auditLog('Suggestion Submitted',`${ME}: ${subject}`);
       document.getElementById('suggSubject').value='';
@@ -5014,12 +5066,12 @@ function renderStaffConfig(c){
   </div></div>
 
   ${canSuperAdmin?`
-  <div class="sbox" style="border-color:#880000;"><div class="stitle" style="background:#880000;color:#fff;">Emergency</div><div class="sbody" style="padding:8px 12px 10px;">
+  <div class="sbox" style="border-color:var(--c-ban);"><div class="stitle" style="background:#880000;color:#fff;">Emergency</div><div class="sbody" style="padding:8px 12px 10px;">
     <div style="display:flex;gap:8px;align-items:center;">
       <button class="btn red small" id="btn-logout-allstaff">Force Log Out ALL Staff</button>
       <span style="font-size:11px;color:var(--c-text2);">Logs out every active session except yours. Emergency use only.</span>
     </div>
-    <div id="massStaffMsg" style="font-size:11px;margin-top:4px;color:#006600;min-height:0;"></div>
+    <div id="massStaffMsg" style="font-size:11px;margin-top:4px;color:var(--c-ok);min-height:0;"></div>
   </div></div>`:''}`;
 
   // ── Check-all ──
@@ -5042,9 +5094,9 @@ function renderStaffConfig(c){
       const reason=document.getElementById('sblk-reason').value.trim();
       const note=document.getElementById('sblk-note').value.trim();
       const msgEl=document.getElementById('sblk-msg');
-      if(!selected.length){ msgEl.style.color='#880000'; msgEl.textContent='No staff selected.'; return; }
-      if(!action){ msgEl.style.color='#880000'; msgEl.textContent='Select an action.'; return; }
-      if(!reason&&['suspend','secure','terminate','wipe'].includes(action)){ msgEl.style.color='#880000'; msgEl.textContent='Reason required for this action.'; return; }
+      if(!selected.length){ msgEl.style.color='var(--c-ban)'; msgEl.textContent='No staff selected.'; return; }
+      if(!action){ msgEl.style.color='var(--c-ban)'; msgEl.textContent='Select an action.'; return; }
+      if(!reason&&['suspend','secure','terminate','wipe'].includes(action)){ msgEl.style.color='var(--c-ban)'; msgEl.textContent='Reason required for this action.'; return; }
 
       const needsOpCode=['terminate','wipe'].includes(action);
       const noteTag=note?`${note} [BLK]`:'[BLK]';
@@ -5111,7 +5163,7 @@ function renderStaffConfig(c){
     const logoutAllBtn=document.getElementById('btn-logout-allstaff');
     if(logoutAllBtn) logoutAllBtn.onclick=()=>{
       openDialog('Force Log Out All Staff','Force log out ALL staff members except yourself?',
-        `<div style="font-size:11px;color:#880000;background:#fde8e8;border:1px solid #cc6666;padding:6px;">Emergency use only. All active sessions will be terminated on next heartbeat.</div>`,
+        `<div style="font-size:11px;color:var(--c-ban);background:#fde8e8;border:1px solid #cc6666;padding:6px;">Emergency use only. All active sessions will be terminated on next heartbeat.</div>`,
         async()=>{
           for(const[sid,s] of Object.entries(STAFF)){
             if(s&&s.username!==ME) await update(ref(db,`staff/${sid}`),{forceLogout:true}).catch(()=>{});
@@ -5240,7 +5292,7 @@ function renderMsgAnalyze(c){
     const loadEl=document.getElementById('maLoading');
     const resultEl=document.getElementById('maResult');
     const historyEl=document.getElementById('maHistory');
-    if(!msg){ resultEl.innerHTML='<span style="color:#880000;font-size:11px;">Please enter a message to analyze.</span>'; return; }
+    if(!msg){ resultEl.innerHTML='<span style="color:var(--c-ban);font-size:11px;">Please enter a message to analyze.</span>'; return; }
     loadEl.style.display='block'; resultEl.innerHTML='';
 
     if(engine==='local'){
@@ -5303,7 +5355,7 @@ function renderWipeLog(c){
       <tr><th>Wipe Tag</th><th>Original Username</th><th>Level / Type</th><th>Player ID</th><th>Rep Score</th><th>Wiped By</th><th>Date</th><th>Note</th></tr>
       ${entries.map(([lid,e])=>`<tr>
         <td><span class="wiped">${e.wipeTag||'[WIPED]'}</span></td>
-        <td style="color:#880000;font-weight:bold;">${e.originalUsername||'—'}</td>
+        <td style="color:var(--c-ban);font-weight:bold;">${e.originalUsername||'—'}</td>
         <td style="font-size:10px;">${e.level||e.status||'—'}</td>
         <td>${e.playerId||'—'}</td>
         <td>${e.repScore!==undefined?e.repScore+'pts':'—'}</td>
@@ -5421,7 +5473,7 @@ function renderBadgeMgmt(c){
     <div style="margin-bottom:4px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;font-weight:bold;">Description (shown on hover):</label>
       <input type="text" id="nb-desc" style="width:100%;" placeholder="What this badge means..."/></div>
     <button class="btn" id="btn-addbadge" style="margin-top:4px;">Add Badge</button>
-    <div id="badgeMsg" style="font-size:11px;margin-top:3px;min-height:14px;color:#006600;"></div>
+    <div id="badgeMsg" style="font-size:11px;margin-top:3px;min-height:14px;color:var(--c-ok);"></div>
   </div></div>`;
 
   // Live preview sync
@@ -5449,11 +5501,11 @@ function renderBadgeMgmt(c){
     const borderColor=document.getElementById('nb-border-hex').value.trim()||'#c0a060';
     const desc=document.getElementById('nb-desc').value.trim();
     const msgEl=document.getElementById('badgeMsg');
-    if(!label){ msgEl.style.color='#880000'; msgEl.textContent='Label required.'; return; }
-    if(!key){ msgEl.style.color='#880000'; msgEl.textContent='Key required.'; return; }
-    if(CUSTOM_BADGES.find(b=>b.key===key)){ msgEl.style.color='#880000'; msgEl.textContent='A badge with that key already exists.'; return; }
+    if(!label){ msgEl.style.color='var(--c-ban)'; msgEl.textContent='Label required.'; return; }
+    if(!key){ msgEl.style.color='var(--c-ban)'; msgEl.textContent='Key required.'; return; }
+    if(CUSTOM_BADGES.find(b=>b.key===key)){ msgEl.style.color='var(--c-ban)'; msgEl.textContent='A badge with that key already exists.'; return; }
     const builtinKeys=['protected','vip','watched','muted'];
-    if(builtinKeys.includes(key)){ msgEl.style.color='#880000'; msgEl.textContent='That key conflicts with a built-in badge.'; return; }
+    if(builtinKeys.includes(key)){ msgEl.style.color='var(--c-ban)'; msgEl.textContent='That key conflicts with a built-in badge.'; return; }
     const newBadges=[...CUSTOM_BADGES,{label,key,assignLevel:level,bgColor,textColor,borderColor,desc}];
     await set(ref(db,'meta/customBadges'),newBadges);
     CUSTOM_BADGES=newBadges;
@@ -5605,7 +5657,7 @@ function runAdvancedSearch(){
   const el=document.getElementById('srchResults');
   if(!raw){
     statusEl.textContent='INVALID — enter a search query.';
-    statusEl.style.color='#880000';
+    statusEl.style.color='var(--c-ban)';
     el.innerHTML='';
     return;
   }
@@ -5657,7 +5709,7 @@ function runAdvancedSearch(){
 
     if(!results.length){
       statusEl.textContent='INVALID — no results found.';
-      statusEl.style.color='#880000';
+      statusEl.style.color='var(--c-ban)';
       el.innerHTML='<i style="color:var(--c-text2);">No results found.</i>';
       return;
     }
@@ -5665,7 +5717,7 @@ function runAdvancedSearch(){
     statusEl.style.color='#006600';
     el.innerHTML=results.map(r=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--c-border);gap:6px;">
       <div style="min-width:0;flex:1;">
-        <span style="font-size:10px;color:#fff;background:#000080;padding:1px 4px;border-radius:2px;margin-right:4px;">${r.type}</span>
+        <span style="font-size:10px;color:#fff;background:var(--c-link);padding:1px 4px;border-radius:2px;margin-right:4px;">${r.type}</span>
         ${r.label}<div style="font-size:10px;color:var(--c-text2);">${r.sub}</div>
       </div>
       <div style="flex-shrink:0;">${r.action}</div>
