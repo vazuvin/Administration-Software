@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="icon" type="image/png" href="favicon.svg">  
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Administration Panel</title>
@@ -442,7 +441,6 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
             <span class="sb-link" id="nav-revokelog">Revoke</span>
             <span class="sb-link" id="nav-suspendlog">Suspension</span>
             <span class="sb-link" id="nav-terminatelog">Termination</span>
-            <span class="sb-link" id="nav-loginlog">Login</span>
           </div>
         </div>
 
@@ -470,6 +468,7 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
             <span class="sb-link" id="nav-wipelog">Wipe Log</span>
             <span class="sb-link" id="nav-badgemgmt">Badge Mgmt</span>
             <span class="sb-link" id="nav-leakid">Leak Identifier</span>
+            <span class="sb-link" id="nav-loginlog">Login Log</span>
           </div>
         </div>
 
@@ -868,6 +867,34 @@ function isSoftwareManager(){ return MY_LEVEL==='SOFTWARE MANAGER'; }
 function isSuperAdmin(){ return MY_LEVEL==='SUPER ADMINISTRATOR'||isSoftwareManager(); }
 // SOFTWARE MANAGER bypasses all permission checks; '- NONE -' means no one can access
 function canDo(k){ if(isSoftwareManager()) return true; const req=PERMS[k]||'SUPER ADMINISTRATOR'; if(req==='- NONE -') return false; return rankOf(MY_LEVEL)>=rankOf(req); }
+
+// ── SESSION DATA COLLECTOR ──
+function collectSessionData(){
+  const ua=navigator.userAgent;
+  let browser='Unknown', browserVersion='—';
+  if(ua.indexOf('Edg/')!==-1){ browser='Edge'; browserVersion=(ua.match(/Edg\/([\d.]+)/)||[])[1]||'—'; }
+  else if(ua.indexOf('OPR/')!==-1){ browser='Opera'; browserVersion=(ua.match(/OPR\/([\d.]+)/)||[])[1]||'—'; }
+  else if(ua.indexOf('Chrome/')!==-1){ browser='Chrome'; browserVersion=(ua.match(/Chrome\/([\d.]+)/)||[])[1]||'—'; }
+  else if(ua.indexOf('Firefox/')!==-1){ browser='Firefox'; browserVersion=(ua.match(/Firefox\/([\d.]+)/)||[])[1]||'—'; }
+  else if(ua.indexOf('Safari/')!==-1){ browser='Safari'; browserVersion=(ua.match(/Version\/([\d.]+)/)||[])[1]||'—'; }
+  let os='Unknown';
+  if(ua.indexOf('Windows NT 10.0')!==-1) os='Windows 10/11';
+  else if(ua.indexOf('Windows NT 6.3')!==-1) os='Windows 8.1';
+  else if(ua.indexOf('Windows NT 6.1')!==-1) os='Windows 7';
+  else if(ua.indexOf('Mac OS X')!==-1) os='macOS '+((ua.match(/Mac OS X ([\d_]+)/)||['',''])[1].replace(/_/g,'.'));
+  else if(ua.indexOf('Android')!==-1) os='Android '+((ua.match(/Android ([\d.]+)/)||['',''])[1]);
+  else if(ua.indexOf('iPhone')!==-1||ua.indexOf('iPad')!==-1) os='iOS';
+  else if(ua.indexOf('Linux')!==-1) os='Linux';
+  let device='Desktop';
+  if(/Mobi|Android|iPhone|iPad|iPod/i.test(ua)) device=/iPad/i.test(ua)?'Tablet':'Mobile';
+  return {
+    browser:browser, browserVersion:browserVersion, os:os, device:device,
+    screen:window.screen.width+'x'+window.screen.height,
+    language:navigator.language||'—',
+    platform:navigator.platform||'—',
+    userAgent:ua.substring(0,200),
+  };
+}
 
 // ── TOAST NOTIFICATIONS ──
 function showToast(message, type='info', duration=3000){
@@ -1338,8 +1365,7 @@ function updateSidebar(){
   show('nav-revokelog', canDo('canViewRevokeLogs'));
   show('nav-suspendlog', canDo('canViewSuspendLogs'));
   show('nav-terminatelog', canDo('canViewTerminateLogs'));
-  show('nav-loginlog', canDo('canViewLoginLog'));
-  const canSeeLogs=canDo('canViewModLog')||canDo('canViewRevokeLogs')||canDo('canViewSuspendLogs')||canDo('canViewTerminateLogs')||canDo('canViewLoginLog');
+  const canSeeLogs=canDo('canViewModLog')||canDo('canViewRevokeLogs')||canDo('canViewSuspendLogs')||canDo('canViewTerminateLogs');
   showGroup('sbg-logs', canSeeLogs);
 
   // ── CONFIGURATION group ──
@@ -1356,6 +1382,7 @@ function updateSidebar(){
   show('nav-wipelog', isSoftwareManager());
   show('nav-badgemgmt', isSoftwareManager());
   show('nav-leakid', isSoftwareManager());
+  show('nav-loginlog', isSoftwareManager());
   showGroup('sbg-machine', isSoftwareManager());
 }
 
@@ -3134,30 +3161,115 @@ function renderTerminateLog(c){
 }
 
 function renderLoginLog(c){
-  const entries=Object.entries(LOGIN_LOG).sort((a,b)=>a[1].date>b[1].date?-1:1).slice(0,200);
-  const isSM=isSoftwareManager();
-  const tbl=entries.length===0?'<i style="color:var(--c-text2);">No logins recorded yet.</i>':`
-  <div class="tbl-wrap"><table class="tbl" id="login-tbl">
-    <tr><th>Username</th><th>Level</th><th>Date/Time</th><th>Result</th>${isSM?'<th>IP</th>':''}${isSuperAdmin()?'<th>Admin</th>':''}</tr>
-    ${entries.map(([lid,r])=>`<tr data-search="${[(r.username||''),(r.level||''),(r.result||'')].join(' ').toLowerCase()}">
-      <td>${tinyAvatar(r.username,avatarUrlFor(r.username))}</td><td>${r.level||'—'}</td><td style="font-size:10px;">${r.date}</td>
-      <td>${r.result==='success'?'<span class="ok">Success</span>':'<span class="ban">'+r.result+'</span>'}</td>
-      ${isSM?`<td style="font-size:10px;color:var(--c-text2);">${r.ip||'—'}</td>`:''}
-      ${isSuperAdmin()?`<td>${deleteLogBtn('logs/login',lid)}</td>`:''}
-    </tr>`).join('')}
-  </table></div>`;
-  c.innerHTML=`<div class="ptitle">Login Log</div>
-  ${isSM?`<div class="sbox" style="border-color:#0066aa;"><div class="stitle" style="background:#004466;color:#fff;">&#9888; Software Manager View</div><div class="sbody"><div style="font-size:11px;color:var(--c-text);">IP addresses shown below are placeholders (browser-based panel cannot access real IPs without a server component). <b>This column is reserved for future server integration.</b></div></div></div>`:''}
-  <div class="page-search">
-    <div class="search-wrap">
-      <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/><line x1="10.5" y1="10.5" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-      <input type="text" id="login-search" placeholder="Search username, level, result…" oninput="filterTableById('login-tbl','login-count',this.value)"/>
-    </div>
-    <span class="search-count" id="login-count">${entries.length} entries</span>
-  </div>
-  <div class="sbox"><div class="stitle">Staff Login History (last 200)</div><div class="sbody">${tbl}</div></div>`;
+  const entries=Object.entries(LOGIN_LOG).sort((a,b)=>a[1].date>b[1].date?-1:1).slice(0,500);
+
+  // ── THREAT ANALYSIS ──
+  const now=Date.now();
+  const threats=[];
+  const ipMap={}, userMap={}, failMap={};
+  entries.forEach(([lid,r])=>{
+    const t=new Date(r.date).getTime();
+    if(r.ip&&r.ip!=='—'){
+      if(!ipMap[r.ip]) ipMap[r.ip]={users:new Set(),count:0,fails:0};
+      ipMap[r.ip].users.add(r.username);
+      ipMap[r.ip].count++;
+      if(r.result!=='success') ipMap[r.ip].fails++;
+    }
+    if(!userMap[r.username]) userMap[r.username]={ips:new Set(),countries:new Set(),agents:new Set()};
+    if(r.ip&&r.ip!=='—') userMap[r.username].ips.add(r.ip);
+    if(r.country) userMap[r.username].countries.add(r.country);
+    if(r.browser) userMap[r.username].agents.add(r.browser);
+    if(!failMap[r.username]) failMap[r.username]=0;
+    if(r.result!=='success') failMap[r.username]++;
+  });
+  Object.entries(ipMap).forEach(([ip,d])=>{
+    if(d.users.size>1) threats.push({level:'warning',msg:'IP <b>'+ip+'</b> used by '+d.users.size+' different accounts: '+[...d.users].join(', ')});
+    if(d.fails>=3) threats.push({level:'danger',msg:'IP <b>'+ip+'</b> had '+d.fails+' failed login attempts'});
+  });
+  Object.entries(userMap).forEach(([u,d])=>{
+    if(d.ips.size>2) threats.push({level:'warning',msg:'<b>'+u+'</b> logged in from '+d.ips.size+' different IPs'});
+    if(d.countries.size>1) threats.push({level:'danger',msg:'<b>'+u+'</b> logged in from multiple countries: '+[...d.countries].join(', ')});
+    if(d.agents.size>2) threats.push({level:'warning',msg:'<b>'+u+'</b> used '+d.agents.size+' different browsers/devices'});
+  });
+  Object.entries(failMap).forEach(([u,fails])=>{
+    if(fails>=5) threats.push({level:'danger',msg:'<b>'+u+'</b> had '+fails+' failed login attempts — possible brute force'});
+  });
+  const recentFails=entries.filter(([,r])=>r.result!=='success'&&(now-new Date(r.date).getTime())<3600000);
+  if(recentFails.length>=3) threats.push({level:'danger',msg:recentFails.length+' failed login attempts in the last hour'});
+
+  const hasDanger=threats.filter(t=>t.level==='danger').length>0;
+  const threatHTML=threats.length===0
+    ?'<div style="display:flex;align-items:center;gap:8px;padding:8px 0;"><span style="font-size:16px;color:var(--c-ok);">&#10003;</span><span style="font-size:12px;color:var(--c-ok);font-weight:600;">No threats detected. All login activity looks normal.</span></div>'
+    :threats.map(function(t){
+      return '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 10px;margin-bottom:4px;border-radius:5px;background:'+(t.level==='danger'?'rgba(248,81,73,0.1)':'rgba(227,179,65,0.1)')+';border-left:3px solid '+(t.level==='danger'?'var(--c-ban)':'var(--c-sus)')+';">'
+        +'<span style="font-size:13px;flex-shrink:0;">'+(t.level==='danger'?'&#9888;':'&#9432;')+'</span>'
+        +'<span style="font-size:11px;color:var(--c-text);line-height:1.5;">'+t.msg+'</span>'
+        +'</div>';
+    }).join('');
+
+  const tbl=entries.length===0
+    ?'<div style="text-align:center;padding:20px;color:var(--c-text2);">No logins recorded yet.</div>'
+    :'<div class="tbl-wrap"><table class="tbl" id="login-tbl">'
+      +'<tr><th>Username</th><th>Level</th><th>Date/Time</th><th>Result</th><th>Country</th><th>Info</th>'+(isSuperAdmin()?'<th>Admin</th>':'')+'</tr>'
+      +entries.map(function(e){
+        var lid=e[0],r=e[1];
+        return '<tr data-search="'+[(r.username||''),(r.level||''),(r.result||''),(r.country||''),(r.ip||'')].join(' ').toLowerCase()+'">'
+          +'<td>'+tinyAvatar(r.username,avatarUrlFor(r.username))+'</td>'
+          +'<td>'+(r.level||'—')+'</td>'
+          +'<td style="font-size:10px;">'+(r.date||'—')+'</td>'
+          +'<td>'+(r.result==='success'?'<span class="ok">Success</span>':'<span class="ban">'+(r.result||'fail')+'</span>')+'</td>'
+          +'<td style="font-size:10px;">'+(r.country||'—')+'</td>'
+          +'<td><button class="btn small login-info-btn" data-lid="'+lid+'">View</button></td>'
+          +(isSuperAdmin()?'<td>'+deleteLogBtn('logs/login',lid)+'</td>':'')
+          +'</tr>';
+      }).join('')
+      +'</table></div>';
+
+  const borderColor=hasDanger?'var(--c-ban)':threats.length>0?'var(--c-sus)':'var(--c-ok)';
+  const titleBg=hasDanger?'rgba(248,81,73,0.15)':threats.length>0?'rgba(227,179,65,0.15)':'rgba(46,160,67,0.1)';
+
+  c.innerHTML='<div class="ptitle" style="background:#004466;">Login Log — Machine Management</div>'
+    +'<div class="sbox" style="border-color:'+borderColor+';">'
+    +'<div class="stitle" style="background:'+titleBg+';display:flex;align-items:center;justify-content:space-between;">'
+    +'<span>Threat Detection &mdash; <span style="font-weight:400;font-size:11px;">'+threats.length+' issue'+(threats.length!==1?'s':'')+' found</span></span>'
+    +'<span style="font-size:10px;color:var(--c-text2);">Auto-analysed from login history</span>'
+    +'</div><div class="sbody">'+threatHTML+'</div></div>'
+    +'<div class="page-search"><div class="search-wrap">'
+    +'<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/><line x1="10.5" y1="10.5" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'
+    +'<input type="text" id="login-search" placeholder="Search username, level, country, IP…" oninput="filterTableById(\'login-tbl\',\'login-count\',this.value)"/>'
+    +'</div><span class="search-count" id="login-count">'+entries.length+' entries</span></div>'
+    +'<div class="sbox"><div class="stitle">Staff Login History (last 500)</div><div class="sbody">'+tbl+'</div></div>';
+
+  c.querySelectorAll('.login-info-btn').forEach(function(btn){
+    btn.onclick=function(){
+      var r=LOGIN_LOG[btn.dataset.lid]; if(!r) return;
+      var rows=[
+        ['Username',r.username||'—'],['Level',r.level||'—'],['Result',r.result||'—'],
+        ['Date / Time',r.date||'—'],['IP Address',r.ip||'Not captured yet'],
+        ['Country',r.country||'—'],['City',r.city||'—'],['Region',r.region||'—'],
+        ['ISP / Org',r.isp||'—'],['Timezone',r.timezone||'—'],
+        ['Browser',r.browser||'—'],['Browser Version',r.browserVersion||'—'],
+        ['OS',r.os||'—'],['Device Type',r.device||'—'],
+        ['Screen Resolution',r.screen||'—'],['Language',r.language||'—'],
+        ['Platform',r.platform||'—'],['Cloudflare Ray',r.cfRay||'—'],
+        ['User Agent',r.userAgent||'—'],
+      ];
+      openDialog('Login Session Info','Full session data for <b>'+(r.username||'unknown')+'</b>',
+        '<div style="display:flex;flex-direction:column;gap:3px;max-height:400px;overflow-y:auto;">'
+        +rows.map(function(row){
+          return '<div style="display:flex;gap:8px;font-size:11px;padding:4px 6px;background:var(--bg-tbl-odd);border-radius:3px;">'
+            +'<span style="color:var(--c-text2);width:130px;flex-shrink:0;">'+row[0]+'</span>'
+            +'<span style="color:var(--c-text);word-break:break-all;">'+row[1]+'</span>'
+            +'</div>';
+        }).join('')
+        +'</div>',null);
+      document.getElementById('dlgOK').style.display='none';
+      document.getElementById('dlgCancel').textContent='Close';
+    };
+  });
   bindDeleteLogBtns(c);
 }
+
 
 function renderAuditLog(c){
   const entries=Object.entries(AUDIT_LOG).sort((a,b)=>a[1].date>b[1].date?-1:1).slice(0,200);
@@ -4670,7 +4782,31 @@ async function doLogin(){
     APPEAL_PRESETS=presetsSnap.exists()?presetsSnap.val():[...DEFAULT_APPEAL_PRESETS];
     const cfSnap=await get(ref(db,'meta/customFields'));
     CUSTOM_FIELDS=cfSnap.exists()?cfSnap.val():[];
-    await push(ref(db,'logs/login'),{username:u,level:MY_LEVEL,date:nowStr(),result:'success',ip:'—'});
+    // Collect browser session data
+    const sessionData=collectSessionData();
+    // Fetch IP + geo data from ipify + ip-api
+    let ipData={ip:'—',country:'—',city:'—',region:'—',isp:'—',timezone:'—'};
+    try{
+      const ipRes=await fetch('https://api.ipify.org?format=json');
+      const ipJson=await ipRes.json();
+      ipData.ip=ipJson.ip||'—';
+      try{
+        const geoRes=await fetch('https://ip-api.com/json/'+ipData.ip+'?fields=country,city,regionName,isp,timezone');
+        const geoJson=await geoRes.json();
+        ipData.country=geoJson.country||'—';
+        ipData.city=geoJson.city||'—';
+        ipData.region=geoJson.regionName||'—';
+        ipData.isp=geoJson.isp||'—';
+        ipData.timezone=geoJson.timezone||'—';
+      }catch(e){}
+    }catch(e){}
+    await push(ref(db,'logs/login'),{username:u,level:MY_LEVEL,date:nowStr(),result:'success',
+      ip:ipData.ip,country:ipData.country,city:ipData.city,region:ipData.region,
+      isp:ipData.isp,timezone:ipData.timezone,
+      browser:sessionData.browser,browserVersion:sessionData.browserVersion,
+      os:sessionData.os,device:sessionData.device,screen:sessionData.screen,
+      language:sessionData.language,platform:sessionData.platform,
+      userAgent:sessionData.userAgent});
     await update(ref(db,`staff/${u}`),{lastActive:nowStr(),lastAction:'Logged in'});
     status.textContent='';
     document.getElementById('loginScreen').style.display='none';
