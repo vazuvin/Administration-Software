@@ -517,17 +517,17 @@ body.gh-dark .sbox:hover{box-shadow:0 2px 12px rgba(1,4,9,0.3);}
             <span style="color:var(--c-border);font-size:12px;">|</span>
             <span style="font-size:10px;font-weight:500;color:var(--c-text2);letter-spacing:0.3px;">MODERATION</span>
           </div>
-          <span class="sb-link" id="nav-home" style="padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;display:block;margin:-2px -4px 0;">⬛ Dashboard</span>
+          <span class="sb-link" id="nav-home" style="padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px;margin:-2px -4px 0;"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/></svg> Dashboard</span>
         </div>
 
         <span class="sb-link" id="nav-information" style="padding:5px 8px 5px 10px;display:flex;align-items:center;gap:5px;font-size:11px;border-left:2px solid transparent;margin-bottom:2px;">
-          <span style="font-size:12px;opacity:0.7;">ℹ</span> Information
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;opacity:0.7;"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.3"/><line x1="7" y1="6.5" x2="7" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="7" cy="4.5" r="0.9" fill="currentColor"/></svg> Information
         </span>
 
         <div class="sb-group" id="sbg-users">
           <div class="sb-group-hdr" onclick="toggleSbGroup('sbg-users')">
             <span class="sb-plusminus" id="pm-sbg-users">&#9660;</span>
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;vertical-align:middle;"><circle cx="6" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M1 13c0-2.8 2.2-4 5-4s5 1.2 5 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="12" cy="5" r="1.8" stroke="currentColor" stroke-width="1.2" opacity="0.6"/><path d="M14.5 12.5c0-1.8-1-2.8-2.5-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/></svg><span class="sb-group-label" style="margin-left:5px;">People</span>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;vertical-align:middle;"><circle cx="5.5" cy="4.5" r="2.2" stroke="currentColor" stroke-width="1.3"/><path d="M1 12c0-2.5 2-3.8 4.5-3.8S10 9.5 10 12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="10.5" cy="4.8" r="1.6" stroke="currentColor" stroke-width="1.2" opacity="0.65"/><path d="M12.5 11c0-1.6-1-2.4-2-2.8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.65"/></svg><span class="sb-group-label" style="margin-left:5px;">People</span>
           </div>
           <div class="sb-group-body" id="body-sbg-users">
             <span class="sb-link" id="nav-useradmin">User Admin</span>
@@ -540,7 +540,7 @@ body.gh-dark .sbox:hover{box-shadow:0 2px 12px rgba(1,4,9,0.3);}
         <div class="sb-group" id="sbg-content" style="display:none;">
           <div class="sb-group-hdr" onclick="toggleSbGroup('sbg-content')">
             <span class="sb-plusminus" id="pm-sbg-content">&#9660;</span>
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;vertical-align:middle;"><path d="M8 1.5L14 4v4c0 3.5-2.5 6-6 7C2.5 14 0 11.5 0 8V4l6-2.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><line x1="5" y1="8" x2="7.5" y2="10.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="7.5" y1="10.5" x2="11.5" y2="6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><span class="sb-group-label" style="margin-left:5px;">Moderation</span>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;vertical-align:middle;"><path d="M7 1L12.5 3.2v3.8c0 3-2.2 5-5.5 5.8C3.7 12 1.5 10 1.5 7V3.2L7 1z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" fill="none"/><polyline points="4.5,7 6.2,8.8 9.5,5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="sb-group-label" style="margin-left:5px;">Moderation</span>
           </div>
           <div class="sb-group-body" id="body-sbg-content">
             <span class="sb-link" id="nav-reputation">Reputation</span>
@@ -553,7 +553,7 @@ body.gh-dark .sbox:hover{box-shadow:0 2px 12px rgba(1,4,9,0.3);}
         <div class="sb-group" id="sbg-staff" style="display:none;">
           <div class="sb-group-hdr" onclick="toggleSbGroup('sbg-staff')">
             <span class="sb-plusminus" id="pm-sbg-staff">&#9660;</span>
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;vertical-align:middle;"><rect x="2" y="9" width="12" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="5" y="1" width="6" height="7" rx="1.5" stroke="currentColor" stroke-width="1.3"/><line x1="8" y1="8" x2="8" y2="9" stroke="currentColor" stroke-width="1.3"/></svg><span class="sb-group-label" style="margin-left:5px;">Staff</span>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;vertical-align:middle;"><rect x="2" y="1" width="10" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3"/><circle cx="7" cy="5" r="1.8" stroke="currentColor" stroke-width="1.2"/><line x1="4.5" y1="9" x2="9.5" y2="9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="5.5" y1="11" x2="8.5" y2="11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg><span class="sb-group-label" style="margin-left:5px;">Staff</span>
           </div>
           <div class="sb-group-body" id="body-sbg-staff">
             <span class="sb-link" id="nav-staff">Staff Registry</span>
@@ -561,6 +561,7 @@ body.gh-dark .sbox:hover{box-shadow:0 2px 12px rgba(1,4,9,0.3);}
             <span class="sb-link" id="nav-messaging">Messaging</span>
             <span class="sb-link" id="nav-suggestions">Suggestions</span>
             <span class="sb-link" id="nav-staffconfig">Staff Config</span>
+            <span class="sb-link" id="nav-evaluations">Evaluations</span>
           </div>
         </div>
 
@@ -603,6 +604,7 @@ body.gh-dark .sbox:hover{box-shadow:0 2px 12px rgba(1,4,9,0.3);}
             <span class="sb-link" id="nav-leakid">Leak Identifier</span>
             <span class="sb-link" id="nav-loginlog">Login Log</span>
             <span class="sb-link" id="nav-clearance">Clearance Manager</span>
+            <span class="sb-link" id="nav-samlog">Samaritan Log</span>
           </div>
         </div>
 
@@ -2141,7 +2143,8 @@ function updateSidebar(){
   show('nav-messaging', canDo('canSendStaffMessage'));
   show('nav-suggestions', canDo('canViewSuggestions'));
   show('nav-staffconfig', canDo('canViewStaffConfig'));
-  const canSeeStaff=canDo('canViewStaff')||canDo('canViewStaffActivity')||canDo('canSendStaffMessage')||canDo('canViewSuggestions')||canDo('canViewStaffConfig');
+  show('nav-evaluations', isSuperAdmin());
+  const canSeeStaff=canDo('canViewStaff')||canDo('canViewStaffActivity')||canDo('canSendStaffMessage')||canDo('canViewSuggestions')||canDo('canViewStaffConfig')||isSuperAdmin();
   showGroup('sbg-staff', canSeeStaff);
 
   // ── LOGS group — only show if user can see at least one log ──
@@ -2168,6 +2171,7 @@ function updateSidebar(){
   show('nav-leakid', isSoftwareManager());
   show('nav-loginlog', isSoftwareManager());
   show('nav-clearance', isSoftwareManager());
+  show('nav-samlog', isSoftwareManager());
   showGroup('sbg-machine', isSoftwareManager());
   // Samaritan always visible to all
   show('nav-samaritan', true);
@@ -2284,6 +2288,8 @@ function render(){
   else if(page==='information') renderInformation(c);
   else if(page==='leakid'){ isSoftwareManager()?renderLeakIdentifier(c):c.innerHTML=denied; }
   else if(page==='clearance'){ isSoftwareManager()?renderClearanceManager(c):c.innerHTML=denied; }
+  else if(page==='samlog'){ isSoftwareManager()?renderSamLog(c):c.innerHTML=denied; }
+  else if(page==='evaluations'){ isSuperAdmin()?renderStaffEvaluations(c):c.innerHTML=denied; }
   else if(page==='samaritan') renderSamaritanPortal(c);
   else if(page==='siteconfig'){ isSoftwareManager()?renderSiteConfig(c):c.innerHTML=denied; }
   else if(page==='statuslog'){ isSoftwareManager()?renderStatusLog(c):c.innerHTML=denied; }
@@ -4366,6 +4372,8 @@ function renderAlerts(c){
   const canPost=isSuperAdmin()||canDo('canManageStaff');
   c.innerHTML=`
   <div class="ptitle">Site-Wide Alerts</div>
+  ${isSuperAdmin()?`
+  <div class="sbox" style="border-color:var(--c-link);"><div class="stitle" style="background:rgba(9,105,218,0.12);">&#128337; Scheduled Alerts</div><div class="sbody" id="sched-alerts-container"><div style="font-size:11px;color:var(--c-text2);">Loading...</div></div></div>`:''}
   ${canPost?`
   <div class="sbox"><div class="stitle">Post Alert</div><div class="sbody">
     <div style="display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap;">
@@ -5238,6 +5246,7 @@ function renderSamaritanLogin(c){
     if(pass === userCode){
       SAM_SESSION = {username: ME, level: hasClearance('manager')?'manager':'access'};
       auditLog('Samaritan Portal Access',ME+' authenticated');
+      samAuditLog('Auth','Authenticated',ME,'Special Projects access granted',0);
       renderSamaritanMain(c);
     } else {
       status.textContent='AUTHENTICATION FAILED';
@@ -5475,6 +5484,7 @@ function renderGlasgow(panel){
     GLASGOW_DATA[sid]={active:true,blocked:blocked};
     document.getElementById('glasgow-msg').textContent='Glasgow enabled for '+(STAFF[sid]&&STAFF[sid].username||sid)+' ('+blocked.length+' items)';
     auditLog('Glasgow Block Enabled',sid+': '+blocked.join(','));
+    samAuditLog('Glasgow','Enabled',(STAFF[sid]&&STAFF[sid].username)||sid,blocked.join(', '),0);
     showToast('Glasgow Block activated.','warning');
   };
   document.getElementById('glasgow-disable').onclick = async function(){
@@ -5533,6 +5543,7 @@ function renderFreeze(panel){
     await update(ref(db,'staff/'+sid),{freezeActive:true});
     document.getElementById('freeze-msg').textContent='Freeze Frame activated.';
     auditLog('Freeze Frame Activated',sid);
+    samAuditLog('Freeze','Activated',(STAFF[sid]&&STAFF[sid].username)||sid,'Screen locked',expTs);
     showToast('Freeze Frame activated.','warning');
   };
   document.getElementById('freeze-disable').onclick = async function(){
@@ -5834,6 +5845,7 @@ function renderBeehive(panel){
     });
     document.getElementById('beehive-output').textContent='Beehive ['+type.toUpperCase()+'] broadcast sent.';
     auditLog('Beehive Alert',type+': '+msg);
+    samAuditLog('Beehive','Broadcast','All Staff',type.toUpperCase()+': '+msg,expTs);
     showToast('Beehive broadcast: '+typeInfo.icon+' '+type.toUpperCase(),'warning');
     // Clear announce bar glow from previous beehive
     var barEl=document.getElementById('announceBar');
@@ -6065,6 +6077,394 @@ function renderOpenHouse(panel){
     auditLog('Open House Disabled','By '+ME);
   };
 }
+
+
+// ══════════════════════════════════════════════════════════════
+// 1. PUNISHMENT AUTO-EXPIRY
+// Runs every 60s — checks all users' punishments and lifts expired ones
+// ══════════════════════════════════════════════════════════════
+function startPunishmentExpiryWatcher(){
+  if(window._expiryWatcherRunning) return;
+  window._expiryWatcherRunning = true;
+  async function checkExpiry(){
+    if(!ME) return;
+    const now = Date.now();
+    const userSnap = await get(ref(db,'users')).catch(()=>null);
+    if(!userSnap||!userSnap.exists()) return;
+    const users = userSnap.val();
+    for(const uid in users){
+      const u = users[uid];
+      if(!u.punishments) continue;
+      for(const pid in u.punishments){
+        const p = u.punishments[pid];
+        if(!p.expiryTs||p.expiryTs<=0) continue;
+        if(now < p.expiryTs) continue;
+        // Punishment expired — lift the status
+        const action = (p.action||'').toLowerCase();
+        const isBan = action.includes('ban');
+        const isSusp = action.includes('suspend');
+        if(isBan||isSusp){
+          await update(ref(db,'users/'+uid),{status:'active'}).catch(()=>{});
+          // Remove the expired punishment
+          await remove(ref(db,'users/'+uid+'/punishments/'+pid)).catch(()=>{});
+          // Log it
+          await push(ref(db,'logs/revoke'),{
+            user:u.username, action:p.action, origMod:p.mod,
+            revokedBy:'[AUTO-EXPIRY]', date:nowStr(),
+            note:'Auto-expired after scheduled duration'
+          }).catch(()=>{});
+          if(isSoftwareManager()){
+            auditLog('Punishment Auto-Expired', u.username+' — '+p.action);
+          }
+        }
+      }
+    }
+  }
+  checkExpiry();
+  setInterval(checkExpiry, 60000);
+}
+window.startPunishmentExpiryWatcher = startPunishmentExpiryWatcher;
+
+// ══════════════════════════════════════════════════════════════
+// 2. SCHEDULED SITE ALERTS
+// ══════════════════════════════════════════════════════════════
+var SCHEDULED_ALERTS = {};
+
+function renderScheduledAlerts(container){
+  var sArr = Object.entries(SCHEDULED_ALERTS).sort(function(a,b){ return (a[1].nextRun||0)-(b[1].nextRun||0); });
+  container.innerHTML = '<div style="font-size:11px;font-weight:600;color:var(--c-text);margin-bottom:6px;">Scheduled Alerts</div>'
+    +(sArr.length===0?'<div style="font-size:11px;color:var(--c-text2);">No scheduled alerts.</div>'
+    :sArr.map(function(e){
+      var sid=e[0], s=e[1];
+      var nextStr = s.nextRun?new Date(s.nextRun).toLocaleString():'—';
+      return '<div style="background:var(--bg-tbl-odd);border:1px solid var(--c-border);border-radius:5px;padding:6px 10px;margin-bottom:4px;display:flex;align-items:center;gap:8px;">'
+        +'<div style="flex:1;min-width:0;">'
+        +'<div style="font-size:11px;font-weight:600;color:var(--c-text);">'+s.message+'</div>'
+        +'<div style="font-size:10px;color:var(--c-text2);">'+s.schedule+' &bull; Next: '+nextStr+'</div>'
+        +'</div>'
+        +'<span class="badge '+(s.type||'warning')+'" style="font-size:9px;">'+s.type+'</span>'
+        +'<button class="btn small sched-del-btn" data-sid="'+sid+'" style="color:var(--c-ban);">Remove</button>'
+        +'</div>';
+    }).join(''))
+    +'<div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:5px;">'
+    +'<div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Alert Text</label><input type="text" id="sched-msg" style="width:100%;" placeholder="Alert message…"/></div>'
+    +'<div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Type</label>'
+    +'<select id="sched-type" style="width:100%;"><option value="warning">Warning</option><option value="critical">Critical</option><option value="info">Info</option></select></div>'
+    +'<div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Schedule</label>'
+    +'<select id="sched-freq" style="width:100%;" onchange="document.getElementById(\'sched-day-row\').style.display=this.value===\'weekly\'?\'block\':\'none\'">'
+    +'<option value="once">Once (specific time)</option>'
+    +'<option value="daily">Daily</option>'
+    +'<option value="weekdays">Weekdays only</option>'
+    +'<option value="weekly">Weekly (pick day)</option>'
+    +'<option value="monthly">Monthly (1st of month)</option>'
+    +'<option value="everyhour">Every Hour</option>'
+    +'<option value="every6h">Every 6 Hours</option>'
+    +'</select>'
+    +'<div id="sched-day-row" style="display:none;margin-top:3px;">'
+    +'<select id="sched-day" style="width:100%;"><option value="0">Sunday</option><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option></select>'
+    +'</div></div>'
+    +'<div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Time (HH:MM)</label><input type="time" id="sched-time" style="width:100%;" value="09:00"/></div>'
+    +'<div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Alert Duration</label>'
+    +'<select id="sched-duration" style="width:100%;"><option value="3600000">1 Hour</option><option value="14400000">4 Hours</option><option value="86400000">24 Hours</option><option value="0">Permanent</option></select>'
+    +'</div></div>'
+    +'<button class="btn" id="sched-add-btn" style="margin-top:6px;background:var(--c-link);color:#fff;border-color:var(--c-link);">Schedule Alert</button>';
+
+  container.querySelectorAll('.sched-del-btn').forEach(function(btn){
+    btn.onclick=async function(){
+      await remove(ref(db,'scheduledAlerts/'+btn.dataset.sid));
+      delete SCHEDULED_ALERTS[btn.dataset.sid];
+      renderScheduledAlerts(container);
+    };
+  });
+
+  var addBtn=document.getElementById('sched-add-btn');
+  if(addBtn) addBtn.onclick=async function(){
+    var msg=(document.getElementById('sched-msg')||{value:''}).value.trim();
+    var type=(document.getElementById('sched-type')||{value:'warning'}).value;
+    var freq=(document.getElementById('sched-freq')||{value:'once'}).value;
+    var time=(document.getElementById('sched-time')||{value:'09:00'}).value||'09:00';
+    var day=parseInt((document.getElementById('sched-day')||{value:'1'}).value);
+    var duration=parseInt((document.getElementById('sched-duration')||{value:'3600000'}).value);
+    if(!msg){ showToast('Enter an alert message.','error'); return; }
+    var nextRun=calcNextRun(freq,time,day);
+    var entry={message:msg,type,schedule:schedLabel(freq,time,day),freq,time,day,duration,nextRun,createdBy:ME,createdAt:nowStr()};
+    var newRef=await push(ref(db,'scheduledAlerts'),entry);
+    SCHEDULED_ALERTS[newRef.key]=entry;
+    showToast('Scheduled alert saved.','success');
+    auditLog('Scheduled Alert Created',msg+' — '+entry.schedule);
+    renderScheduledAlerts(container);
+  };
+}
+
+function calcNextRun(freq,time,day){
+  var now=new Date();
+  var[h,m]=time.split(':').map(Number);
+  var next=new Date();
+  next.setSeconds(0,0);
+  next.setHours(h,m);
+  if(freq==='everyhour'){ next=new Date(Date.now()+3600000); return next.getTime(); }
+  if(freq==='every6h'){ next=new Date(Date.now()+21600000); return next.getTime(); }
+  if(next<=now) next.setDate(next.getDate()+1);
+  if(freq==='daily'||freq==='once') return next.getTime();
+  if(freq==='weekdays'){ while(next.getDay()===0||next.getDay()===6) next.setDate(next.getDate()+1); return next.getTime(); }
+  if(freq==='weekly'){ while(next.getDay()!==day) next.setDate(next.getDate()+1); return next.getTime(); }
+  if(freq==='monthly'){ next=new Date(now.getFullYear(),now.getMonth()+1,1,h,m,0,0); return next.getTime(); }
+  return next.getTime();
+}
+function schedLabel(freq,time,day){
+  var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  if(freq==='once') return 'Once at '+time;
+  if(freq==='daily') return 'Daily at '+time;
+  if(freq==='weekdays') return 'Weekdays at '+time;
+  if(freq==='weekly') return 'Weekly on '+days[day]+' at '+time;
+  if(freq==='monthly') return 'Monthly (1st) at '+time;
+  if(freq==='everyhour') return 'Every hour';
+  if(freq==='every6h') return 'Every 6 hours';
+  return freq;
+}
+function startScheduledAlertWatcher(){
+  if(window._schedWatcherRunning) return;
+  window._schedWatcherRunning=true;
+  setInterval(async function(){
+    if(!isSoftwareManager()) return;
+    const now=Date.now();
+    for(var sid in SCHEDULED_ALERTS){
+      var s=SCHEDULED_ALERTS[sid];
+      if(!s.nextRun||now<s.nextRun) continue;
+      // Fire it
+      var expiresAt=s.duration>0?now+s.duration:0;
+      await push(ref(db,'siteAlerts'),{message:s.message,type:s.type,by:'[SCHEDULED]',date:nowStr(),active:true,expiresAt});
+      auditLog('Scheduled Alert Fired',s.message);
+      // Calculate next run or remove if once
+      if(s.freq==='once'){
+        await remove(ref(db,'scheduledAlerts/'+sid));
+        delete SCHEDULED_ALERTS[sid];
+      } else {
+        var nextRun=calcNextRun(s.freq,s.time||'09:00',s.day||1);
+        await update(ref(db,'scheduledAlerts/'+sid),{nextRun});
+        SCHEDULED_ALERTS[sid].nextRun=nextRun;
+      }
+    }
+  },60000);
+}
+window.startScheduledAlertWatcher=startScheduledAlertWatcher;
+
+// ══════════════════════════════════════════════════════════════
+// 3. STAFF EVALUATION SYSTEM
+// ══════════════════════════════════════════════════════════════
+var STAFF_REVIEWS = {};
+
+function renderStaffEvaluations(c){
+  var canReview = isSuperAdmin();
+  var myReviews = Object.entries(STAFF_REVIEWS).filter(function(e){ return e[1].targetStaff; });
+  var pending = myReviews.filter(function(e){ return !e[1].completed; });
+
+  c.innerHTML = '<div class="ptitle">Staff Evaluations</div>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">'
+    +'<div class="sbox" style="flex:2;min-width:240px;"><div class="stitle">Pending Reviews</div><div class="sbody">'
+    +(pending.length===0?'<div style="font-size:11px;color:var(--c-text2);">No pending evaluations.</div>'
+    :pending.map(function(e){
+      var rid=e[0],r=e[1];
+      return '<div style="background:var(--bg-tbl-odd);border:1px solid var(--c-border);border-radius:5px;padding:7px 10px;margin-bottom:4px;display:flex;align-items:center;gap:8px;">'
+        +'<div style="flex:1;"><b style="font-size:12px;color:var(--c-text);">'+r.targetStaff+'</b>'
+        +'<div style="font-size:10px;color:var(--c-text2);">Assigned to: '+r.reviewerStaff+' &bull; Due: '+(r.dueDate||'Open-ended')+'</div></div>'
+        +(canReview?'<button class="btn small eval-open-btn" data-rid="'+rid+'">Review</button>':'<span style="font-size:10px;color:var(--c-text2);">Awaiting reviewer</span>')
+        +'</div>';
+    }).join(''))
+    +'</div></div>'
+    +'<div class="sbox" style="flex:1;min-width:200px;"><div class="stitle">Evaluation History</div><div class="sbody">'
+    +(myReviews.filter(function(e){return e[1].completed;}).slice(0,10).map(function(e){
+      var r=e[1];
+      var score=r.scores?Math.round(Object.values(r.scores).reduce(function(a,b){return a+b;},0)/Object.values(r.scores).length):0;
+      var scoreColor=score>=4?'var(--c-ok)':score>=3?'var(--c-sus)':'var(--c-ban)';
+      return '<div style="font-size:11px;padding:4px 0;border-bottom:1px solid var(--c-border);display:flex;align-items:center;gap:6px;">'
+        +tinyAvatar(r.targetStaff,avatarUrlFor(r.targetStaff))
+        +'<span style="flex:1;color:var(--c-text2);">'+r.reviewedAt+'</span>'
+        +'<span style="font-weight:700;color:'+scoreColor+';">'+score+'/5</span>'
+        +'</div>';
+    }).join('')||'<div style="font-size:11px;color:var(--c-text2);">No completed reviews.</div>')
+    +'</div></div></div>'
+    +(canReview?'<div class="sbox"><div class="stitle">Assign New Evaluation</div><div class="sbody">'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    +'<div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Staff Member to Evaluate</label>'
+    +'<select id="eval-target" style="width:100%;">'+Object.values(STAFF).map(function(s){ return '<option value="'+s.username+'">'+s.username+' ('+s.level+')</option>'; }).join('')+'</select></div>'
+    +'<div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Assign To (Reviewer)</label>'
+    +'<select id="eval-reviewer" style="width:100%;">'+Object.values(STAFF).filter(function(s){return rankOf(s.level||'')>=rankOf('SUPER ADMINISTRATOR');}).map(function(s){ return '<option value="'+s.username+'">'+s.username+'</option>'; }).join('')+'</select></div>'
+    +'<div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Review Period</label>'
+    +'<select id="eval-period" style="width:100%;"><option value="Q1">Q1 (Jan–Mar)</option><option value="Q2">Q2 (Apr–Jun)</option><option value="Q3">Q3 (Jul–Sep)</option><option value="Q4">Q4 (Oct–Dec)</option><option value="Monthly">Monthly</option><option value="Probation">Probation Review</option><option value="Promotion">Promotion Consideration</option></select></div>'
+    +'<div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Due Date (optional)</label>'
+    +'<input type="date" id="eval-due" style="width:100%;"/></div>'
+    +'</div>'
+    +'<button class="btn" id="eval-assign-btn" style="margin-top:8px;background:var(--c-link);color:#fff;border-color:var(--c-link);">Assign Evaluation</button>'
+    +'</div></div>':'');
+
+  if(canReview){
+    var assignBtn=document.getElementById('eval-assign-btn');
+    if(assignBtn) assignBtn.onclick=async function(){
+      var target=(document.getElementById('eval-target')||{value:''}).value;
+      var reviewer=(document.getElementById('eval-reviewer')||{value:''}).value;
+      var period=(document.getElementById('eval-period')||{value:'Q1'}).value;
+      var due=(document.getElementById('eval-due')||{value:''}).value;
+      if(!target||!reviewer){ showToast('Select target and reviewer.','error'); return; }
+      var entry={targetStaff:target,reviewerStaff:reviewer,period,dueDate:due||null,assignedBy:ME,assignedAt:nowStr(),completed:false,scores:{},notes:{},recommendation:''};
+      await push(ref(db,'staffReviews'),entry);
+      showToast('Evaluation assigned to '+reviewer+'.','success');
+      auditLog('Evaluation Assigned',target+' → reviewer: '+reviewer+' ('+period+')');
+      nav('evaluations');
+    };
+    c.querySelectorAll('.eval-open-btn').forEach(function(btn){
+      btn.onclick=function(){ openEvaluationForm(btn.dataset.rid); };
+    });
+  }
+}
+
+function openEvaluationForm(rid){
+  var r=STAFF_REVIEWS[rid]; if(!r) return;
+  var categories=[
+    {key:'modQuality',label:'Moderation Quality',desc:'Accuracy, fairness, consistency of mod actions'},
+    {key:'communication',label:'Communication',desc:'Messaging, responses, team interaction'},
+    {key:'initiative',label:'Initiative',desc:'Proactive contributions, suggestions, effort'},
+    {key:'conduct',label:'Professional Conduct',desc:'Attitude, professionalism, following guidelines'},
+    {key:'reliability',label:'Reliability',desc:'Logging in, completing assignments, availability'},
+  ];
+  function stars(key,current){
+    var html='<div style="display:flex;gap:4px;">';
+    for(var i=1;i<=5;i++){
+      html+='<span class="eval-star" data-key="'+key+'" data-val="'+i+'" style="font-size:18px;cursor:pointer;color:'+(i<=(current||0)?'#f0c000':'var(--c-border)');
+      html+=';" onclick="setEvalStar(\''+key+'\','+i+')">&#9733;</span>';
+    }
+    html+='</div>';
+    return html;
+  }
+  var currentScores=r.scores||{};
+  var formHTML='<div style="max-height:440px;overflow-y:auto;">'
+    +'<div style="font-size:11px;color:var(--c-text2);margin-bottom:10px;">Evaluation for <b>'+r.targetStaff+'</b> — Period: '+r.period+'</div>'
+    +categories.map(function(cat){
+      return '<div style="margin-bottom:10px;padding:8px;background:var(--bg-tbl-odd);border-radius:5px;">'
+        +'<div style="font-size:12px;font-weight:600;color:var(--c-text);margin-bottom:2px;">'+cat.label+'</div>'
+        +'<div style="font-size:10px;color:var(--c-text2);margin-bottom:5px;">'+cat.desc+'</div>'
+        +stars(cat.key,currentScores[cat.key])
+        +'<input type="text" id="eval-note-'+cat.key+'" style="width:100%;margin-top:4px;font-size:11px;" placeholder="Notes for this category…" value="'+(r.notes&&r.notes[cat.key]?r.notes[cat.key]:'')+'"/>'
+        +'</div>';
+    }).join('')
+    +'<div style="margin-bottom:8px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Overall Comments</label>'
+    +'<textarea id="eval-overall" style="width:100%;height:60px;" placeholder="Overall performance summary…">'+(r.overallNotes||'')+'</textarea></div>'
+    +'<div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Recommendation</label>'
+    +'<select id="eval-recommendation" style="width:100%;">'
+    +'<option value="">— Select —</option>'
+    +'<option value="promote" '+(r.recommendation==='promote'?'selected':'')+'>Promote</option>'
+    +'<option value="retain" '+(r.recommendation==='retain'?'selected':'')+'>Retain at current rank</option>'
+    +'<option value="probation" '+(r.recommendation==='probation'?'selected':'')+'>Place on probation</option>'
+    +'<option value="demote" '+(r.recommendation==='demote'?'selected':'')+'>Demote</option>'
+    +'<option value="terminate" '+(r.recommendation==='terminate'?'selected':'')+'>Terminate</option>'
+    +'</select></div>'
+    +'<div id="eval-score-display" style="margin-top:8px;font-size:12px;font-weight:600;color:var(--c-text);">Score: Calculating...</div>'
+    +'</div>';
+
+  // Store current scores for the form
+  window._evalScores=Object.assign({},currentScores);
+  openDialog('Staff Evaluation — '+r.targetStaff,'Review period: '+r.period,formHTML,async function(){
+    var scores=window._evalScores||{};
+    var notes={};
+    categories.forEach(function(cat){ var el=document.getElementById('eval-note-'+cat.key); if(el) notes[cat.key]=el.value.trim(); });
+    var overall=(document.getElementById('eval-overall')||{value:''}).value.trim();
+    var rec=(document.getElementById('eval-recommendation')||{value:''}).value;
+    var updates={scores,notes,overallNotes:overall,recommendation:rec,reviewedBy:ME,reviewedAt:nowStr(),completed:true};
+    await update(ref(db,'staffReviews/'+rid),updates);
+    Object.assign(STAFF_REVIEWS[rid]||{},updates);
+    showToast('Evaluation submitted for '+r.targetStaff+'.','success');
+    auditLog('Evaluation Completed',r.targetStaff+' — '+rec+' recommendation by '+ME);
+    nav('evaluations');
+  });
+  // Re-render stars after dialog opens
+  setTimeout(function(){
+    categories.forEach(function(cat){
+      if(currentScores[cat.key]) updateStarDisplay(cat.key,currentScores[cat.key]);
+    });
+    updateEvalScore();
+  },100);
+}
+window.setEvalStar=function(key,val){
+  if(!window._evalScores) window._evalScores={};
+  window._evalScores[key]=val;
+  updateStarDisplay(key,val);
+  updateEvalScore();
+};
+function updateStarDisplay(key,val){
+  document.querySelectorAll('.eval-star[data-key="'+key+'"]').forEach(function(s){
+    s.style.color=parseInt(s.dataset.val)<=val?'#f0c000':'var(--c-border)';
+  });
+}
+function updateEvalScore(){
+  var scores=window._evalScores||{};
+  var vals=Object.values(scores).filter(function(v){return v>0;});
+  if(!vals.length){ var el=document.getElementById('eval-score-display'); if(el) el.textContent='Score: Not yet rated'; return; }
+  var avg=(vals.reduce(function(a,b){return a+b;},0)/5).toFixed(1);
+  var el=document.getElementById('eval-score-display');
+  if(el){
+    var color=parseFloat(avg)>=4?'var(--c-ok)':parseFloat(avg)>=3?'var(--c-sus)':'var(--c-ban)';
+    el.innerHTML='Overall Score: <span style="color:'+color+';font-size:16px;">'+avg+'</span>/5.0';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// 4. SAMARITAN ACTIVITY LOG
+// ══════════════════════════════════════════════════════════════
+function renderSamLog(c){
+  get(ref(db,'samLog')).then(function(snap){
+    var entries=snap.exists()?Object.entries(snap.val()).sort(function(a,b){return b[1].ts-a[1].ts;}).slice(0,500):[];
+    var contingencyColors={
+      glasgow:'#cf222e',lullaby:'#8250df',freeze:'#0969da',cleanslate:'#1a7f37',
+      elephant:'#9a6700',goldfish:'#0550ae',beehive:'#d29922',overtime:'#8250df',
+      branchtransfer:'#1a7f37',openhouse:'#0969da',clearance:'#0550ae',auth:'#58a6ff',
+    };
+    var tbl=entries.length===0
+      ?'<div style="text-align:center;padding:24px;color:var(--c-text2);">No Samaritan activity recorded yet.</div>'
+      :'<div class="tbl-wrap"><table class="tbl" id="samlog-tbl">'
+        +'<tr><th>Time</th><th>Operator</th><th>Contingency</th><th>Action</th><th>Target</th><th>Details</th><th>Expiry</th></tr>'
+        +entries.map(function(e){
+          var lid=e[0],r=e[1];
+          var color=contingencyColors[(r.contingency||'').toLowerCase()]||'var(--c-text2)';
+          return '<tr data-search="'+(r.operator||'').toLowerCase()+' '+(r.contingency||'').toLowerCase()+'">'
+            +'<td style="font-size:10px;white-space:nowrap;">'+(r.date||'—')+'</td>'
+            +'<td>'+tinyAvatar(r.operator||'—',avatarUrlFor(r.operator||''))+'</td>'
+            +'<td><span style="font-size:10px;font-weight:700;color:'+color+';letter-spacing:0.5px;">'+(r.contingency||'—').toUpperCase()+'</span></td>'
+            +'<td style="font-size:11px;">'+(r.action||'—')+'</td>'
+            +'<td style="font-size:11px;color:var(--c-text2);">'+(r.target||'—')+'</td>'
+            +'<td style="font-size:10px;color:var(--c-text2);max-width:160px;white-space:normal;">'+(r.detail||'—')+'</td>'
+            +'<td style="font-size:10px;color:var(--c-text2);">'+(r.expiry?new Date(r.expiry).toLocaleString():'Manual/N/A')+'</td>'
+            +'</tr>';
+        }).join('')
+        +'</table></div>';
+
+    c.innerHTML='<div class="ptitle" style="background:#004466;">&#9670; Samaritan Activity Log</div>'
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">'
+      +Object.entries(contingencyColors).map(function(e){
+        var count=entries.filter(function(r){return (r[1].contingency||'').toLowerCase()===e[0];}).length;
+        return '<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(0,0,0,0.2);border:1px solid '+e[1]+';color:'+e[1]+';font-weight:600;">'+e[0].toUpperCase()+' <b>'+count+'</b></span>';
+      }).join('')
+      +'</div>'
+      +'<div class="page-search"><div class="search-wrap"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/><line x1="10.5" y1="10.5" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'
+      +'<input type="text" id="samlog-search" placeholder="Search operator, contingency…" oninput="filterTableById(\'samlog-tbl\',\'samlog-count\',this.value)"/>'
+      +'</div><span class="search-count" id="samlog-count">'+entries.length+' entries</span>'
+      +(isSoftwareManager()?'<button class="btn small" onclick="if(confirm(\'Clear all Samaritan logs?\')) remove(ref(db,\'samLog\')).then(()=>nav(\'samlog\'))" style="margin-left:auto;color:var(--c-ban);">Clear Log</button>':'')
+      +'</div>'
+      +'<div class="sbox"><div class="stitle">All Contingency Activity (last 500)</div><div class="sbody">'+tbl+'</div></div>';
+  });
+}
+
+// Helper: log a samaritan action
+async function samAuditLog(contingency,action,target,detail,expiry){
+  try{
+    await push(ref(db,'samLog'),{
+      contingency:contingency,action:action,target:target||'',
+      detail:detail||'',expiry:expiry||0,
+      operator:ME,date:nowStr(),ts:Date.now()
+    });
+  }catch(e){}
+}
+window.samAuditLog=samAuditLog;
+
 
 // ── ADMIN LOG ──
 function renderAdminLog(c){
@@ -6973,8 +7373,12 @@ async function doLogin(){
     nav('home');
     // Load theme from Firebase
     await loadThemeFromFirebase();
-    // Start punishment expiry countdowns
+    // Start punishment expiry countdowns (visual)
     startExpiryCountdowns();
+    // Start auto-expiry system
+    startPunishmentExpiryWatcher();
+    // Start scheduled alerts watcher (SM only)
+    if(isSoftwareManager()) startScheduledAlertWatcher();
     // Push login to activity feed
     pushActivityFeed('🟢', ME + ' logged in');
   }catch(e){ 
@@ -7223,6 +7627,8 @@ function startListeners(){
   onValue(ref(db,'wipelog'),snap=>{ WIPE_LOG=snap.val()||{}; if(page==='wipelog') safeRender(); });
   onValue(ref(db,'statusLog'),snap=>{ STATUS_LOG=snap.val()||{}; if(page==='statuslog') safeRender(); });
   onValue(ref(db,'clearance'),snap=>{ CLEARANCE_DATA=snap.val()||{}; });
+  onValue(ref(db,'staffReviews'),snap=>{ STAFF_REVIEWS=snap.val()||{}; });
+  onValue(ref(db,'scheduledAlerts'),snap=>{ SCHEDULED_ALERTS=snap.val()||{}; });
   onValue(ref(db,'contingencies/glasgow'),snap=>{ GLASGOW_DATA=snap.val()||{}; });
   onValue(ref(db,'contingencies/freeze'),snap=>{ FREEZE_DATA=snap.val()||{}; });
   onValue(ref(db,'contingencies/lullaby'),function(snap){
@@ -8308,7 +8714,7 @@ function openNotifSettings(){
   document.getElementById('notifSettingsOverlay').classList.add('show');
 }
 
-['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','loginlog','auditlog','alerts','adminlog','home','messaging','requests','userconfig','siteconfig','suggestions','staffconfig','msganalyze','statuslog','badgemgmt','wipelog','information','leakid','clearance','samaritan'].forEach(p=>{
+['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','loginlog','auditlog','alerts','adminlog','home','messaging','requests','userconfig','siteconfig','suggestions','staffconfig','msganalyze','statuslog','badgemgmt','wipelog','information','leakid','clearance','samaritan','samlog','evaluations'].forEach(p=>{
   const el=document.getElementById('nav-'+p);
   if(el) el.onclick=()=>nav(p);
 });
