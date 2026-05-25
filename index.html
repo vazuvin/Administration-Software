@@ -233,11 +233,126 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
 /* ── OVERLAYS / DIALOGS ── */
 .overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg-overlay);z-index:999;align-items:center;justify-content:center;}
 .overlay.show{display:flex;}
-.dialog{background:var(--bg-dialog);border:1px solid var(--c-border);width:360px;box-shadow:0 16px 32px rgba(1,4,9,0.2);border-radius:8px;overflow:hidden;}
-.susp-popup{background:var(--bg-dialog);border:1px solid var(--c-border);width:420px;box-shadow:0 16px 32px rgba(1,4,9,0.2);border-radius:8px;overflow:hidden;}
+.dialog{background:var(--bg-dialog);border:1px solid var(--c-border);width:360px;box-shadow:0 24px 48px rgba(1,4,9,0.35);border-radius:12px;overflow:hidden;}
+.susp-popup{background:var(--bg-dialog);border:1px solid var(--c-border);width:420px;box-shadow:0 24px 48px rgba(1,4,9,0.35);border-radius:12px;overflow:hidden;}
 .susp-field{margin-bottom:8px;}
 .susp-field label{display:block;font-size:12px;font-weight:600;color:var(--c-text);margin-bottom:2px;}
 .susp-field .val{font-size:12px;color:var(--c-text);line-height:1.5;}
+
+/* ── GLASSMORPHISM LOGIN ── */
+.login-glass{
+  background:rgba(22,27,34,0.75);
+  backdrop-filter:blur(20px) saturate(1.5);
+  -webkit-backdrop-filter:blur(20px) saturate(1.5);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:16px;
+  box-shadow:0 24px 64px rgba(1,4,9,0.6),inset 0 1px 0 rgba(255,255,255,0.08);
+}
+body:not(.gh-dark) .login-glass{
+  background:rgba(246,248,250,0.85);
+  border:1px solid rgba(0,0,0,0.08);
+  box-shadow:0 24px 64px rgba(1,4,9,0.15);
+}
+
+/* ── PAGE TRANSITIONS ── */
+#content{transition:opacity 0.15s ease,transform 0.15s ease;}
+#content.page-fade-out{opacity:0;transform:translateY(4px);}
+#content.page-fade-in{opacity:1;transform:translateY(0);}
+
+/* ── PULSING ACTIVITY DOTS ── */
+@keyframes pulse-active{0%,100%{box-shadow:0 0 0 0 rgba(63,185,80,0.5);}50%{box-shadow:0 0 0 4px rgba(63,185,80,0);}}
+@keyframes pulse-idle{0%,100%{box-shadow:0 0 0 0 rgba(227,179,65,0.5);}50%{box-shadow:0 0 0 4px rgba(227,179,65,0);}}
+.activity-dot.active{background:#3fb950;animation:pulse-active 2s ease-in-out infinite;}
+.activity-dot.idle{background:#e3b341;animation:pulse-idle 3s ease-in-out infinite;}
+
+/* ── SIDEBAR ENHANCEMENTS ── */
+.sb-link{transition:background 0.1s,border-left-color 0.1s,padding-left 0.1s;}
+.sb-link:hover{background:var(--bg-sb-hdr-hover);color:var(--c-text);padding-left:32px;}
+.sb-link.active{background:var(--bg-sb-active);color:var(--c-sb-active);font-weight:600;border-left:3px solid var(--c-link);padding-left:25px;}
+.sb-group-hdr{transition:background 0.1s;}
+.sb-group-label{font-size:10px;font-weight:700;color:var(--c-text2);text-transform:uppercase;letter-spacing:0.8px;}
+.sb-group-icon{font-size:13px;flex-shrink:0;opacity:0.7;width:16px;text-align:center;}
+
+/* ── TABLE ENHANCEMENTS ── */
+.tbl tr{transition:background 0.1s;}
+.tbl td{border-bottom:1px solid var(--c-tbl-border);position:relative;}
+.tbl tr:hover td{background:var(--bg-tbl-hover);}
+.tbl tr:hover td:first-child::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--c-link);border-radius:0 2px 2px 0;}
+.tbl th{background:var(--bg-tbl-th);color:#fff;padding:7px 10px;text-align:left;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:0.6px;}
+
+/* ── SBOX ENHANCEMENTS ── */
+.sbox{border:1px solid var(--c-border);margin-bottom:12px;background:var(--bg-sbox);border-radius:8px;overflow:hidden;transition:box-shadow 0.2s;}
+.sbox:hover{box-shadow:0 2px 12px rgba(1,4,9,0.08);}
+body.gh-dark .sbox:hover{box-shadow:0 2px 12px rgba(1,4,9,0.3);}
+.stitle{background:var(--bg-stitle);border-bottom:1px solid var(--c-border);padding:7px 12px;font-weight:600;font-size:12px;color:var(--c-stitle-text);}
+
+/* ── BUTTON ENHANCEMENTS ── */
+.win98-btn,.btn{transition:background 0.1s,transform 0.1s,box-shadow 0.1s;border-radius:6px;}
+.btn.primary{background:var(--c-link);color:#fff;border-color:var(--c-link);}
+.btn.primary:hover{opacity:0.9;}
+.win98-btn:active,.btn:active{transform:scale(0.97);}
+
+/* ── PAGE TITLE ── */
+.ptitle{background:var(--c-ptitle-bg);color:var(--c-ptitle-text);padding:8px 14px;font-weight:700;font-size:13px;margin-bottom:12px;border-radius:8px;display:flex;align-items:center;gap:8px;letter-spacing:0.2px;}
+
+/* ── COMMAND PALETTE ── */
+#cmdPalette{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(1,4,9,0.6);z-index:9998;align-items:flex-start;justify-content:center;padding-top:120px;backdrop-filter:blur(4px);}
+#cmdPalette.show{display:flex;}
+#cmdPaletteBox{background:var(--bg-dialog);border:1px solid var(--c-border);border-radius:12px;width:560px;max-width:90vw;box-shadow:0 24px 64px rgba(1,4,9,0.5);overflow:hidden;}
+#cmdInput{width:100%;height:48px;background:transparent;border:none;border-bottom:1px solid var(--c-border);padding:0 16px;font-size:15px;font-family:inherit;outline:none;color:var(--c-text);}
+#cmdResults{max-height:360px;overflow-y:auto;}
+.cmd-item{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;border-bottom:1px solid var(--c-border);}
+.cmd-item:hover,.cmd-item.cmd-selected{background:var(--bg-sb-active);}
+.cmd-item:last-child{border-bottom:none;}
+.cmd-icon{font-size:16px;width:24px;text-align:center;flex-shrink:0;}
+.cmd-label{font-size:13px;font-weight:500;color:var(--c-text);}
+.cmd-desc{font-size:11px;color:var(--c-text2);margin-left:auto;}
+.cmd-category{padding:6px 16px;font-size:10px;font-weight:700;color:var(--c-text2);text-transform:uppercase;letter-spacing:0.8px;background:var(--bg-topinfo);border-bottom:1px solid var(--c-border);}
+
+/* ── ONLINE PRESENCE STRIP ── */
+#onlineStrip{display:flex;align-items:center;gap:4px;padding:0 8px;height:100%;}
+.online-avatar{width:26px;height:26px;border-radius:50%;border:2px solid #3fb950;cursor:default;position:relative;overflow:hidden;}
+.online-avatar img{width:100%;height:100%;object-fit:cover;display:block;}
+.online-avatar .online-initial{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;}
+
+/* ── MOBILE RESPONSIVE ── */
+@media(max-width:768px){
+  .sidebar{position:fixed;left:0;top:0;bottom:0;z-index:900;transform:translateX(-100%);transition:transform 0.25s ease;box-shadow:4px 0 24px rgba(1,4,9,0.3);}
+  .sidebar.mobile-open{transform:translateX(0);}
+  .content{padding:12px 8px;}
+  #mobile-toggle{display:flex;}
+  .topbar{padding:0 10px;}
+  .menubar{display:none;}
+  .topinfo{font-size:10px;padding:4px 10px;overflow-x:auto;white-space:nowrap;}
+  .main{flex-direction:column;}
+  .tbl{font-size:11px;}
+  .tbl td,.tbl th{padding:5px 7px;}
+  .stat-card{min-width:80px;}
+  .dialog,.susp-popup{width:95vw;}
+  #cmdPaletteBox{width:95vw;}
+}
+#mobile-toggle{display:none;background:none;border:none;color:var(--c-topbar-text);font-size:20px;cursor:pointer;padding:0 8px;align-items:center;}
+#mobile-overlay{display:none;position:fixed;inset:0;z-index:899;background:rgba(1,4,9,0.5);}
+#mobile-overlay.show{display:block;}
+
+/* ── SPARKLINE CANVAS ── */
+.sparkline{display:block;margin-top:6px;}
+
+/* ── STAT CARD ENHANCED ── */
+.stat-card{border-radius:10px;transition:border-color 0.2s,transform 0.15s,box-shadow 0.15s;}
+.stat-card:hover{border-color:var(--c-link);transform:translateY(-1px);box-shadow:0 4px 16px rgba(9,105,218,0.15);}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--c-border);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:var(--c-text2);}
+
+/* ── PINNED NOTES ── */
+.pinned-note{background:rgba(227,179,65,0.1);border:1px solid rgba(227,179,65,0.3);border-radius:6px;padding:8px 10px;margin-bottom:6px;position:relative;}
+.pinned-note .pn-author{font-size:10px;color:var(--c-text2);margin-top:4px;}
+.pinned-note .pn-del{position:absolute;top:6px;right:6px;background:none;border:none;color:var(--c-text2);cursor:pointer;font-size:14px;line-height:1;padding:0;}
+.pinned-note .pn-del:hover{color:var(--c-ban);}
 </style>
 </head>
 <body>
@@ -251,7 +366,7 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
       <div style="font-size:28px;font-weight:900;color:var(--c-link);letter-spacing:-1px;text-shadow:0 0 40px rgba(88,166,255,0.4);">SAMARITAN</div>
       <div style="font-size:12px;color:var(--c-text2);letter-spacing:3px;text-transform:uppercase;margin-top:2px;">Internal Administration</div>
     </div>
-    <div class="login-popup">
+    <div class="login-popup login-glass">
       <div class="titlebar">
         <div class="titlebar-title">Sign In</div>
       </div>
@@ -269,6 +384,15 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
   </div>
 </div>
 
+<!-- COMMAND PALETTE -->
+<div id="cmdPalette">
+  <div id="cmdPaletteBox">
+    <input type="text" id="cmdInput" placeholder="Type a command or search… (e.g. 'go home', 'moderate vazuvin', 'suspend staff')" autocomplete="off"/>
+    <div id="cmdResults"></div>
+  </div>
+</div>
+<!-- MOBILE SIDEBAR OVERLAY -->
+<div id="mobile-overlay" onclick="closeMobileSidebar()"></div>
 <!-- SUSPENSION/TERMINATION POPUP -->
 <div class="overlay" id="suspOverlay">
   <div class="susp-popup">
@@ -395,7 +519,7 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
         <div class="sb-group" id="sbg-users">
           <div class="sb-group-hdr" onclick="toggleSbGroup('sbg-users')">
             <span class="sb-plusminus" id="pm-sbg-users">&#9660;</span>
-            <span class="sb-group-label">People</span>
+            <span class="sb-group-icon">&#128100;</span><span class="sb-group-label">People</span>
           </div>
           <div class="sb-group-body" id="body-sbg-users">
             <span class="sb-link" id="nav-useradmin">User Admin</span>
@@ -408,7 +532,7 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
         <div class="sb-group" id="sbg-content" style="display:none;">
           <div class="sb-group-hdr" onclick="toggleSbGroup('sbg-content')">
             <span class="sb-plusminus" id="pm-sbg-content">&#9660;</span>
-            <span class="sb-group-label">Moderation</span>
+            <span class="sb-group-icon">&#9878;</span><span class="sb-group-label">Moderation</span>
           </div>
           <div class="sb-group-body" id="body-sbg-content">
             <span class="sb-link" id="nav-reputation">Reputation</span>
@@ -421,7 +545,7 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
         <div class="sb-group" id="sbg-staff" style="display:none;">
           <div class="sb-group-hdr" onclick="toggleSbGroup('sbg-staff')">
             <span class="sb-plusminus" id="pm-sbg-staff">&#9660;</span>
-            <span class="sb-group-label">Staff</span>
+            <span class="sb-group-icon">&#128101;</span><span class="sb-group-label">Staff</span>
           </div>
           <div class="sb-group-body" id="body-sbg-staff">
             <span class="sb-link" id="nav-staff">Staff Registry</span>
@@ -435,7 +559,7 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
         <div class="sb-group" id="sbg-logs" style="display:none;">
           <div class="sb-group-hdr" onclick="toggleSbGroup('sbg-logs')">
             <span class="sb-plusminus" id="pm-sbg-logs">&#9660;</span>
-            <span class="sb-group-label">Logs</span>
+            <span class="sb-group-icon">&#128196;</span><span class="sb-group-label">Logs</span>
           </div>
           <div class="sb-group-body" id="body-sbg-logs">
             <span class="sb-link" id="nav-modlog">Moderation</span>
@@ -448,7 +572,7 @@ select{height:28px;border:1px solid var(--c-border-input);background:var(--bg-in
         <div class="sb-group" id="sbg-config" style="display:none;">
           <div class="sb-group-hdr" onclick="toggleSbGroup('sbg-config')">
             <span class="sb-plusminus" id="pm-sbg-config">&#9660;</span>
-            <span class="sb-group-label">Configuration</span>
+            <span class="sb-group-icon">&#9881;</span><span class="sb-group-label">Configuration</span>
           </div>
           <div class="sb-group-body" id="body-sbg-config">
             <span class="sb-link" id="nav-userconfig">User Config</span>
@@ -896,6 +1020,358 @@ function collectSessionData(){
     userAgent:ua.substring(0,200),
   };
 }
+
+
+// ══════════════════════════════════════════════════════
+// COMMAND PALETTE
+// ══════════════════════════════════════════════════════
+var cmdSelectedIdx = 0;
+var cmdCurrentItems = [];
+
+function openCmdPalette(){
+  var pal = document.getElementById('cmdPalette');
+  var inp = document.getElementById('cmdInput');
+  if(!pal || !inp) return;
+  pal.classList.add('show');
+  inp.value = '';
+  renderCmdResults('');
+  inp.focus();
+}
+function closeCmdPalette(){
+  var pal = document.getElementById('cmdPalette');
+  if(pal) pal.classList.remove('show');
+}
+window.openCmdPalette = openCmdPalette;
+window.closeCmdPalette = closeCmdPalette;
+
+function buildCmdItems(q){
+  var items = [];
+  var ql = q.toLowerCase().trim();
+  // Navigation items
+  var navItems = [
+    {icon:'🏠', label:'Dashboard', desc:'Home', action:function(){nav('home');}},
+    {icon:'👤', label:'User Admin', desc:'Look up a player', action:function(){nav('useradmin');}},
+    {icon:'⚖️', label:'Moderate User', desc:'Apply mod action', action:function(){nav('moderate');}},
+    {icon:'📋', label:'All Accounts', desc:'View all players', action:function(){nav('accounts');}},
+    {icon:'🛡', label:'Staff Registry', desc:'View staff', action:function(){nav('staff');}},
+    {icon:'📊', label:'Staff Activity', desc:'Who is online', action:function(){nav('activity');}},
+    {icon:'📝', label:'Moderation Log', desc:'All mod actions', action:function(){nav('modlog');}},
+    {icon:'⚖️', label:'Appeals', desc:'Review appeals', action:function(){nav('appeals');}},
+    {icon:'⭐', label:'Reputation', desc:'Player rep scores', action:function(){nav('reputation');}},
+    {icon:'📬', label:'Staff Messages', desc:'Messaging', action:function(){nav('messaging');}},
+    {icon:'🔔', label:'Site Alerts', desc:'Manage alerts', action:function(){nav('alerts');}},
+    {icon:'ℹ️', label:'Information', desc:'Panel reference', action:function(){nav('information');}},
+  ];
+  navItems.forEach(function(it){
+    if(!ql || it.label.toLowerCase().includes(ql) || it.desc.toLowerCase().includes(ql)){
+      items.push({category:'Navigation', icon:it.icon, label:it.label, desc:it.desc, action:it.action});
+    }
+  });
+  // Player search
+  if(ql.length >= 2){
+    var matchUsers = Object.entries(USERS).filter(function(e){ return (e[1].username||'').toLowerCase().includes(ql); }).slice(0,5);
+    matchUsers.forEach(function(e){
+      var uid=e[0], u=e[1];
+      items.push({category:'Players', icon:'👤', label:u.username, desc:statusBadge(u.status)+' — Player #'+(u.playerId||'?'), action:function(){ currentUserId=uid; nav('useradmin'); }});
+    });
+    // Staff search
+    var matchStaff = Object.entries(STAFF).filter(function(e){ return (e[1].username||'').toLowerCase().includes(ql); }).slice(0,3);
+    matchStaff.forEach(function(e){
+      var sid=e[0], s=e[1];
+      items.push({category:'Staff', icon:'🛡', label:s.username, desc:s.level||'—', action:function(){ currentStaffId=sid; nav('staff'); }});
+    });
+  }
+  // Actions
+  if(!ql || 'dark mode'.includes(ql) || 'light mode'.includes(ql) || 'theme'.includes(ql)){
+    items.push({category:'Actions', icon:'🌙', label:'Toggle Dark/Light Mode', desc:'Switch theme', action:function(){ document.getElementById('nightModeBtn') && document.getElementById('nightModeBtn').click(); closeCmdPalette(); }});
+  }
+  if(!ql || 'logout'.includes(ql) || 'sign out'.includes(ql)){
+    items.push({category:'Actions', icon:'🚪', label:'Log Out', desc:'Sign out of panel', action:function(){ doLogout(); closeCmdPalette(); }});
+  }
+  return items;
+}
+
+function renderCmdResults(q){
+  var res = document.getElementById('cmdResults');
+  if(!res) return;
+  var items = buildCmdItems(q);
+  cmdCurrentItems = items;
+  cmdSelectedIdx = 0;
+  if(items.length === 0){
+    res.innerHTML = '<div style="padding:20px;text-align:center;color:var(--c-text2);font-size:12px;">No results for "'+q+'"</div>';
+    return;
+  }
+  var lastCat = '';
+  var html = '';
+  items.forEach(function(it, i){
+    if(it.category !== lastCat){
+      html += '<div class="cmd-category">'+it.category+'</div>';
+      lastCat = it.category;
+    }
+    html += '<div class="cmd-item'+(i===0?' cmd-selected':'')+'" data-idx="'+i+'">'
+      +'<span class="cmd-icon">'+it.icon+'</span>'
+      +'<span class="cmd-label">'+it.label+'</span>'
+      +'<span class="cmd-desc">'+it.desc+'</span>'
+      +'</div>';
+  });
+  res.innerHTML = html;
+  res.querySelectorAll('.cmd-item').forEach(function(el){
+    el.onclick = function(){
+      var idx = parseInt(el.dataset.idx);
+      if(cmdCurrentItems[idx]) { cmdCurrentItems[idx].action(); closeCmdPalette(); }
+    };
+  });
+}
+
+document.addEventListener('keydown', function(e){
+  var pal = document.getElementById('cmdPalette');
+  if(!pal || !pal.classList.contains('show')) return;
+  if(e.key === 'Escape'){ closeCmdPalette(); e.preventDefault(); return; }
+  if(e.key === 'ArrowDown'){ cmdSelectedIdx = Math.min(cmdSelectedIdx+1, cmdCurrentItems.length-1); updateCmdSelection(); e.preventDefault(); return; }
+  if(e.key === 'ArrowUp'){ cmdSelectedIdx = Math.max(cmdSelectedIdx-1, 0); updateCmdSelection(); e.preventDefault(); return; }
+  if(e.key === 'Enter'){ if(cmdCurrentItems[cmdSelectedIdx]){ cmdCurrentItems[cmdSelectedIdx].action(); closeCmdPalette(); } e.preventDefault(); return; }
+});
+
+function updateCmdSelection(){
+  document.querySelectorAll('.cmd-item').forEach(function(el, i){ el.classList.toggle('cmd-selected', i===cmdSelectedIdx); });
+  var sel = document.querySelector('.cmd-item.cmd-selected');
+  if(sel) sel.scrollIntoView({block:'nearest'});
+}
+
+var cmdInp = document.getElementById('cmdInput');
+if(cmdInp) cmdInp.addEventListener('input', function(){ renderCmdResults(this.value); });
+document.getElementById('cmdPalette').addEventListener('click', function(e){ if(e.target===this) closeCmdPalette(); });
+
+// Override Ctrl+K to open command palette instead of search
+document.addEventListener('keydown', function(e){
+  if(!ME) return;
+  if((e.ctrlKey && e.key==='k') || (e.key==='/' && document.activeElement.tagName!=='INPUT' && document.activeElement.tagName!=='TEXTAREA')){
+    e.preventDefault();
+    openCmdPalette();
+  }
+}, true);
+
+// ══════════════════════════════════════════════════════
+// ONLINE PRESENCE STRIP
+// ══════════════════════════════════════════════════════
+function updateOnlineStrip(){
+  var strip = document.getElementById('onlineStrip');
+  if(!strip) return;
+  var online = Object.values(STAFF).filter(function(s){
+    if(!s.lastActive || s.lastActive==='Never') return false;
+    return (new Date() - new Date(s.lastActive)) < 300000;
+  });
+  if(online.length === 0){ strip.innerHTML = ''; return; }
+  var html = '<span style="font-size:10px;color:var(--c-topbar-sub);margin-right:4px;">Online:</span>';
+  online.slice(0,8).forEach(function(s){
+    var letter = (s.username||'?').charAt(0).toUpperCase();
+    var colors = ['#1158a8','#0969da','#1a7f37','#9a6700','#8250df','#cf222e','#0550ae'];
+    var bg = colors[(s.username||'?').charCodeAt(0) % colors.length];
+    html += '<div class="online-avatar" title="'+s.username+' ('+s.level+')" style="background:'+bg+';">'
+      + (s.avatarUrl ? '<img src="'+s.avatarUrl+'">' : '<div class="online-initial">'+letter+'</div>')
+      + '</div>';
+  });
+  if(online.length > 8) html += '<span style="font-size:10px;color:var(--c-topbar-sub);margin-left:2px;">+' + (online.length-8) + '</span>';
+  strip.innerHTML = html;
+}
+window.updateOnlineStrip = updateOnlineStrip;
+
+// ══════════════════════════════════════════════════════
+// MOBILE SIDEBAR
+// ══════════════════════════════════════════════════════
+function toggleMobileSidebar(){
+  var sb = document.querySelector('.sidebar');
+  var ov = document.getElementById('mobile-overlay');
+  if(!sb) return;
+  var isOpen = sb.classList.contains('mobile-open');
+  sb.classList.toggle('mobile-open', !isOpen);
+  if(ov) ov.classList.toggle('show', !isOpen);
+}
+function closeMobileSidebar(){
+  var sb = document.querySelector('.sidebar');
+  var ov = document.getElementById('mobile-overlay');
+  if(sb) sb.classList.remove('mobile-open');
+  if(ov) ov.classList.remove('show');
+}
+window.toggleMobileSidebar = toggleMobileSidebar;
+window.closeMobileSidebar = closeMobileSidebar;
+
+// Close sidebar when nav item clicked on mobile
+document.querySelectorAll('.sb-link').forEach(function(el){
+  el.addEventListener('click', function(){ if(window.innerWidth <= 768) closeMobileSidebar(); });
+});
+
+// ══════════════════════════════════════════════════════
+// DARK MODE SYNCED TO FIREBASE (per user)
+// ══════════════════════════════════════════════════════
+async function saveThemeToFirebase(isDark){
+  if(!ME || !db) return;
+  try{ await update(ref(db,'staff/'+ME),{theme:isDark?'dark':'light'}); }catch(e){}
+}
+async function loadThemeFromFirebase(){
+  if(!ME || !db) return;
+  try{
+    var snap = await get(ref(db,'staff/'+ME+'/theme'));
+    if(snap.exists()){
+      var t = snap.val();
+      var isDark = t === 'dark';
+      document.body.classList.toggle('gh-dark', isDark);
+      var btn = document.getElementById('nightModeBtn');
+      if(btn) btn.textContent = isDark ? '☀' : '☾';
+    }
+  }catch(e){}
+}
+window.saveThemeToFirebase = saveThemeToFirebase;
+window.loadThemeFromFirebase = loadThemeFromFirebase;
+
+// ══════════════════════════════════════════════════════
+// SPARKLINE HELPER
+// ══════════════════════════════════════════════════════
+function drawSparkline(canvasId, data, color){
+  var canvas = document.getElementById(canvasId);
+  if(!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+  if(!data || data.length < 2) return;
+  var max = Math.max.apply(null, data) || 1;
+  var step = w / (data.length - 1);
+  ctx.beginPath();
+  ctx.strokeStyle = color || '#58a6ff';
+  ctx.lineWidth = 1.5;
+  ctx.lineJoin = 'round';
+  data.forEach(function(val, i){
+    var x = i * step;
+    var y = h - (val / max) * (h - 2) - 1;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  // Fill under line
+  ctx.lineTo((data.length-1)*step, h);
+  ctx.lineTo(0, h);
+  ctx.closePath();
+  ctx.fillStyle = (color||'#58a6ff').replace(')',',0.12)').replace('rgb','rgba').replace('#58a6ff','rgba(88,166,255,0.12)');
+  ctx.fill();
+}
+window.drawSparkline = drawSparkline;
+
+function getSparkData(days){
+  // Returns array of daily action counts for last N days from MOD_LOG
+  var result = [];
+  var now = new Date();
+  for(var i=days-1; i>=0; i--){
+    var d = new Date(now);
+    d.setDate(d.getDate() - i);
+    var dateStr = d.toISOString().substring(0,10);
+    var count = Object.values(MOD_LOG).filter(function(r){ return r.date && r.date.substring(0,10)===dateStr; }).length;
+    result.push(count);
+  }
+  return result;
+}
+function getLoginSparkData(days){
+  var result = [];
+  var now = new Date();
+  for(var i=days-1; i>=0; i--){
+    var d = new Date(now);
+    d.setDate(d.getDate() - i);
+    var dateStr = d.toISOString().substring(0,10);
+    var count = Object.values(LOGIN_LOG).filter(function(r){ return r.date && r.date.substring(0,10)===dateStr && r.result==='success'; }).length;
+    result.push(count);
+  }
+  return result;
+}
+window.getSparkData = getSparkData;
+window.getLoginSparkData = getLoginSparkData;
+
+// ══════════════════════════════════════════════════════
+// PINNED NOTES (stored in Firebase)
+// ══════════════════════════════════════════════════════
+var PINNED_NOTES = {};
+function renderPinnedNotes(container){
+  var notesArr = Object.entries(PINNED_NOTES).sort(function(a,b){ return b[1].ts-a[1].ts; });
+  var html = notesArr.length === 0
+    ? '<div style="font-size:11px;color:var(--c-text2);padding:4px 0;">No pinned notes. Add one below.</div>'
+    : notesArr.map(function(e){
+        var nid=e[0], n=e[1];
+        return '<div class="pinned-note">'
+          +'<div style="font-size:12px;color:var(--c-text);">'+n.text+'</div>'
+          +'<div class="pn-author">Pinned by '+n.by+' &bull; '+n.date+'</div>'
+          +(isSuperAdmin()||n.by===ME?'<button class="pn-del" data-nid="'+nid+'">&#10005;</button>':'')
+          +'</div>';
+      }).join('');
+  container.innerHTML = html;
+  container.querySelectorAll('.pn-del').forEach(function(btn){
+    btn.onclick = async function(){
+      await remove(ref(db,'pinnedNotes/'+btn.dataset.nid));
+      delete PINNED_NOTES[btn.dataset.nid];
+      renderPinnedNotes(container);
+    };
+  });
+}
+window.renderPinnedNotes = renderPinnedNotes;
+
+// ══════════════════════════════════════════════════════
+// PUNISHMENT EXPIRY COUNTDOWN
+// ══════════════════════════════════════════════════════
+function formatExpiry(ms){
+  if(ms <= 0) return 'Expired';
+  var s=Math.floor(ms/1000), m=Math.floor(s/60), h=Math.floor(m/60), d=Math.floor(h/24);
+  if(d > 0) return d+'d '+( h%24)+'h remaining';
+  if(h > 0) return h+'h '+(m%60)+'m remaining';
+  if(m > 0) return m+'m '+(s%60)+'s remaining';
+  return s+'s remaining';
+}
+window.formatExpiry = formatExpiry;
+
+function startExpiryCountdowns(){
+  if(window._expiryTimer) clearInterval(window._expiryTimer);
+  window._expiryTimer = setInterval(function(){
+    document.querySelectorAll('[data-expiry]').forEach(function(el){
+      var exp = parseInt(el.dataset.expiry);
+      if(!exp) return;
+      var rem = exp - Date.now();
+      el.textContent = formatExpiry(rem);
+      el.style.color = rem < 3600000 ? 'var(--c-ban)' : rem < 86400000 ? 'var(--c-sus)' : 'var(--c-ok)';
+    });
+  }, 1000);
+}
+window.startExpiryCountdowns = startExpiryCountdowns;
+
+// ══════════════════════════════════════════════════════
+// LIVE ACTIVITY FEED
+// ══════════════════════════════════════════════════════
+var activityFeed = [];
+function pushActivityFeed(icon, msg){
+  activityFeed.unshift({icon:icon, msg:msg, time:Date.now()});
+  if(activityFeed.length > 20) activityFeed.length = 20;
+  var feed = document.getElementById('live-activity-feed');
+  if(feed) renderActivityFeed(feed);
+}
+function renderActivityFeed(container){
+  if(!container) return;
+  if(activityFeed.length === 0){
+    container.innerHTML = '<div style="font-size:11px;color:var(--c-text2);text-align:center;padding:12px;">No recent activity.</div>';
+    return;
+  }
+  container.innerHTML = activityFeed.map(function(e){
+    var ago = Math.floor((Date.now()-e.time)/1000);
+    var agoStr = ago < 60 ? ago+'s ago' : Math.floor(ago/60)+'m ago';
+    return '<div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--c-border);">'
+      +'<span style="font-size:14px;flex-shrink:0;">'+e.icon+'</span>'
+      +'<span style="font-size:11px;color:var(--c-text);flex:1;line-height:1.4;">'+e.msg+'</span>'
+      +'<span style="font-size:10px;color:var(--c-text2);white-space:nowrap;">'+agoStr+'</span>'
+      +'</div>';
+  }).join('');
+}
+window.pushActivityFeed = pushActivityFeed;
+window.renderActivityFeed = renderActivityFeed;
+
+// ══════════════════════════════════════════════════════
+// FIX THREAT DETECTION ACK (use stable IDs based on content not index)
+// ══════════════════════════════════════════════════════
+window.getAckKey = function(){ return 'ackThreats2_'+(ME||''); };
+window.loadAcked = function(){ try{ return JSON.parse(localStorage.getItem(window.getAckKey())||'[]'); }catch(e){ return []; } };
+window.saveAcked = function(arr){ try{ localStorage.setItem(window.getAckKey(), JSON.stringify(arr)); }catch(e){} };
 
 // ── TOAST NOTIFICATIONS ──
 function showToast(message, type='info', duration=3000){
@@ -1409,7 +1885,16 @@ function nav(p){
   document.querySelectorAll('.sb-link').forEach(l=>l.classList.remove('active'));
   const el=document.getElementById('nav-'+p);
   if(el) el.classList.add('active');
-  render();
+  const c=document.getElementById('content');
+  if(c){
+    c.classList.add('page-fade-out');
+    setTimeout(()=>{
+      render();
+      c.classList.remove('page-fade-out');
+      c.classList.add('page-fade-in');
+      setTimeout(()=>c.classList.remove('page-fade-in'),150);
+    },100);
+  } else { render(); }
 }
 window.nav=nav;
 
@@ -2025,6 +2510,7 @@ function renderHome(c){
       <div class="sc-label">Mod Actions</div>
       <div class="sc-val" id="sc-modcount" data-target="${Object.keys(MOD_LOG).length}">0</div>
       <div class="sc-sub">Total logged</div>
+      <canvas id="spark-modlog" class="sparkline" width="120" height="24"></canvas>
       ${canDo('canViewModLog')?`<div style="margin-top:8px;"><button class="btn small" onclick="nav('modlog')">Mod Log →</button></div>`:''}
     </div>
   </div>
@@ -2101,7 +2587,19 @@ function renderHome(c){
         ${canDo('canViewAppealLog')?`<button class="btn small" onclick="nav('appeals')">&#9658; Appeal Log</button>`:''}
         <hr style="border:none;border-top:1px solid var(--c-border);margin:2px 0;">
         <button class="btn small" onclick="openUpdateLog()">&#9998; Update Log</button>
+        <button class="btn small" onclick="openCmdPalette()">&#9654; Command Palette <span style="font-size:9px;opacity:0.6;">(Ctrl+K)</span></button>
       </div></div>
+      <div class="sbox"><div class="stitle">&#9889; Live Activity</div><div class="sbody" style="padding:8px 12px;max-height:180px;overflow-y:auto;" id="live-activity-feed">
+        <div style="font-size:11px;color:var(--c-text2);text-align:center;padding:12px;">Loading…</div>
+      </div></div>
+      ${isSuperAdmin()||canDo('canManageStaff')?`
+      <div class="sbox"><div class="stitle">&#128204; Pinned Notes</div><div class="sbody">
+        <div id="pinned-notes-list" style="margin-bottom:8px;"></div>
+        <div style="display:flex;gap:5px;">
+          <input type="text" id="pinned-note-input" style="flex:1;" placeholder="Add a note for all senior staff…" maxlength="200"/>
+          <button class="btn small" id="btn-add-pin">Pin</button>
+        </div>
+      </div></div>`:''}
       <div class="sbox"><div class="stitle">Keyboard Shortcuts</div><div class="sbody">
         <div style="font-size:10px;color:var(--c-text2);line-height:2;">
           <div><span class="kbd">Ctrl+K</span> or <span class="kbd">/</span> — Global search</div>
@@ -2126,6 +2624,28 @@ function renderHome(c){
       if(current>=target) clearInterval(timer);
     },30);
   });
+  // Draw sparklines after short delay for canvas to be available
+  setTimeout(()=>{
+    const sparkData=getSparkData(7);
+    const loginData=getLoginSparkData(7);
+    drawSparkline('spark-modlog', sparkData, '#58a6ff');
+    drawSparkline('spark-logins', loginData, '#3fb950');
+    drawSparkline('spark-risk', getSparkData(7).map(()=>0), '#d29922');
+  }, 200);
+  // Wire pinned notes
+  const notesList=document.getElementById('pinned-notes-list');
+  if(notesList) renderPinnedNotes(notesList);
+  const pinBtn=document.getElementById('btn-add-pin');
+  if(pinBtn) pinBtn.onclick=async()=>{
+    const inp=document.getElementById('pinned-note-input');
+    const text=inp?inp.value.trim():'';
+    if(!text) return;
+    await push(ref(db,'pinnedNotes'),{text,by:ME,date:nowStr(),ts:Date.now()});
+    if(inp) inp.value='';
+  };
+  // Wire activity feed
+  const feed=document.getElementById('live-activity-feed');
+  if(feed) renderActivityFeed(feed);
 }
 
 // ── USER ADMIN ──
@@ -3180,7 +3700,7 @@ function renderTerminateLog(c){
 
 function renderLoginLog(c){
   const entries=Object.entries(LOGIN_LOG).sort((a,b)=>a[1].date>b[1].date?-1:1).slice(0,500);
-  const acknowledged=JSON.parse(localStorage.getItem('ackThreats_'+ME)||'[]');
+  var acknowledged=window.loadAcked();
 
   // ── THREAT ANALYSIS ──
   const now=Date.now();
@@ -3205,9 +3725,9 @@ function renderLoginLog(c){
     if(r.result!=='success') failMap[r.username].push(r);
   });
 
-  var threatId=0;
   function mkThreat(level, msg, detailFn){
-    var id='t'+(threatId++);
+    // Stable ID based on message content so ack persists across page reloads
+    var id='t_'+level+'_'+msg.replace(/<[^>]*>/g,'').replace(/[^a-z0-9]/gi,'_').substring(0,40);
     var ack=acknowledged.indexOf(id)!==-1;
     return {id:id, level:level, msg:msg, detailFn:detailFn, ack:ack};
   }
@@ -3322,17 +3842,17 @@ function renderLoginLog(c){
     btn.onclick=function(){
       var id=btn.dataset.tid;
       if(acknowledged.indexOf(id)===-1) acknowledged.push(id);
-      try{ localStorage.setItem('ackThreats_'+ME,JSON.stringify(acknowledged)); }catch(ex){}
+      window.saveAcked(acknowledged);
       nav('loginlog');
     };
   });
   document.getElementById('btn-ack-all-threats').onclick=function(){
     threats.forEach(function(t){ if(acknowledged.indexOf(t.id)===-1) acknowledged.push(t.id); });
-    try{ localStorage.setItem('ackThreats_'+ME,JSON.stringify(acknowledged)); }catch(ex){}
+    window.saveAcked(acknowledged);
     nav('loginlog');
   };
   document.getElementById('btn-clear-threats').onclick=function(){
-    try{ localStorage.removeItem('ackThreats_'+ME); }catch(ex){}
+    try{ localStorage.removeItem(window.getAckKey()); }catch(ex){}
     nav('loginlog');
   };
 
@@ -5030,6 +5550,12 @@ async function doLogin(){
       }
     }
     nav('home');
+    // Load theme from Firebase
+    await loadThemeFromFirebase();
+    // Start punishment expiry countdowns
+    startExpiryCountdowns();
+    // Push login to activity feed
+    pushActivityFeed('🟢', ME + ' logged in');
   }catch(e){ 
     status.textContent='INVALID!'; 
     const sd=collectSessionData();
@@ -5237,6 +5763,24 @@ function startListeners(){
   onValue(ref(db,'suggestions'),snap=>{ SUGGESTIONS=snap.val()||{}; if(page==='suggestions') safeRender(); });
   onValue(ref(db,'wipelog'),snap=>{ WIPE_LOG=snap.val()||{}; if(page==='wipelog') safeRender(); });
   onValue(ref(db,'statusLog'),snap=>{ STATUS_LOG=snap.val()||{}; if(page==='statuslog') safeRender(); });
+  onValue(ref(db,'pinnedNotes'),snap=>{ PINNED_NOTES=snap.val()||{}; if(page==='home') safeRender(); });
+  // Update online strip every 30s
+  updateOnlineStrip();
+  setInterval(updateOnlineStrip, 30000);
+  // Push Firebase events to activity feed
+  onValue(ref(db,'logs/moderation'),function(snap){
+    if(!snap.exists()) return;
+    var entries=Object.values(snap.val()||{});
+    var latest=entries[entries.length-1];
+    if(latest&&latest.mod&&latest.mod!==ME) pushActivityFeed('⚖️', latest.mod+' applied "'+latest.action+'" to '+latest.user);
+  });
+  onValue(ref(db,'logs/login'),function(snap){
+    if(!snap.exists()) return;
+    var entries=Object.values(snap.val()||{});
+    var latest=entries[entries.length-1];
+    if(latest&&latest.username&&latest.username!==ME&&latest.result==='success') pushActivityFeed('🟢', latest.username+' logged in');
+    if(latest&&latest.result==='failed') pushActivityFeed('🔴', 'Failed login attempt for "'+latest.username+'"');
+  });
   onValue(ref(db,'meta/siteStatus'),snap=>{
     if(snap.exists()){
       const prev=(SITE_STATUS&&SITE_STATUS.status)||'OK';
@@ -6241,6 +6785,7 @@ function applyTheme(){
     btn.textContent = darkMode ? '☀' : '☽';
   }
   try { localStorage.setItem('ghTheme', darkMode ? 'dark' : 'light'); } catch(e){}
+  if(ME) saveThemeToFirebase(darkMode);
   if(typeof updateAnnouncements==='function') setTimeout(updateAnnouncements,10);
 }
 applyTheme();
