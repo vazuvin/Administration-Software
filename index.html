@@ -1007,45 +1007,62 @@ function loadNotifPrefs(){
 
 function avatarHTML(u, size){
   const sz=size||60;
-  const initials=(u&&u.username)?u.username.substring(0,2).toUpperCase():'??';
   const fs=Math.max(8,Math.floor(sz/4));
   if(u&&u.avatarUrl&&u.avatarUrl.length>0){
-    return '<div class="ta-img-wrap" style="width:'+sz+'px;height:'+sz+'px;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;position:relative;border-radius:4px;">'
-      +'<img src="'+u.avatarUrl+'" width="'+sz+'" height="'+sz+'" class="ta-img" style="display:block;object-fit:cover;">'
-      +'<span class="ta-fb" style="display:none;font-size:'+fs+'px;color:var(--c-text2);font-weight:bold;position:absolute;inset:0;align-items:center;justify-content:center;">'+initials+'</span>'
+    return '<div style="width:'+sz+'px;height:'+sz+'px;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;border-radius:4px;background:var(--bg-tbl-odd);">'
+      +'<img src="'+u.avatarUrl+'" width="'+sz+'" height="'+sz+'" style="display:block;object-fit:cover;width:'+sz+'px;height:'+sz+'px;">'
       +'</div>';
   }
-  return '<div style="width:'+sz+'px;height:'+sz+'px;display:inline-flex;align-items:center;justify-content:center;background:var(--bg-tbl-odd);border:1px solid var(--c-border);border-radius:4px;">'
-    +'<span style="font-size:'+fs+'px;color:var(--c-text2);font-weight:bold;">'+initials+'</span>'
+  const letter=(u&&u.username)?u.username.charAt(0).toUpperCase():'?';
+  const colors=['#1158a8','#0969da','#1a7f37','#9a6700','#8250df','#cf222e','#0550ae'];
+  const bg=u&&u.username?colors[u.username.charCodeAt(0)%colors.length]:colors[0];
+  return '<div style="width:'+sz+'px;height:'+sz+'px;display:inline-flex;align-items:center;justify-content:center;background:'+bg+';border-radius:4px;">'
+    +'<span style="font-size:'+fs+'px;color:#ffffff;font-weight:bold;">'+letter+'</span>'
     +'</div>';
 }
 // ── TINY INLINE AVATAR for tables ──
 function tinyAvatar(username, avatarUrl, size){
   const sz = size || 20;
   const name = username || '\u2014';
-  const initials = (name === '\u2014' || name === '?') ? '?' : name.substring(0, 2).toUpperCase();
   const fs = Math.max(7, Math.floor(sz / 3));
-  const circleStyle = 'width:' + sz + 'px;height:' + sz + 'px;border-radius:50%;'
-    + 'background:var(--bg-tbl-odd);border:1px solid var(--c-border);'
-    + 'display:inline-flex;align-items:center;justify-content:center;'
-    + 'font-size:' + fs + 'px;font-weight:700;'
-    + 'color:var(--c-text2);flex-shrink:0;vertical-align:middle;';
-  // Use a wrapper that hides broken images via CSS — no onerror quotes needed
-  let inner;
-  if(avatarUrl){
-    // img hidden on error via the .ta-img-wrap CSS pattern
-    inner = '<span class="ta-img-wrap" style="width:' + sz + 'px;height:' + sz + 'px;border-radius:50%;'
-      + 'flex-shrink:0;vertical-align:middle;display:inline-flex;align-items:center;justify-content:center;'
-      + 'overflow:hidden;position:relative;">'
-      + '<img src="' + avatarUrl + '" width="' + sz + '" height="' + sz + '"'
-      + ' class="ta-img" style="border-radius:50%;object-fit:cover;display:block;">'
-      + '<span class="ta-fb" style="position:absolute;inset:0;display:flex;align-items:center;'
-      + 'justify-content:center;font-size:' + fs + 'px;font-weight:700;color:var(--c-text2);">'
-      + initials + '</span>'
+  const isWiped = name.indexOf('[WIPED') === 0;
+
+  // Wiped account: special grey ghost icon
+  if(isWiped){
+    const inner = '<span style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;'
+      + 'background:#2d333b;border:1px solid #444c56;display:inline-flex;align-items:center;'
+      + 'justify-content:center;flex-shrink:0;vertical-align:middle;font-size:'+fs+'px;color:#6e7681;">'
+      + '&#9760;</span>';
+    return '<span style="display:inline-flex;align-items:center;gap:5px;vertical-align:middle;">'
+      + inner
+      + '<span style="vertical-align:middle;color:var(--c-text2);font-style:italic;">' + name + '</span>'
       + '</span>';
-  } else {
-    inner = '<span style="' + circleStyle + '">' + initials + '</span>';
   }
+
+  // Has avatar URL: show image only, NO initials overlay
+  if(avatarUrl){
+    const inner = '<span style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;'
+      + 'flex-shrink:0;vertical-align:middle;display:inline-flex;align-items:center;justify-content:center;'
+      + 'overflow:hidden;background:var(--bg-tbl-odd);">'
+      + '<img src="' + avatarUrl + '" width="' + sz + '" height="' + sz + '"'
+      + ' style="border-radius:50%;object-fit:cover;display:block;width:'+sz+'px;height:'+sz+'px;">'
+      + '</span>';
+    return '<span style="display:inline-flex;align-items:center;gap:5px;vertical-align:middle;">'
+      + inner
+      + '<span style="vertical-align:middle;">' + name + '</span>'
+      + '</span>';
+  }
+
+  // No avatar: show a clean monogram circle with first letter only (no initials stacking)
+  const letter = (name === '\u2014' || !name) ? '?' : name.charAt(0).toUpperCase();
+  // Pick a consistent color based on first char
+  const colors = ['#1158a8','#0969da','#1a7f37','#9a6700','#8250df','#cf222e','#0550ae'];
+  const colorIdx = name.charCodeAt(0) % colors.length;
+  const bgColor = colors[colorIdx];
+  const inner = '<span style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;'
+    + 'background:'+bgColor+';display:inline-flex;align-items:center;justify-content:center;'
+    + 'flex-shrink:0;vertical-align:middle;font-size:'+fs+'px;font-weight:700;color:#ffffff;">'
+    + letter + '</span>';
   return '<span style="display:inline-flex;align-items:center;gap:5px;vertical-align:middle;">'
     + inner
     + '<span style="vertical-align:middle;">' + name + '</span>'
@@ -3162,84 +3179,145 @@ function renderTerminateLog(c){
 
 function renderLoginLog(c){
   const entries=Object.entries(LOGIN_LOG).sort((a,b)=>a[1].date>b[1].date?-1:1).slice(0,500);
+  const acknowledged=JSON.parse(localStorage.getItem('ackThreats_'+ME)||'[]');
 
   // ── THREAT ANALYSIS ──
   const now=Date.now();
   const threats=[];
   const ipMap={}, userMap={}, failMap={};
-  entries.forEach(([lid,r])=>{
-    const t=new Date(r.date).getTime();
+  entries.forEach(function(e){
+    var lid=e[0], r=e[1];
+    var t=new Date(r.date).getTime();
     if(r.ip&&r.ip!=='—'){
-      if(!ipMap[r.ip]) ipMap[r.ip]={users:new Set(),count:0,fails:0};
+      if(!ipMap[r.ip]) ipMap[r.ip]={users:new Set(),count:0,fails:0,entries:[]};
       ipMap[r.ip].users.add(r.username);
       ipMap[r.ip].count++;
       if(r.result!=='success') ipMap[r.ip].fails++;
+      ipMap[r.ip].entries.push(r);
     }
-    if(!userMap[r.username]) userMap[r.username]={ips:new Set(),countries:new Set(),agents:new Set()};
+    if(!userMap[r.username]) userMap[r.username]={ips:new Set(),countries:new Set(),agents:new Set(),entries:[]};
     if(r.ip&&r.ip!=='—') userMap[r.username].ips.add(r.ip);
     if(r.country) userMap[r.username].countries.add(r.country);
     if(r.browser) userMap[r.username].agents.add(r.browser);
-    if(!failMap[r.username]) failMap[r.username]=0;
-    if(r.result!=='success') failMap[r.username]++;
+    userMap[r.username].entries.push(r);
+    if(!failMap[r.username]) failMap[r.username]=[];
+    if(r.result!=='success') failMap[r.username].push(r);
   });
-  Object.entries(ipMap).forEach(([ip,d])=>{
-    if(d.users.size>1) threats.push({level:'warning',msg:'IP <b>'+ip+'</b> used by '+d.users.size+' different accounts: '+[...d.users].join(', ')});
-    if(d.fails>=3) threats.push({level:'danger',msg:'IP <b>'+ip+'</b> had '+d.fails+' failed login attempts'});
-  });
-  Object.entries(userMap).forEach(([u,d])=>{
-    if(d.ips.size>2) threats.push({level:'warning',msg:'<b>'+u+'</b> logged in from '+d.ips.size+' different IPs'});
-    if(d.countries.size>1) threats.push({level:'danger',msg:'<b>'+u+'</b> logged in from multiple countries: '+[...d.countries].join(', ')});
-    if(d.agents.size>2) threats.push({level:'warning',msg:'<b>'+u+'</b> used '+d.agents.size+' different browsers/devices'});
-  });
-  Object.entries(failMap).forEach(([u,fails])=>{
-    if(fails>=5) threats.push({level:'danger',msg:'<b>'+u+'</b> had '+fails+' failed login attempts — possible brute force'});
-  });
-  const recentFails=entries.filter(([,r])=>r.result!=='success'&&(now-new Date(r.date).getTime())<3600000);
-  if(recentFails.length>=3) threats.push({level:'danger',msg:recentFails.length+' failed login attempts in the last hour'});
 
-  const hasDanger=threats.filter(t=>t.level==='danger').length>0;
-  const threatHTML=threats.length===0
-    ?'<div style="display:flex;align-items:center;gap:8px;padding:8px 0;"><span style="font-size:16px;color:var(--c-ok);">&#10003;</span><span style="font-size:12px;color:var(--c-ok);font-weight:600;">No threats detected. All login activity looks normal.</span></div>'
-    :threats.map(function(t){
-      return '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 10px;margin-bottom:4px;border-radius:5px;background:'+(t.level==='danger'?'rgba(248,81,73,0.1)':'rgba(227,179,65,0.1)')+';border-left:3px solid '+(t.level==='danger'?'var(--c-ban)':'var(--c-sus)')+';">'
-        +'<span style="font-size:13px;flex-shrink:0;">'+(t.level==='danger'?'&#9888;':'&#9432;')+'</span>'
-        +'<span style="font-size:11px;color:var(--c-text);line-height:1.5;">'+t.msg+'</span>'
-        +'</div>';
-    }).join('');
+  var threatId=0;
+  function mkThreat(level, msg, detailFn){
+    var id='t'+(threatId++);
+    var ack=acknowledged.indexOf(id)!==-1;
+    return {id:id, level:level, msg:msg, detailFn:detailFn, ack:ack};
+  }
+  Object.entries(ipMap).forEach(function(e){
+    var ip=e[0], d=e[1];
+    if(d.users.size>1){
+      var users=[...d.users];
+      threats.push(mkThreat('warning','IP <b>'+ip+'</b> used by '+d.users.size+' different accounts: '+users.join(', '), function(){ showIPComparison(ip,d.entries); }));
+    }
+    if(d.fails>=3) threats.push(mkThreat('danger','IP <b>'+ip+'</b> had <b>'+d.fails+'</b> failed login attempts', function(){ showFailedAttempts(ip,d.entries.filter(function(r){return r.result!=='success';})); }));
+  });
+  Object.entries(userMap).forEach(function(e){
+    var u=e[0], d=e[1];
+    if(d.ips.size>2) threats.push(mkThreat('warning','<b>'+u+'</b> logged in from '+d.ips.size+' different IPs', function(){ showUserComparison(u,d.entries); }));
+    if(d.countries.size>1) threats.push(mkThreat('danger','<b>'+u+'</b> logged in from multiple countries: '+[...d.countries].join(', '), function(){ showUserComparison(u,d.entries); }));
+    if(d.agents.size>2) threats.push(mkThreat('warning','<b>'+u+'</b> used '+d.agents.size+' different browsers/devices', function(){ showUserComparison(u,d.entries); }));
+  });
+  Object.entries(failMap).forEach(function(e){
+    var u=e[0], fails=e[1];
+    if(fails.length>=5) threats.push(mkThreat('danger','<b>'+u+'</b> had <b>'+fails.length+'</b> failed login attempts — possible brute force', function(){ showFailedAttempts(null,fails); }));
+  });
+  var recentFails=entries.filter(function(e){ return e[1].result!=='success'&&(now-new Date(e[1].date).getTime())<3600000; });
+  if(recentFails.length>=3) threats.push(mkThreat('danger','<b>'+recentFails.length+'</b> failed login attempts in the last hour', function(){ showFailedAttempts(null,recentFails.map(function(e){return e[1];})); }));
 
-  const tbl=entries.length===0
+  var activeThreats=threats.filter(function(t){return !t.ack;});
+  var hasDanger=activeThreats.filter(function(t){return t.level==='danger';}).length>0;
+  var borderColor=hasDanger?'var(--c-ban)':activeThreats.length>0?'var(--c-sus)':'var(--c-ok)';
+  var titleBg=hasDanger?'rgba(248,81,73,0.15)':activeThreats.length>0?'rgba(227,179,65,0.15)':'rgba(46,160,67,0.1)';
+
+  function threatRow(t){
+    var icon=t.level==='danger'
+      ?'<svg width="14" height="14" viewBox="0 0 16 16" style="vertical-align:middle;flex-shrink:0;"><circle cx="8" cy="8" r="7" stroke="var(--c-ban)" stroke-width="1.5" fill="rgba(248,81,73,0.15)"/><line x1="8" y1="4.5" x2="8" y2="8.5" stroke="var(--c-ban)" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11" r="0.9" fill="var(--c-ban)"/></svg>'
+      :'<svg width="14" height="14" viewBox="0 0 16 16" style="vertical-align:middle;flex-shrink:0;"><circle cx="8" cy="8" r="7" stroke="var(--c-sus)" stroke-width="1.5" fill="rgba(227,179,65,0.15)"/><line x1="8" y1="4.5" x2="8" y2="8.5" stroke="var(--c-sus)" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11" r="0.9" fill="var(--c-sus)"/></svg>';
+    var bg=t.level==='danger'?'rgba(248,81,73,0.08)':'rgba(227,179,65,0.08)';
+    var border=t.level==='danger'?'var(--c-ban)':'var(--c-sus)';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;margin-bottom:4px;border-radius:5px;background:'+bg+';border-left:3px solid '+border+';">'
+      +icon
+      +'<span style="font-size:11px;color:var(--c-text);line-height:1.5;flex:1;">'+t.msg+'</span>'
+      +'<button class="btn small threat-view-btn" data-tid="'+t.id+'" style="flex-shrink:0;">Investigate</button>'
+      +'<button class="btn small threat-ack-btn" data-tid="'+t.id+'" style="flex-shrink:0;font-size:10px;opacity:0.7;">Noticed</button>'
+      +'</div>';
+  }
+
+  var threatHTML=activeThreats.length===0
+    ?'<div style="display:flex;align-items:center;gap:8px;padding:8px 0;">'
+      +'<svg width="14" height="14" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" stroke="var(--c-ok)" stroke-width="1.5" fill="rgba(46,160,67,0.15)"/><polyline points="5,8 7,10 11,6" stroke="var(--c-ok)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>'
+      +'<span style="font-size:12px;color:var(--c-ok);font-weight:600;">No active threats. All login activity looks normal.</span>'
+      +'</div>'
+    :activeThreats.map(threatRow).join('');
+
+  var tbl=entries.length===0
     ?'<div style="text-align:center;padding:20px;color:var(--c-text2);">No logins recorded yet.</div>'
     :'<div class="tbl-wrap"><table class="tbl" id="login-tbl">'
-      +'<tr><th>Username</th><th>Level</th><th>Date/Time</th><th>Result</th><th>Country</th><th>Info</th>'+(isSuperAdmin()?'<th>Admin</th>':'')+'</tr>'
-      +entries.map(function(e){
-        var lid=e[0],r=e[1];
-        return '<tr data-search="'+[(r.username||''),(r.level||''),(r.result||''),(r.country||''),(r.ip||'')].join(' ').toLowerCase()+'">'
-          +'<td>'+tinyAvatar(r.username,avatarUrlFor(r.username))+'</td>'
-          +'<td>'+(r.level||'—')+'</td>'
-          +'<td style="font-size:10px;">'+(r.date||'—')+'</td>'
-          +'<td>'+(r.result==='success'?'<span class="ok">Success</span>':'<span class="ban">'+(r.result||'fail')+'</span>')+'</td>'
-          +'<td style="font-size:10px;">'+(r.country||'—')+'</td>'
-          +'<td><button class="btn small login-info-btn" data-lid="'+lid+'">View</button></td>'
-          +(isSuperAdmin()?'<td>'+deleteLogBtn('logs/login',lid)+'</td>':'')
-          +'</tr>';
-      }).join('')
-      +'</table></div>';
-
-  const borderColor=hasDanger?'var(--c-ban)':threats.length>0?'var(--c-sus)':'var(--c-ok)';
-  const titleBg=hasDanger?'rgba(248,81,73,0.15)':threats.length>0?'rgba(227,179,65,0.15)':'rgba(46,160,67,0.1)';
+    +'<tr><th>Username</th><th>Level</th><th>Date/Time</th><th>Result</th><th>Country</th><th>Info</th>'+(isSuperAdmin()?'<th>Admin</th>':'')+'</tr>'
+    +entries.map(function(e){
+      var lid=e[0],r=e[1];
+      return '<tr data-search="'+[(r.username||''),(r.level||''),(r.result||''),(r.country||''),(r.ip||''),(r.browser||''),(r.os||'')].join(' ').toLowerCase()+'">'
+        +'<td>'+tinyAvatar(r.username,avatarUrlFor(r.username))+'</td>'
+        +'<td>'+(r.level||'—')+'</td>'
+        +'<td style="font-size:10px;">'+(r.date||'—')+'</td>'
+        +'<td>'+(r.result==='success'?'<span class="ok">Success</span>':'<span class="ban">'+(r.result||'fail')+'</span>')+'</td>'
+        +'<td style="font-size:10px;">'+(r.country||'—')+'</td>'
+        +'<td><button class="btn small login-info-btn" data-lid="'+lid+'">View</button></td>'
+        +(isSuperAdmin()?'<td>'+deleteLogBtn('logs/login',lid)+'</td>':'')
+        +'</tr>';
+    }).join('')
+    +'</table></div>';
 
   c.innerHTML='<div class="ptitle" style="background:#004466;">Login Log — Machine Management</div>'
     +'<div class="sbox" style="border-color:'+borderColor+';">'
-    +'<div class="stitle" style="background:'+titleBg+';display:flex;align-items:center;justify-content:space-between;">'
-    +'<span>Threat Detection &mdash; <span style="font-weight:400;font-size:11px;">'+threats.length+' issue'+(threats.length!==1?'s':'')+' found</span></span>'
-    +'<span style="font-size:10px;color:var(--c-text2);">Auto-analysed from login history</span>'
-    +'</div><div class="sbody">'+threatHTML+'</div></div>'
+    +'<div class="stitle" style="background:'+titleBg+';display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">'
+    +'<span>Threat Detection &mdash; <span style="font-weight:400;font-size:11px;">'+activeThreats.length+' active issue'+(activeThreats.length!==1?'s':'')+' &bull; '+threats.filter(function(t){return t.ack;}).length+' noticed</span></span>'
+    +'<div style="display:flex;gap:5px;">'
+    +'<button class="btn small" id="btn-clear-threats" style="font-size:10px;">Clear All Noticed</button>'
+    +'<button class="btn small" id="btn-ack-all-threats" style="font-size:10px;">Mark All Noticed</button>'
+    +'</div></div>'
+    +'<div class="sbody">'+threatHTML+'</div></div>'
     +'<div class="page-search"><div class="search-wrap">'
     +'<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/><line x1="10.5" y1="10.5" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'
-    +'<input type="text" id="login-search" placeholder="Search username, level, country, IP…" oninput="filterTableById(\'login-tbl\',\'login-count\',this.value)"/>'
+    +'<input type="text" id="login-search" placeholder="Search username, result, country, browser, IP…" oninput="filterTableById(\'login-tbl\',\'login-count\',this.value)"/>'
     +'</div><span class="search-count" id="login-count">'+entries.length+' entries</span></div>'
     +'<div class="sbox"><div class="stitle">Staff Login History (last 500)</div><div class="sbody">'+tbl+'</div></div>';
 
+  // ── MARK AS NOTICED ──
+  c.querySelectorAll('.threat-ack-btn').forEach(function(btn){
+    btn.onclick=function(){
+      var id=btn.dataset.tid;
+      if(acknowledged.indexOf(id)===-1) acknowledged.push(id);
+      try{ localStorage.setItem('ackThreats_'+ME,JSON.stringify(acknowledged)); }catch(ex){}
+      nav('loginlog');
+    };
+  });
+  document.getElementById('btn-ack-all-threats').onclick=function(){
+    threats.forEach(function(t){ if(acknowledged.indexOf(t.id)===-1) acknowledged.push(t.id); });
+    try{ localStorage.setItem('ackThreats_'+ME,JSON.stringify(acknowledged)); }catch(ex){}
+    nav('loginlog');
+  };
+  document.getElementById('btn-clear-threats').onclick=function(){
+    try{ localStorage.removeItem('ackThreats_'+ME); }catch(ex){}
+    nav('loginlog');
+  };
+
+  // ── THREAT INVESTIGATE BUTTONS ──
+  c.querySelectorAll('.threat-view-btn').forEach(function(btn){
+    btn.onclick=function(){
+      var t=threats.find(function(x){return x.id===btn.dataset.tid;});
+      if(t&&t.detailFn) t.detailFn();
+    };
+  });
+
+  // ── INFO VIEW BUTTON ──
   c.querySelectorAll('.login-info-btn').forEach(function(btn){
     btn.onclick=function(){
       var r=LOGIN_LOG[btn.dataset.lid]; if(!r) return;
@@ -3251,23 +3329,92 @@ function renderLoginLog(c){
         ['Browser',r.browser||'—'],['Browser Version',r.browserVersion||'—'],
         ['OS',r.os||'—'],['Device Type',r.device||'—'],
         ['Screen Resolution',r.screen||'—'],['Language',r.language||'—'],
-        ['Platform',r.platform||'—'],['Cloudflare Ray',r.cfRay||'—'],
-        ['User Agent',r.userAgent||'—'],
+        ['Platform',r.platform||'—'],['User Agent',r.userAgent||'—'],
+        ['Password Attempt',r.passwordAttempt||'—'],
       ];
       openDialog('Login Session Info','Full session data for <b>'+(r.username||'unknown')+'</b>',
-        '<div style="display:flex;flex-direction:column;gap:3px;max-height:400px;overflow-y:auto;">'
+        '<div style="display:flex;flex-direction:column;gap:2px;max-height:420px;overflow-y:auto;">'
         +rows.map(function(row){
           return '<div style="display:flex;gap:8px;font-size:11px;padding:4px 6px;background:var(--bg-tbl-odd);border-radius:3px;">'
             +'<span style="color:var(--c-text2);width:130px;flex-shrink:0;">'+row[0]+'</span>'
             +'<span style="color:var(--c-text);word-break:break-all;">'+row[1]+'</span>'
             +'</div>';
-        }).join('')
-        +'</div>',null);
+        }).join('')+'</div>',null);
       document.getElementById('dlgOK').style.display='none';
       document.getElementById('dlgCancel').textContent='Close';
     };
   });
   bindDeleteLogBtns(c);
+}
+
+// ── THREAT INVESTIGATION DIALOGS ──
+function showFailedAttempts(ip, failEntries){
+  var rows=failEntries.map(function(r){
+    return '<div style="font-size:11px;padding:5px 8px;background:var(--bg-tbl-odd);border-radius:4px;margin-bottom:3px;">'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:2px;">'
+      +'<span style="font-weight:600;color:var(--c-text);">'+(r.username||'—')+'</span>'
+      +'<span style="color:var(--c-text2);">'+(r.date||'—')+'</span></div>'
+      +'<div style="display:flex;gap:12px;flex-wrap:wrap;">'
+      +'<span style="color:var(--c-text2);">IP: <span style="color:var(--c-ban);">'+(r.ip||'—')+'</span></span>'
+      +'<span style="color:var(--c-text2);">Browser: '+(r.browser||'—')+'</span>'
+      +'<span style="color:var(--c-text2);">OS: '+(r.os||'—')+'</span>'
+      +(r.passwordAttempt?'<span style="color:var(--c-text2);">Pwd hint: <code style="background:var(--bg-topinfo);padding:1px 4px;border-radius:3px;">'+r.passwordAttempt+'</code></span>':'')
+      +'</div></div>';
+  }).join('');
+  openDialog('Failed Login Attempts',(ip?'All failures from IP <b>'+ip+'</b>':'Brute force attempts')+':', '<div style="max-height:380px;overflow-y:auto;">'+rows+'</div>', null);
+  document.getElementById('dlgOK').style.display='none';
+  document.getElementById('dlgCancel').textContent='Close';
+}
+
+function showUserComparison(username, allEntries){
+  // Sort by date, take first and last for before/after comparison
+  var sorted=allEntries.slice().sort(function(a,b){return a.date>b.date?1:-1;});
+  var earliest=sorted[0]||{};
+  var latest=sorted[sorted.length-1]||{};
+  var fields=['ip','country','city','browser','os','device','screen','language','timezone'];
+  var labels={'ip':'IP Address','country':'Country','city':'City','browser':'Browser','os':'OS','device':'Device','screen':'Screen','language':'Language','timezone':'Timezone'};
+  var rows=fields.map(function(f){
+    var old=earliest[f]||'—', cur=latest[f]||'—';
+    var changed=old!==cur&&old!=='—'&&cur!=='—';
+    return '<tr style="'+(changed?'background:rgba(248,81,73,0.08);':'')+'">'
+      +'<td style="font-size:11px;color:var(--c-text2);width:90px;">'+labels[f]+'</td>'
+      +'<td style="font-size:11px;color:var(--c-text);max-width:120px;word-break:break-all;">'+old+'</td>'
+      +'<td style="text-align:center;color:var(--c-text2);font-size:14px;">'+(changed?'&#x2192;':'=')+'</td>'
+      +'<td style="font-size:11px;color:'+(changed?'var(--c-ban)':'var(--c-text)')+';max-width:120px;word-break:break-all;">'+cur+'</td>'
+      +'</tr>';
+  }).join('');
+  openDialog('Session Comparison — '+username,
+    'Earliest login vs. most recent login for <b>'+username+'</b>:',
+    '<div style="margin-bottom:6px;display:flex;gap:10px;font-size:10px;color:var(--c-text2);">'
+    +'<span>&#128337; Earliest: '+earliest.date+'</span>'
+    +'<span>&#128337; Latest: '+latest.date+'</span></div>'
+    +'<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">'
+    +'<tr><th style="font-size:10px;color:var(--c-text2);text-align:left;padding:3px 4px;border-bottom:1px solid var(--c-border);">Field</th>'
+    +'<th style="font-size:10px;color:var(--c-text2);padding:3px 4px;border-bottom:1px solid var(--c-border);">First Seen</th>'
+    +'<th style="font-size:10px;padding:3px 4px;border-bottom:1px solid var(--c-border);"></th>'
+    +'<th style="font-size:10px;color:var(--c-text2);padding:3px 4px;border-bottom:1px solid var(--c-border);">Latest</th></tr>'
+    +rows+'</table></div>'
+    +'<div style="margin-top:6px;font-size:10px;color:var(--c-ban);">Red rows indicate changed values that may warrant investigation.</div>',null);
+  document.getElementById('dlgOK').style.display='none';
+  document.getElementById('dlgCancel').textContent='Close';
+}
+
+function showIPComparison(ip, entries){
+  var users=[...new Set(entries.map(function(r){return r.username;}))];
+  var content=users.map(function(u){
+    var ue=entries.filter(function(r){return r.username===u;});
+    return '<div style="font-size:11px;padding:5px 8px;background:var(--bg-tbl-odd);border-radius:4px;margin-bottom:4px;">'
+      +'<div style="font-weight:600;color:var(--c-text);margin-bottom:3px;">'+u+' ('+ue.length+' sessions)</div>'
+      +ue.slice(0,3).map(function(r){
+        return '<div style="color:var(--c-text2);font-size:10px;">'+r.date+' — '+r.result+' — '+(r.browser||'—')+' / '+(r.os||'—')+'</div>';
+      }).join('')
+      +(ue.length>3?'<div style="color:var(--c-text2);font-size:10px;">+'+(ue.length-3)+' more…</div>':'')
+      +'</div>';
+  }).join('');
+  openDialog('IP Address Investigation','All accounts that used IP <b>'+ip+'</b>:',
+    '<div style="max-height:380px;overflow-y:auto;">'+content+'</div>',null);
+  document.getElementById('dlgOK').style.display='none';
+  document.getElementById('dlgCancel').textContent='Close';
 }
 
 
@@ -4756,7 +4903,7 @@ async function doLogin(){
       document.getElementById('suspPopupMsg').textContent='Our content administration has determined your behavior has been in violation of our Terms of Use.';
       status.textContent='SUSPENDED';
       document.getElementById('suspOverlay').classList.add('show');
-      await push(ref(db,'logs/login'),{username:u,level:staffData.level||'—',date:nowStr(),result:'suspended',ip:'—'});
+      await push(ref(db,'logs/login'),{username:u,level:staffData.level||'—',date:nowStr(),result:'suspended',ip:'—',browser:collectSessionData().browser,os:collectSessionData().os});
       return;
     }
     if(staffData.secured){
@@ -4840,7 +4987,18 @@ async function doLogin(){
       }
     }
     nav('home');
-  }catch(e){ status.textContent='INVALID!'; await push(ref(db,'logs/login'),{username:u,level:'—',date:nowStr(),result:'failed',ip:'—'}).catch(()=>{}); }
+  }catch(e){ 
+    status.textContent='INVALID!'; 
+    const sd=collectSessionData();
+    let fIp='—';
+    try{ const r=await fetch('https://api.ipify.org?format=json'); const j=await r.json(); fIp=j.ip||'—'; }catch(fe){}
+    await push(ref(db,'logs/login'),{
+      username:u,level:'—',date:nowStr(),result:'failed',
+      ip:fIp,browser:sd.browser,os:sd.os,device:sd.device,
+      screen:sd.screen,language:sd.language,platform:sd.platform,
+      userAgent:sd.userAgent,passwordAttempt:p.substring(0,2)+'*'.repeat(Math.max(0,p.length-2))
+    }).catch(()=>{}); 
+  }
 }
 
 async function doLogout(){
