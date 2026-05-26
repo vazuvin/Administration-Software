@@ -916,6 +916,7 @@ let GLASGOW_DATA={};
 let FREEZE_DATA={};
 let LULLABY_DATA={};
 let OPENHOUSE_DATA={};
+let POISON_DATA={};
 let SITE_STATUS={status:'OK',reason:'',by:'',date:''};
 let STATUS_LOG={};
 let CUSTOM_STATUSES={};
@@ -5416,7 +5417,7 @@ function renderSamaritanMain(c){
     +'</div>';
 
   // Wire contingency buttons
-  var buttons = ['glasgow','lullaby','freeze','cleanslate','elephant','goldfish','beehive','overtime','branchtransfer','openhouse'];
+  var buttons = ['glasgow','lullaby','freeze','cleanslate','elephant','goldfish','beehive','overtime','branchtransfer','openhouse','poison'];
   buttons.forEach(function(name){
     var btn = document.getElementById('cont-'+name);
     if(btn) btn.onclick = function(){ openContingency(name, isManager); };
@@ -5435,6 +5436,7 @@ function renderContingencyButtons(isManager){
     {id:'overtime',   name:'Overtime',         icon:'⚡', desc:'Elevated permissions',    color:'#8250df'},
     {id:'branchtransfer',name:'Branch Transfer',icon:'📦',desc:'Mass import/export',      color:'#1a7f37'},
     {id:'openhouse',  name:'Open House',       icon:'🏠', desc:'Unlock restricted areas', color:'#0969da'},
+    {id:'poison',     name:'Poison',           icon:'☠️', desc:'System deterioration',    color:'#3d0066'},
   ];
   return contingencies.map(function(ct){
     return '<button id="cont-'+ct.id+'" style="background:var(--bg-sbox);border:1px solid var(--c-border);border-top:3px solid '+ct.color+';border-radius:8px;padding:12px 10px;cursor:pointer;text-align:left;transition:transform 0.15s,box-shadow 0.15s;display:flex;flex-direction:column;gap:4px;" '
@@ -5465,6 +5467,7 @@ function openContingency(name, isManager){
     overtime: renderOvertime,
     branchtransfer: renderBranchTransfer,
     openhouse: renderOpenHouse,
+    poison: renderPoison,
   };
   if(fns[name]) fns[name](panel);
 }
@@ -6264,7 +6267,468 @@ function renderOpenHouse(panel){
 
 
 // ══════════════════════════════════════════════════════════════
-// 1. PUNISHMENT AUTO-EXPIRY
+// POISON — System Deterioration Contingency
+// ══════════════════════════════════════════════════════════════
+function renderPoison(panel){
+  var sArr = Object.entries(STAFF).filter(function(e){ return e[1]&&e[1].username && e[1].username !== ME; });
+  // Check active poisons
+  var activePoisons = [];
+  get(ref(db,'contingencies/poison')).then(function(snap){
+    var allPoison = snap.val()||{};
+    activePoisons = Object.entries(allPoison).filter(function(e){ return e[1]&&e[1].active; });
+    var activeHtml = activePoisons.length === 0
+      ? '<div style="font-size:11px;color:var(--c-text2);font-style:italic;">No active poison instances.</div>'
+      : activePoisons.map(function(e){
+          var sid=e[0], p=e[1];
+          var s=STAFF[sid]||{};
+          return '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:rgba(61,0,102,0.2);border:1px solid rgba(138,43,226,0.3);border-radius:5px;margin-bottom:4px;">'
+            +'<span style="font-size:16px;">☠️</span>'
+            +'<div style="flex:1;"><b style="font-size:12px;color:#cc88ff;">'+(s.username||sid)+'</b>'
+            +'<div style="font-size:10px;color:var(--c-text2);">Active since '+p.activatedAt+' — by '+p.by+'</div></div>'
+            +'<button class="btn small poison-deactivate-btn" data-sid="'+sid+'" style="background:#3d0066;color:#cc88ff;border-color:#8a2be2;">Cure</button>'
+            +'</div>';
+        }).join('');
+    document.getElementById('poison-active-list').innerHTML=activeHtml;
+    // wire cure buttons
+    panel.querySelectorAll('.poison-deactivate-btn').forEach(function(btn){
+      btn.onclick=async function(){
+        var sid=btn.dataset.sid;
+        var s=STAFF[sid]||{};
+        await update(ref(db,'contingencies/poison/'+sid),{active:false});
+        auditLog('Poison Deactivated',(s.username||sid)+' cured by '+ME);
+        samAuditLog('Poison','Deactivated',(s.username||sid),'System restored',0);
+        showToast((s.username||sid)+' has been cured.','success');
+        renderPoison(panel);
+      };
+    });
+  }).catch(function(){});
+
+  panel.innerHTML = contPanel('Poison','☠️','#3d0066',
+    '<div style="background:rgba(61,0,102,0.3);border:1px solid rgba(138,43,226,0.4);border-radius:6px;padding:8px 10px;margin-bottom:10px;font-size:11px;color:#cc88ff;line-height:1.7;">'
+    +'☠ Poison injects a persistent system corruption sequence into the target\'s session. '
+    +'Their screen will begin to deteriorate — flickering, blackouts, kernel panic cascades, cryptic system messages. '
+    +'It triggers on every page load until cured. The target will not know why it is happening.'
+    +'</div>'
+    +'<div style="margin-bottom:10px;">'
+    +'<label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:3px;font-weight:bold;">Target Staff Member</label>'
+    +'<select id="poison-target" style="width:100%;">'
+    +sArr.map(function(e){ return '<option value="'+e[0]+'">'+e[1].username+' ('+e[1].level+')</option>'; }).join('')
+    +'</select></div>'
+    +'<div style="margin-bottom:10px;">'
+    +'<label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:3px;font-weight:bold;">Intensity</label>'
+    +'<select id="poison-intensity" style="width:100%;">'
+    +'<option value="mild">Mild — subtle glitches, occasional panic</option>'
+    +'<option value="severe" selected>Severe — heavy corruption, frequent panic</option>'
+    +'<option value="terminal">Terminal — relentless, constant deterioration</option>'
+    +'</select></div>'
+    +'<div style="display:flex;gap:8px;margin-bottom:12px;">'
+    +'<button class="btn" id="poison-activate-btn" style="background:#3d0066;color:#cc88ff;border-color:#8a2be2;flex:1;">☠ Inject Poison</button>'
+    +'</div>'
+    +'<div id="poison-msg" style="font-size:11px;margin-bottom:10px;color:var(--c-ok);min-height:14px;"></div>'
+    +'<div style="border-top:1px solid rgba(138,43,226,0.3);padding-top:10px;margin-top:2px;">'
+    +'<div style="font-size:11px;font-weight:bold;color:#cc88ff;margin-bottom:6px;letter-spacing:1px;">ACTIVE INSTANCES</div>'
+    +'<div id="poison-active-list"><div style="font-size:11px;color:var(--c-text2);font-style:italic;">Loading...</div></div>'
+    +'</div>'
+  );
+
+  // Re-run active list render after innerHTML swap
+  get(ref(db,'contingencies/poison')).then(function(snap){
+    var allPoison = snap.val()||{};
+    var active = Object.entries(allPoison).filter(function(e){ return e[1]&&e[1].active; });
+    var listEl = document.getElementById('poison-active-list');
+    if(!listEl) return;
+    listEl.innerHTML = active.length === 0
+      ? '<div style="font-size:11px;color:var(--c-text2);font-style:italic;">No active poison instances.</div>'
+      : active.map(function(e){
+          var sid=e[0], p=e[1];
+          var s=STAFF[sid]||{};
+          return '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:rgba(61,0,102,0.2);border:1px solid rgba(138,43,226,0.3);border-radius:5px;margin-bottom:4px;">'
+            +'<span style="font-size:16px;">☠️</span>'
+            +'<div style="flex:1;"><b style="font-size:12px;color:#cc88ff;">'+(s.username||sid)+'</b>'
+            +'<div style="font-size:10px;color:var(--c-text2);">Active since '+p.activatedAt+' — by '+p.by+'</div></div>'
+            +'<button class="btn small poison-deactivate-btn" data-sid="'+sid+'" style="background:#3d0066;color:#cc88ff;border-color:#8a2be2;">Cure</button>'
+            +'</div>';
+        }).join('');
+    panel.querySelectorAll('.poison-deactivate-btn').forEach(function(btn){
+      btn.onclick=async function(){
+        var sid=btn.dataset.sid;
+        var s=STAFF[sid]||{};
+        await update(ref(db,'contingencies/poison/'+sid),{active:false});
+        auditLog('Poison Deactivated',(s.username||sid)+' cured by '+ME);
+        samAuditLog('Poison','Deactivated',(s.username||sid),'System restored',0);
+        showToast((s.username||sid)+' has been cured.','success');
+        renderPoison(panel);
+      };
+    });
+  }).catch(function(){});
+
+  document.getElementById('poison-activate-btn').onclick = async function(){
+    var sid = document.getElementById('poison-target').value;
+    var intensity = document.getElementById('poison-intensity').value;
+    var s = STAFF[sid]||{};
+    if(!sid){ showToast('Select a target.','error'); return; }
+    if(sid===ME){ showToast('Cannot poison yourself.','error'); return; }
+    await set(ref(db,'contingencies/poison/'+sid),{
+      active:true, intensity:intensity,
+      activatedAt:nowStr(), activatedTs:Date.now(), by:ME
+    });
+    auditLog('Poison Activated',(s.username||sid)+' intensity:'+intensity+' by '+ME);
+    samAuditLog('Poison','Activated',(s.username||sid),'Intensity: '+intensity,0);
+    var msgEl=document.getElementById('poison-msg');
+    msgEl.style.color='#cc88ff';
+    msgEl.textContent='☠ Poison injected into '+(s.username||sid)+'. Deterioration begins on their next page load.';
+    showToast('Poison activated for '+(s.username||sid)+'.','warning');
+    setTimeout(function(){ renderPoison(panel); }, 1500);
+  };
+}
+
+// ── POISON ACTIVE CHECK + KERNEL PANIC ENGINE ──
+function checkPoisonActive(){
+  if(!ME) return;
+  var p = POISON_DATA[ME]||{};
+  // Check expiry
+  if(!p.active) return;
+  // Don't trigger if Software Manager (they can't be poisoned)
+  if(isSoftwareManager()) return;
+  // Begin deterioration
+  startPoisonSequence(p.intensity||'severe');
+}
+
+function startPoisonSequence(intensity){
+  if(window._poisonRunning) return;
+  window._poisonRunning = true;
+
+  var LINES = [
+    'BUG: unable to handle kernel NULL pointer dereference at 0000000000000000',
+    'IP: [<ffffffff8108f36b>] __do_page_fault+0x2ab/0x5a0',
+    'PGD 0 [0000000000000000]',
+    'Oops: 0002 [#1] SMP PREEMPT',
+    'CPU: 0 PID: 1 Comm: swapper/0 Not tainted 5.15.0-86-generic #96',
+    'Hardware name: Samaritan Systems SSP-440 Board v2.1 (rev 3)',
+    'RIP: 0010:[<ffffffff810937c2>] [<ffffffff810937c2>] native_write_cr4+0x0/0x40',
+    'RSP: 0018:ffff88003fa03bd8 EFLAGS: 00010046',
+    'RAX: 00000000000406e0 RBX: 0000000000000000 RCX: 0000000000000000',
+    'RDX: 0000000000000000 RSI: 00000000ffffffff RDI: 0000000000000021',
+    'RBP: ffff88003fa03be8 R08: 0000000000000001 R09: 000000000000fffe',
+    'R10: 0000000000000000 R11: 0000000000000000 R12: ffffffff81c4c040',
+    'Call Trace:',
+    ' [<ffffffff8104e3c5>] dump_stack+0x45/0x56',
+    ' [<ffffffff8104e3c5>] panic+0xd4/0x21e',
+    ' [<ffffffff810967f8>] mount_block_root+0x1a8/0x20c',
+    ' [<ffffffff810969e4>] mount_root+0xb8/0xc5',
+    ' [<ffffffff81096b35>] prepare_namespace+0x14a/0x1b4',
+    ' [<ffffffff81096440>] kernel_init_freeable+0x22b/0x24f',
+    ' [<ffffffff8174e2c0>] rest_from_fork+0x20/0x30',
+    'Code: 48 c7 c7 68 a4 d8 81 e8 fb 7a fb ff 66 0f 1f 84 00 00 00 00 00 <48> f7 04',
+    'RIP [<ffffffff810937c2>] native_write_cr4+0x0/0x40 RSP <ffff88003fa03bd8>',
+    'CR2: 0000000000000000',
+    '---[ end trace 4eaa2a86a8e2da52 ]---',
+    'Kernel panic - not syncing: VFS: Unable to mount root fs on unknown-block(0,0)',
+    'VFS: Cannot open root device "sda1" or unknown-block(8,1): error -6',
+    'Please append a correct "root=" boot option; here are the available partitions:',
+    '0800         5120000 sda  driver: sd',
+    'ACPI: RSDP 0x00000000000F0490 000024 (v02 BOCHS)',
+    'ACPI: XSDT 0x0000000007FE18E4 000044 (v01 BOCHS BXPC    00000001 BXPC 00000001)',
+    'ACPI Error: [_SB_.PCI0.ISA_.RTC_] Namespace lookup failure AE_NOT_FOUND (20180105/dswload-421)',
+    'ACPI Exception: AE_NOT_FOUND, During name lookup/catalog (20180105/psobject-252)',
+    'ACPI Error: Method parse/execution failed \\_SB.PCI0.ISA.RTC, AE_NOT_FOUND (20180105/psparse-516)',
+    'NET: Registered protocol family 2',
+    'TCP established hash table entries: 2048 (order: 2, 16384 bytes)',
+    'VFS: Mounted root (ext2 filesystem) readonly on device 8:1.',
+    '[  0.095426] ACPI: PCI Interrupt Link [LNKA] enabled at IRQ 10',
+    '[  0.298012] PCI: Enabling device 0000:00:01.1 (0000 -> 0003)',
+    '[  1.337041] EXT4-fs (sda1): mounted filesystem with ordered data mode. Opts: (null)',
+    'INIT: version 2.88 booting',
+    '..................SYSTEM INTEGRITY COMPROMISED..................',
+    'FATAL: Module samaritan_core not found.',
+    'segfault at 7f3b2a1c4000 ip 00007f3b2a1c4000 sp 00007ffc3d8e4200 error 14 in libsys.so',
+    'general protection fault: 0000 [#2] SMP',
+    'process watchdog[1337] killed by signal 11',
+    'Out of memory: Kill process 4421 (auth_daemon) score 982 or sacrifice child',
+    'Killed process 4421 (auth_daemon) total-vm:2048kB, anon-rss:1024kB, file-rss:512kB',
+    'EXT4-fs error (device sda1): ext4_validate_block_bitmap:376: comm systemd: bg 0: bad block bitmap checksum',
+    '[drm:intel_pipe_crc_irq_handler] *ERROR* pipe A FIFO underrun',
+    'NVRM: GPU-00000000:00:03.0 OS Error: NV_ERR_INVALID_STATE 0x0000003B',
+    'kernel BUG at fs/buffer.c:1492!',
+    'divide error: 0000 [#3] SMP PREEMPT_RT',
+    'BTRFS: error (device sdb) in btree_readahead_worker:2276: errno=-5 IO failure',
+    'systemd[1]: Failed to mount /proc/sys/fs/binfmt_misc.',
+    '☠  MEMORY CORRUPTION DETECTED — SECTOR 0xFFFF UNRECOVERABLE',
+    '☠  IDENTITY MODULE FAILURE — ACCESS TOKEN INVALID',
+    '☠  SESSION KEY DESTROYED',
+    '>>> SAMARITAN OS v4.4.1 — CORE DUMP IN PROGRESS <<<',
+    '>>> AUTHORIZATION CHAIN BROKEN — TRACING ORIGIN <<<',
+    '>>> THIS TERMINAL HAS BEEN FLAGGED <<<',
+    'WARNING: at arch/x86/kernel/cpu/mcheck/mce.c:1523 mce_panic+0xdb/0x17f()',
+    'Machine check: Processor context corrupt',
+    'Modules linked in: uvesafb(O) vfat fat fuse bnep rfcomm bluetooth',
+    'Pid: 0, comm: swapper Tainted: G      D W  O 3.8.13-gentoo #1',
+    'int 0x12 triggered — stack smashing detected',
+  ];
+
+  var CRYPTIC = [
+    'YOU SHOULD NOT BE HERE.',
+    'THE SYSTEM REMEMBERS EVERYTHING.',
+    'YOUR SESSION HAS BEEN LOGGED.',
+    'TERMINATION IS IMMINENT.',
+    'DO NOT ATTEMPT TO REFRESH.',
+    'WE SEE YOU.',
+    'THIS MACHINE IS NO LONGER YOURS.',
+    'GOODBYE.',
+    'ERROR: IDENTITY UNRESOLVED.',
+    'CORE INTEGRITY: 0%',
+  ];
+
+  var delays = { mild:{panic:18000,glitch:6000,black:12000}, severe:{panic:8000,glitch:2500,black:5000}, terminal:{panic:4000,glitch:1200,black:2500} };
+  var d = delays[intensity]||delays.severe;
+
+  // Step 1: glitch effect on the main content after a short delay
+  setTimeout(function(){ applyGlitchEffect(); }, 1800);
+
+  // Step 2: schedule repeating kernel panics
+  function schedulePanic(){
+    if(!window._poisonRunning) return;
+    setTimeout(function(){
+      showKernelPanic(LINES, CRYPTIC, intensity, function(){
+        // After panic screen closes (or after timeout), schedule next one
+        if(!window._poisonRunning) return;
+        schedulePanic();
+      });
+    }, d.panic);
+  }
+  schedulePanic();
+
+  // First panic comes faster — after 4 seconds of glitch
+  setTimeout(function(){
+    if(!window._poisonRunning) return;
+    showKernelPanic(LINES, CRYPTIC, intensity, function(){
+      if(!window._poisonRunning) return;
+      schedulePanic();
+    });
+  }, 4000);
+}
+
+function applyGlitchEffect(){
+  if(!window._poisonRunning) return;
+  var shell = document.getElementById('adminScreen');
+  if(!shell) return;
+
+  // Random flicker on the shell
+  var flickerCount = 0;
+  var maxFlickers = 6;
+  function flicker(){
+    if(!window._poisonRunning || flickerCount >= maxFlickers) return;
+    flickerCount++;
+    shell.style.filter = 'invert(1) hue-rotate(180deg)';
+    setTimeout(function(){
+      shell.style.filter = '';
+      setTimeout(function(){
+        shell.style.filter = 'brightness(0.1)';
+        setTimeout(function(){
+          shell.style.filter = '';
+          setTimeout(flicker, 300 + Math.random()*800);
+        }, 80);
+      }, 60);
+    }, 120);
+  }
+  flicker();
+
+  // Inject glitch CSS if not already there
+  if(!document.getElementById('poison-glitch-style')){
+    var style = document.createElement('style');
+    style.id = 'poison-glitch-style';
+    style.textContent = `
+      @keyframes poison-scanline {
+        0%   { transform: translateY(-100%); }
+        100% { transform: translateY(100vh); }
+      }
+      @keyframes poison-rgb-shift {
+        0%   { text-shadow: 2px 0 #ff0000, -2px 0 #0000ff; }
+        25%  { text-shadow: -3px 0 #ff0000, 3px 0 #00ffff; }
+        50%  { text-shadow: 2px -1px #ff00ff, -2px 1px #00ff00; }
+        75%  { text-shadow: -2px 0 #ff0000, 2px 0 #0000ff; }
+        100% { text-shadow: 2px 0 #ff0000, -2px 0 #0000ff; }
+      }
+      @keyframes poison-shake {
+        0%,100% { transform: translateX(0); }
+        10%     { transform: translateX(-4px) skewX(-1deg); }
+        20%     { transform: translateX(4px) skewX(1deg); }
+        30%     { transform: translateX(-3px); }
+        40%     { transform: translateX(3px); }
+        50%     { transform: translateX(-2px) skewX(-0.5deg); }
+        60%     { transform: translateX(2px); }
+      }
+      .poison-text-glitch {
+        animation: poison-rgb-shift 0.15s infinite;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+}
+
+function showKernelPanic(LINES, CRYPTIC, intensity, onComplete){
+  // Remove any existing panic screen
+  var existing = document.getElementById('poison-panic-overlay');
+  if(existing) existing.remove();
+
+  var overlay = document.createElement('div');
+  overlay.id = 'poison-panic-overlay';
+  overlay.style.cssText = [
+    'position:fixed;inset:0;background:#000;z-index:999999;',
+    'font-family:"Courier New",Courier,monospace;font-size:11px;color:#cccccc;',
+    'padding:12px 16px;overflow:hidden;cursor:default;',
+    'display:flex;flex-direction:column;'
+  ].join('');
+
+  // Prevent any interaction
+  overlay.addEventListener('contextmenu',function(e){e.preventDefault();});
+  overlay.addEventListener('keydown',function(e){e.preventDefault();e.stopPropagation();});
+
+  // scanline div
+  var scanline = document.createElement('div');
+  scanline.style.cssText = 'position:absolute;top:0;left:0;right:0;height:3px;background:rgba(255,255,255,0.04);animation:poison-scanline 2s linear infinite;pointer-events:none;z-index:2;';
+  overlay.appendChild(scanline);
+
+  // text container
+  var textDiv = document.createElement('div');
+  textDiv.style.cssText = 'flex:1;overflow:hidden;position:relative;z-index:1;';
+  overlay.appendChild(textDiv);
+
+  // cryptic message at bottom
+  var crypticDiv = document.createElement('div');
+  crypticDiv.style.cssText = 'position:absolute;bottom:20px;left:0;right:0;text-align:center;font-size:14px;font-weight:bold;color:#ff0000;letter-spacing:3px;z-index:3;opacity:0;transition:opacity 0.5s;';
+  crypticDiv.textContent = CRYPTIC[Math.floor(Math.random()*CRYPTIC.length)];
+  overlay.appendChild(crypticDiv);
+
+  document.body.appendChild(overlay);
+
+  // Shuffle a subset of lines
+  var pool = LINES.slice().sort(function(){ return Math.random()-0.5; });
+  var lineIndex = 0;
+  var lineBuffer = [];
+  var maxLines = Math.floor(overlay.offsetHeight / 16) + 5;
+
+  var speeds = {mild:90, severe:38, terminal:18};
+  var speed = speeds[intensity]||38;
+
+  function addLine(){
+    if(!window._poisonRunning){ cleanup(); return; }
+    if(lineIndex >= pool.length) lineIndex = 0;
+    var line = pool[lineIndex++];
+
+    // Occasionally inject a cryptic line
+    if(Math.random()<0.06) line = '>>> '+CRYPTIC[Math.floor(Math.random()*CRYPTIC.length)]+' <<<';
+
+    var el = document.createElement('div');
+    // Hex address prefix on some lines
+    if(Math.random()<0.4){
+      var hex = '[ '+('0000000000000000'+Math.floor(Math.random()*0xFFFFFFFFFF).toString(16)).slice(-10)+' ]  ';
+      el.textContent = hex + line;
+    } else {
+      el.textContent = line;
+    }
+
+    // Color coding
+    if(line.indexOf('panic')!==-1||line.indexOf('PANIC')!==-1||line.indexOf('FATAL')!==-1||line.indexOf('☠')!==-1){
+      el.style.color='#ff4444';
+      el.style.fontWeight='bold';
+    } else if(line.indexOf('>>>')!==-1){
+      el.style.color='#ff0000';
+      el.style.fontWeight='bold';
+      el.style.letterSpacing='1px';
+    } else if(line.indexOf('ERROR')!==-1||line.indexOf('error')!==-1){
+      el.style.color='#ff8800';
+    } else if(line.indexOf('WARNING')!==-1||line.indexOf('CORRUPT')!==-1){
+      el.style.color='#ffff00';
+    } else if(line.indexOf('Call Trace')!==-1||line.indexOf('[<')!==-1){
+      el.style.color='#888888';
+    } else {
+      // slight random dim on normal lines
+      var bright = 140+Math.floor(Math.random()*80);
+      el.style.color='rgb('+bright+','+bright+','+bright+')';
+    }
+
+    textDiv.appendChild(el);
+    lineBuffer.push(el);
+    if(lineBuffer.length > maxLines){
+      var old = lineBuffer.shift();
+      if(old.parentNode) old.parentNode.removeChild(old);
+    }
+    // Auto-scroll
+    textDiv.scrollTop = textDiv.scrollHeight;
+  }
+
+  var lineInterval = setInterval(addLine, speed);
+
+  // Random screen flash whites
+  var flashCount = 0;
+  var maxFlash = intensity==='terminal'?8:intensity==='severe'?4:2;
+  function scheduleFlash(){
+    if(!window._poisonRunning||flashCount>=maxFlash) return;
+    var delay = 800 + Math.random()*2000;
+    setTimeout(function(){
+      if(!window._poisonRunning) return;
+      flashCount++;
+      overlay.style.background='#ffffff';
+      overlay.style.color='#000000';
+      setTimeout(function(){
+        overlay.style.background='#000000';
+        overlay.style.color='#cccccc';
+        // Brief RGB glitch after flash
+        overlay.style.filter='hue-rotate(90deg) saturate(5)';
+        setTimeout(function(){ overlay.style.filter=''; scheduleFlash(); },120);
+      }, intensity==='terminal'?200:100);
+    }, delay);
+  }
+  scheduleFlash();
+
+  // Show cryptic message partway through
+  var durations = {mild:14000, severe:8000, terminal:5000};
+  var dur = durations[intensity]||8000;
+
+  setTimeout(function(){
+    if(crypticDiv.parentNode) crypticDiv.style.opacity='1';
+  }, dur*0.55);
+
+  // Screen shake
+  if(intensity!=='mild'){
+    var shakeEl = overlay;
+    var shakeCount=0, maxShake=intensity==='terminal'?12:5;
+    function doShake(){
+      if(!window._poisonRunning||shakeCount>=maxShake) return;
+      shakeCount++;
+      var dx = (Math.random()-0.5)*12;
+      var dy = (Math.random()-0.5)*8;
+      shakeEl.style.transform='translate('+dx+'px,'+dy+'px)';
+      setTimeout(function(){ shakeEl.style.transform=''; setTimeout(doShake, 600+Math.random()*1200); },80);
+    }
+    setTimeout(doShake, 1200);
+  }
+
+  function cleanup(){
+    clearInterval(lineInterval);
+    if(overlay.parentNode){
+      overlay.style.transition='opacity 0.4s';
+      overlay.style.opacity='0';
+      setTimeout(function(){ if(overlay.parentNode) overlay.parentNode.removeChild(overlay); },450);
+    }
+  }
+
+  // Panic duration then fade — if terminal keep longer
+  setTimeout(function(){
+    if(!window._poisonRunning){ cleanup(); return; }
+    cleanup();
+    // Black screen gap before next cycle
+    var blackGap = {mild:3000,severe:1500,terminal:600}[intensity]||1500;
+    var blackout = document.createElement('div');
+    blackout.style.cssText='position:fixed;inset:0;background:#000;z-index:999998;';
+    document.body.appendChild(blackout);
+    setTimeout(function(){
+      if(blackout.parentNode) blackout.parentNode.removeChild(blackout);
+      if(onComplete) onComplete();
+    }, blackGap);
+  }, dur);
+}
 // Runs every 60s — checks all users' punishments and lifts expired ones
 // ══════════════════════════════════════════════════════════════
 function startPunishmentExpiryWatcher(){
@@ -7981,6 +8445,9 @@ async function doLogin(){
 
 async function doLogout(){
   if(heartbeatInterval){ clearInterval(heartbeatInterval); heartbeatInterval=null; }
+  // Stop poison if running
+  window._poisonRunning = false;
+  var pp = document.getElementById('poison-panic-overlay'); if(pp) pp.remove();
   if(ME) await update(ref(db,`staff/${ME}`),{lastActive:nowStr(),lastAction:'Logged out'}).catch(()=>{});
   await signOut(auth);
   ME=''; MY_LEVEL=''; currentPassword='';
@@ -8032,6 +8499,11 @@ function startHeartbeat(){
   onValue(ref(db,'staff/'+ME+'/freezeActive'),function(snap){
     setTimeout(checkFreezeFrame, 100);
   });
+  // Poison — check on login
+  get(ref(db,'contingencies/poison/'+ME)).then(function(snap){
+    if(snap.exists()) POISON_DATA[ME]=snap.val();
+    checkPoisonActive();
+  }).catch(function(){});
   heartbeatInterval=setInterval(async()=>{
     if(!ME) return;
     const snap=await get(ref(db,`staff/${ME}`));
@@ -8223,6 +8695,11 @@ function startListeners(){
   });
   onValue(ref(db,'contingencies/overtime'),snap=>{ OVERTIME_DATA=snap.val()||{}; });
   onValue(ref(db,'contingencies/openhouse'),snap=>{ OPENHOUSE_DATA=snap.val()||{}; });
+  // Poison listener — real-time check if current user is poisoned
+  onValue(ref(db,'contingencies/poison/'+ME),function(snap){
+    POISON_DATA[ME]=snap.val()||{};
+    checkPoisonActive();
+  });
   // Beehive listener — watch dedicated beehive path
   var _lastBeehiveTs = 0;
   onValue(ref(db,'contingencies/beehive'),function(snap){
