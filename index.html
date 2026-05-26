@@ -439,6 +439,56 @@ body.sam-active .main{ background:#0d1117; }
   </div>
 </div>
 
+<!-- STAFF WARNING POPUP (shown to warned staff member) -->
+<div class="overlay" id="warnPopupOverlay">
+  <div class="susp-popup" style="width:460px;">
+    <div style="background:#9a6700;color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 2L18.5 17H1.5L10 2Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/><line x1="10" y1="8" x2="10" y2="12" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="15" r="0.9" fill="#fff"/></svg>
+      <div style="font-size:14px;font-weight:700;letter-spacing:0.5px;">Warning</div>
+    </div>
+    <div style="padding:16px 18px 14px;">
+      <div style="font-size:12px;color:var(--c-text);line-height:1.65;margin-bottom:12px;">
+        Our content monitors have determined that your behavior within this administration panel has been in violation of our <span style="color:var(--c-link);text-decoration:underline;cursor:pointer;">Staff Guidelines</span>.
+      </div>
+      <div style="font-size:12px;margin-bottom:2px;color:var(--c-text);"><span style="font-weight:600;">Reviewed:</span> <span id="warnPopupDate" style="font-weight:700;color:var(--c-text);"></span></div>
+      <div style="font-size:12px;margin-bottom:12px;color:var(--c-text);">Moderator Note: <span id="warnPopupModNote" style="font-weight:700;"></span></div>
+      <div style="border:1px solid var(--c-border);border-radius:4px;padding:10px 12px;margin-bottom:12px;background:var(--bg-tbl-odd);">
+        <div style="font-size:12px;color:var(--c-text);margin-bottom:5px;"><span style="font-weight:600;">Reason:</span> <span id="warnPopupReason" style="font-weight:700;"></span></div>
+        <div style="font-size:12px;color:var(--c-text);"><span style="font-weight:600;">Offensive Item:</span> <span id="warnPopupOffItem"></span></div>
+      </div>
+      <div style="font-size:12px;color:var(--c-text);margin-bottom:4px;">Please abide by the <span style="color:var(--c-link);text-decoration:underline;cursor:pointer;">Staff Code of Conduct</span> so that this panel can function properly for all staff.</div>
+      <div style="font-size:12px;color:var(--c-text);margin-bottom:14px;">You may continue using the panel by acknowledging this warning.</div>
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:12px;">
+        <input type="checkbox" id="warnPopupAgree" style="width:13px;height:13px;cursor:pointer;"/>
+        <label for="warnPopupAgree" style="font-size:12px;color:var(--c-text);cursor:pointer;">I Acknowledge this Warning</label>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+        <button class="win98-btn ok-btn" id="warnPopupContinue" style="width:200px;opacity:0.5;cursor:not-allowed;" disabled>Continue to Panel</button>
+        <button class="win98-btn" id="warnPopupLogout" style="width:200px;">Logout</button>
+      </div>
+      <div id="warnPopupErr" style="font-size:11px;color:var(--c-ban);text-align:center;margin-top:6px;min-height:14px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- POISON LOCKOUT SCREEN (replaces login screen when poisoned) -->
+<div id="poisonLockout" style="display:none;position:fixed;inset:0;z-index:999997;background:#000;flex-direction:column;align-items:center;justify-content:center;">
+  <canvas id="poisonLockoutCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;"></canvas>
+  <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:16px;pointer-events:none;user-select:none;">
+    <div id="poisonLockoutIcon" style="opacity:0.07;">
+      <div style="font-size:11px;letter-spacing:6px;color:#444;text-transform:uppercase;margin-bottom:8px;text-align:center;">SAMARITAN SYSTEMS</div>
+      <svg width="80" height="80" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="46" stroke="#333" stroke-width="3"/>
+        <path d="M50 18 L50 82 M18 50 L82 50" stroke="#333" stroke-width="2.5"/>
+        <circle cx="50" cy="50" r="18" stroke="#333" stroke-width="2.5"/>
+        <path d="M50 18 Q68 34 82 50 Q68 66 50 82 Q32 66 18 50 Q32 34 50 18Z" stroke="#333" stroke-width="1.5" fill="none"/>
+      </svg>
+      <div style="font-size:9px;letter-spacing:4px;color:#333;text-transform:uppercase;margin-top:8px;text-align:center;">INTERNAL ADMINISTRATION</div>
+    </div>
+  </div>
+  <div id="poisonLockoutCode" style="position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1;"></div>
+</div>
+
 <div id="adminScreen" style="position:relative;">
 <div id="toast-container"></div>
   <canvas id="shellBg" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0;transition:opacity 0.5s;"></canvas>
@@ -6607,151 +6657,148 @@ function startPoisonSequence(intensity){
   }[intensity]||{firstPanic:3500,panicInterval:11000,panicDur:8000,gpuInterval:3500,gpuDur:2500,logoutChance:0.04,speed:28};
 
   // ── Phase 1: GPU corruption layer on the live page ──
+  // ── Realistic website-breaking effects (no colorful squares) ──
   function runGpuLayer(){
     if(!window._poisonRunning) return;
+    var shell=document.getElementById('adminScreen');
+    var sidebar=document.querySelector('.sidebar');
+    var topbar=document.querySelector('.topbar');
+    var content=document.querySelector('.content');
+    var startTime=Date.now();
+    var dur=cfg.gpuDur;
+    var effects=[];
+
+    // 1. Whole-page CSS filter degradation (desaturation, brightness drop, hue shift)
+    var filterEffects=['saturate(0.1)','saturate(0.3) brightness(0.7)','saturate(0)brightness(0.5)hue-rotate(30deg)',
+      'contrast(0.4)brightness(0.6)','sepia(0.8)brightness(0.5)','brightness(0.2)'];
+    if(shell) shell.style.filter=filterEffects[Math.floor(Math.random()*filterEffects.length)];
+
+    // 2. Sidebar or topbar goes completely black or transparent
+    if(sidebar&&Math.random()<0.5) sidebar.style.visibility=Math.random()<0.4?'hidden':'visible';
+    if(topbar&&Math.random()<0.4) topbar.style.background='#000';
+
+    // 3. Content area skew/scale — page looks broken
+    if(content&&Math.random()<0.6){
+      var skew=(Math.random()-0.5)*3;
+      var scale=0.92+Math.random()*0.12;
+      content.style.transform='skewY('+skew+'deg) scale('+scale+')';
+      content.style.transformOrigin='top left';
+    }
+
+    // 4. Text rendering corruption via letter-spacing blowout on random elements
+    var textEls=document.querySelectorAll('.ptitle,.stitle,.topbar-right,.sb-group-label');
+    textEls.forEach(function(el){
+      if(Math.random()<0.4){
+        el.style.letterSpacing=(Math.random()*8-2)+'px';
+        el.style.opacity=(0.1+Math.random()*0.5).toString();
+      }
+    });
+
+    // 5. Canvas overlay — monochrome scanlines and vignette only (realistic monitor failure)
     var canvas=document.createElement('canvas');
     canvas.id='poison-gpu-canvas';
-    canvas.style.cssText='position:fixed;inset:0;width:100%;height:100%;z-index:99990;pointer-events:none;';
+    canvas.style.cssText='position:fixed;inset:0;width:100%;height:100%;z-index:99990;pointer-events:none;mix-blend-mode:multiply;';
     canvas.width=window.innerWidth; canvas.height=window.innerHeight;
     document.body.appendChild(canvas);
     var ctx=canvas.getContext('2d');
     var W=canvas.width, H=canvas.height;
-    var startTime=Date.now();
-    var duration=cfg.gpuDur;
     var artFrame=0;
-
-    // also shake the admin shell
-    var shell=document.getElementById('adminScreen');
+    var scanOffset=Math.random()*H;
 
     function drawArtifacts(){
-      if(!window._poisonRunning){ removeGpu(); return; }
-      if(Date.now()-startTime>duration){ removeGpu(); return; }
+      if(!window._poisonRunning||Date.now()-startTime>dur){ removeGpu(); return; }
       artFrame++;
       ctx.clearRect(0,0,W,H);
-      var t=artFrame;
 
-      // 1. Random colored pixel blocks (VRAM corruption)
-      var numBlocks=3+Math.floor(Math.random()*18);
-      for(var i=0;i<numBlocks;i++){
-        var bx=Math.random()*W, by=Math.random()*H;
-        var bw=4+Math.random()*180, bh=2+Math.random()*60;
-        // GPU artifact colors — saturated, often wrong hues
-        var colors=['#ff0000','#00ff00','#0000ff','#ff00ff','#00ffff','#ffff00','#ff6600','#cc00ff','#ffffff','#000000','#ff0088','#00ff88'];
-        ctx.fillStyle=colors[Math.floor(Math.random()*colors.length)];
-        ctx.globalAlpha=0.15+Math.random()*0.75;
-        ctx.fillRect(bx,by,bw,bh);
+      // Monochromatic scanlines (no color)
+      ctx.fillStyle='rgba(0,0,0,0.85)';
+      ctx.fillRect(0,0,W,H);
+
+      // Horizontal bands of varying darkness (monitor failure)
+      for(var y=0;y<H;y+=2){
+        var darkLevel=0.6+0.4*Math.sin((y+artFrame*0.8+scanOffset)*0.04);
+        ctx.globalAlpha=darkLevel*0.15;
+        ctx.fillStyle='#000000';
+        ctx.fillRect(0,y,W,1);
       }
 
-      // 2. Horizontal scanline tears (display controller corruption)
-      var numTears=Math.floor(Math.random()*6);
-      for(var j=0;j<numTears;j++){
-        var ty=Math.random()*H;
-        var th=1+Math.floor(Math.random()*8);
-        var tx=Math.random()*W*0.4;
-        ctx.globalAlpha=0.4+Math.random()*0.5;
-        ctx.fillStyle=Math.random()>0.5?'#ffffff':'#ff0000';
-        ctx.fillRect(tx,ty,W-tx,th);
-        // offset duplicate (tearing effect)
-        ctx.globalAlpha=0.3;
-        ctx.fillStyle='#0000ff';
-        ctx.fillRect(0,ty+th,W*Math.random(),th);
-      }
-
-      // 3. Pixel snow / static
-      if(Math.random()<0.6){
-        var snowCount=30+Math.floor(Math.random()*120);
-        for(var k=0;k<snowCount;k++){
-          ctx.globalAlpha=Math.random();
-          ctx.fillStyle=Math.random()>0.5?'#ffffff':'#ff0000';
-          ctx.fillRect(Math.random()*W, Math.random()*H, 1+Math.random()*3, 1+Math.random()*3);
-        }
-      }
-
-      // 4. Checkerboard corruption patch (VRAM block failure)
-      if(Math.random()<0.35){
-        var cx2=Math.random()*(W-120), cy2=Math.random()*(H-80);
-        var csize=8+Math.floor(Math.random()*16);
-        var cols2=Math.floor((60+Math.random()*120)/csize);
-        var rows2=Math.floor((40+Math.random()*60)/csize);
-        for(var ci=0;ci<cols2;ci++){
-          for(var ri=0;ri<rows2;ri++){
-            ctx.globalAlpha=0.3+Math.random()*0.6;
-            if((ci+ri)%2===0){
-              ctx.fillStyle='#'+Math.floor(Math.random()*0xffffff).toString(16).padStart(6,'0');
-              ctx.fillRect(cx2+ci*csize, cy2+ri*csize, csize, csize);
-            }
-          }
-        }
-      }
-
-      // 5. Color channel shift strips (RGB separation)
-      if(Math.random()<0.4){
-        var sy=Math.random()*H, sh=10+Math.random()*60;
-        ctx.globalAlpha=0.2;
-        ctx.fillStyle='#ff000088';
-        ctx.fillRect(Math.random()*20-10, sy, W, sh);
-        ctx.fillStyle='#0000ff88';
-        ctx.fillRect(Math.random()*20-10, sy+2, W, sh);
-      }
-
-      // 6. Vertical corruption stripe
+      // Occasional horizontal tear — white/grey pixel shift (no color)
       if(Math.random()<0.25){
-        var vx=Math.random()*W;
-        var grad=ctx.createLinearGradient(vx,0,vx+6+Math.random()*30,0);
-        grad.addColorStop(0,'rgba(255,0,255,0.6)');
-        grad.addColorStop(0.5,'rgba(0,255,255,0.4)');
-        grad.addColorStop(1,'rgba(255,255,0,0)');
-        ctx.globalAlpha=0.5+Math.random()*0.4;
-        ctx.fillStyle=grad;
-        ctx.fillRect(vx,0,6+Math.random()*40,H);
+        var ty=Math.floor(Math.random()*H);
+        var shift=Math.floor((Math.random()-0.5)*30);
+        ctx.globalAlpha=0.12+Math.random()*0.18;
+        ctx.fillStyle='#ffffff';
+        ctx.fillRect(0,ty,W,1+Math.floor(Math.random()*3));
+        // Offset duplicate of adjacent row
+        if(shift!==0){
+          ctx.globalAlpha=0.08;
+          ctx.fillStyle='rgba(255,255,255,0.5)';
+          ctx.fillRect(shift,ty+1,W,1);
+        }
       }
 
-      // 7. Whole-screen hue shift flash
-      if(artFrame%22===0&&Math.random()<0.3){
-        ctx.globalAlpha=0.08+Math.random()*0.12;
-        var hueColors=['rgba(255,0,0,1)','rgba(0,0,255,1)','rgba(0,255,0,1)','rgba(255,0,255,1)'];
-        ctx.fillStyle=hueColors[Math.floor(Math.random()*hueColors.length)];
-        ctx.fillRect(0,0,W,H);
-      }
+      // Vignette corners darkening
+      var vg=ctx.createRadialGradient(W/2,H/2,H*0.3,W/2,H/2,H*0.9);
+      vg.addColorStop(0,'rgba(0,0,0,0)');
+      vg.addColorStop(1,'rgba(0,0,0,0.6)');
+      ctx.globalAlpha=0.5+Math.sin(artFrame*0.05)*0.2;
+      ctx.fillStyle=vg;
+      ctx.fillRect(0,0,W,H);
 
-      // 8. Shake the page content itself occasionally
-      if(shell && artFrame%8===0 && Math.random()<0.5){
-        var dx=(Math.random()-0.5)*14, dy=(Math.random()-0.5)*8;
-        shell.style.transform='translate('+dx+'px,'+dy+'px) skewX('+(Math.random()-0.5)*1.5+'deg)';
-        setTimeout(function(){ if(shell) shell.style.transform=''; }, 60+Math.random()*80);
+      // Random dead pixel rows (black)
+      if(artFrame%6===0&&Math.random()<0.3){
+        var dpY=Math.floor(Math.random()*H);
+        ctx.globalAlpha=0.9;
+        ctx.fillStyle='#000000';
+        ctx.fillRect(0,dpY,W,1);
       }
-
-      // 9. Scanline sweep
-      ctx.globalAlpha=0.06;
-      ctx.fillStyle='#ffffff';
-      var scanY=(artFrame*3.5)%H;
-      ctx.fillRect(0,scanY,W,2);
-      ctx.fillRect(0,(scanY+H/2)%H,W,1);
 
       ctx.globalAlpha=1;
       requestAnimationFrame(drawArtifacts);
     }
     drawArtifacts();
 
-    // Sudden screen color inversion flash
-    if(Math.random()<0.6){
-      setTimeout(function(){
-        if(!window._poisonRunning||!document.getElementById('adminScreen')) return;
-        document.getElementById('adminScreen').style.filter='invert(1) hue-rotate('+Math.floor(Math.random()*360)+'deg)';
-        setTimeout(function(){
-          var el=document.getElementById('adminScreen');
-          if(el) el.style.filter='';
-        }, 60+Math.random()*120);
-      }, Math.random()*cfg.gpuDur*0.7);
+    // 6. Shake whole shell
+    var shakeT=null;
+    if(shell&&intensity!=='mild'){
+      var shakes=intensity==='terminal'?6:3;
+      function doShake(n){
+        if(!window._poisonRunning||n<=0) return;
+        var dx=(Math.random()-0.5)*18, dy=(Math.random()-0.5)*10;
+        shell.style.transform='translate('+dx+'px,'+dy+'px)';
+        setTimeout(function(){ if(shell) shell.style.transform=''; setTimeout(function(){ doShake(n-1); },200+Math.random()*400); },80);
+      }
+      setTimeout(function(){ doShake(shakes); }, 300+Math.random()*800);
     }
 
-    // Random forced logout (intensity-based)
+    // 7. Occasional full-screen brief blackout (monitor power flicker)
+    if(Math.random()<0.5){
+      setTimeout(function(){
+        if(!window._poisonRunning) return;
+        var flash=document.createElement('div');
+        flash.style.cssText='position:fixed;inset:0;background:#000;z-index:999991;pointer-events:none;';
+        document.body.appendChild(flash);
+        setTimeout(function(){ if(flash.parentNode) flash.parentNode.removeChild(flash); },80+Math.random()*150);
+      }, 400+Math.random()*(dur*0.6));
+    }
+
+    // 8. Forced logout
     if(Math.random()<cfg.logoutChance){
       setTimeout(function(){
         if(!window._poisonRunning) return;
-        doLogout();
+        window._pendingPoisonLogout=true;
+        doLogout(true);
       }, 1200+Math.random()*2000);
     }
+
+    // Cleanup after duration
+    setTimeout(function(){
+      if(shell) shell.style.filter='';
+      if(content){ content.style.transform=''; content.style.transformOrigin=''; }
+      if(sidebar) sidebar.style.visibility='';
+      if(topbar) topbar.style.background='';
+      textEls.forEach(function(el){ el.style.letterSpacing=''; el.style.opacity=''; });
+    }, dur);
   }
 
   function removeGpu(){
@@ -7002,9 +7049,9 @@ function showKernelPanic(LINES, CRYPTIC, intensity, cfg, onComplete){
   // Cryptic message
   var cDiv=document.createElement('div');
   cDiv.style.cssText='position:fixed;bottom:24px;left:0;right:0;text-align:center;'
-    +'font-size:15px;font-weight:bold;color:#ff0000;letter-spacing:4px;z-index:10;'
-    +'opacity:0;transition:opacity 0.8s;text-shadow:0 0 20px #ff0000,0 0 40px #ff000088;'
-    +'animation:pblink 1.2s infinite;';
+    +'font-size:13px;font-weight:bold;color:#ffffff;letter-spacing:4px;z-index:10;'
+    +'opacity:0;transition:opacity 0.8s;'
+    +'animation:pblink 1.8s infinite;';
   cDiv.textContent=CRYPTIC[Math.floor(Math.random()*CRYPTIC.length)];
   overlay.appendChild(cDiv);
 
@@ -7049,29 +7096,27 @@ function showKernelPanic(LINES, CRYPTIC, intensity, cfg, onComplete){
     if(Math.random()<0.3) line='['+Math.floor(Math.random()*999)+'.'+rHex(6)+'] '+line;
     el.textContent=line;
 
-    // Color
+    // Monochromatic colors only — real kernel panics are white/grey text on black
     var lc=line.toLowerCase();
-    if(lc.includes('panic')||lc.includes('fatal')||lc.includes('☠')||lc.includes('>>>')){
-      el.style.color='#ff3333'; el.style.fontWeight='bold';
-    } else if(lc.includes('error')||lc.includes('oops')||lc.includes('bug:')){
-      el.style.color='#ff7700';
-    } else if(lc.includes('warning')||lc.includes('corrupt')||lc.includes('mismatch')||lc.includes('failed')){
-      el.style.color='#dddd00';
+    if(lc.includes('panic')||lc.includes('fatal')||lc.includes('>>>')){
+      el.style.color='#ffffff'; el.style.fontWeight='bold';
+    } else if(lc.includes('error')||lc.includes('oops')||lc.includes('bug:')||lc.includes('☠')){
+      el.style.color='#e0e0e0'; el.style.fontWeight='bold';
+    } else if(lc.includes('warning')||lc.includes('corrupt')||lc.includes('mismatch')){
+      el.style.color='#cccccc';
     } else if(lc.includes('call trace')||lc.includes('[<ff')||line.startsWith(' [')){
-      el.style.color='#777777';
+      el.style.color='#888888';
     } else if(lc.includes('[samaritan]')){
-      el.style.color='#cc44ff'; el.style.fontWeight='bold';
-    } else if(lc.includes('killed')||lc.includes('out of memory')){
-      el.style.color='#ff4488';
+      el.style.color='#aaaaaa'; el.style.fontWeight='bold';
     } else {
-      var b=130+Math.floor(Math.random()*90);
+      var b=100+Math.floor(Math.random()*80);
       el.style.color='rgb('+b+','+b+','+b+')';
     }
 
-    // Occasional glitch on individual lines
-    if(Math.random()<0.04){
-      el.style.filter='hue-rotate('+Math.floor(Math.random()*360)+'deg)';
-      el.style.letterSpacing=(Math.random()*4-1)+'px';
+    // Very occasional subtle letter-spacing glitch — no hue rotation
+    if(Math.random()<0.02){
+      el.style.letterSpacing=(Math.random()*3)+'px';
+      el.style.opacity=(0.4+Math.random()*0.4).toString();
     }
 
     textDiv.appendChild(el);
@@ -7106,11 +7151,10 @@ function showKernelPanic(LINES, CRYPTIC, intensity, cfg, onComplete){
     setTimeout(function(){
       if(!window._poisonRunning) return;
       // Pick flash type
-      var type=Math.floor(Math.random()*4);
+      var type=Math.floor(Math.random()*3);
       if(type===0){ overlay.style.background='#ffffff'; overlay.style.color='#000'; }
-      else if(type===1){ overlay.style.background='#ff0000'; overlay.style.filter='invert(0.8)'; }
-      else if(type===2){ overlay.style.background='#000022'; overlay.style.filter='hue-rotate(180deg) saturate(8)'; }
-      else { overlay.style.background='#001100'; overlay.style.filter='invert(1)'; }
+      else if(type===1){ overlay.style.background='#000000'; overlay.style.filter='brightness(0.05)'; }
+      else { overlay.style.background='#111111'; overlay.style.filter='contrast(3) brightness(0.3)'; }
       setTimeout(function(){
         overlay.style.background='#0a0a0a';
         overlay.style.color='#c8c8c8';
@@ -7139,7 +7183,8 @@ function showKernelPanic(LINES, CRYPTIC, intensity, cfg, onComplete){
     setTimeout(function(){
       if(!window._poisonRunning) return;
       cleanup();
-      setTimeout(doLogout, 400);
+      window._pendingPoisonLogout=true;
+      setTimeout(function(){ doLogout(true); }, 400);
     }, 1500+Math.random()*3000);
     return;
   }
@@ -7190,11 +7235,14 @@ function renderModUserPanel(uid){
 // ══════════════════════════════════════════════════════════════
 // STAFF WARNING SYSTEM
 // ══════════════════════════════════════════════════════════════
-async function issueStaffWarning(sid, reason, severity, issuedBy){
+async function issueStaffWarning(sid, reason, severity, modNote, offensiveItem, issuedBy){
   var s=STAFF[sid]||{};
-  var entry={username:s.username||sid, by:issuedBy||ME, reason:reason, severity:severity||'WARNING', date:nowStr(), ts:Date.now()};
-  var key=await push(ref(db,'logs/staffWarnings'),entry);
-  // Track warning count on staff record
+  var entry={
+    username:s.username||sid, by:issuedBy||ME, reason:reason,
+    severity:severity||'WARNING', modNote:modNote||'', offensiveItem:offensiveItem||'',
+    date:nowStr(), ts:Date.now(), acknowledged:false
+  };
+  await push(ref(db,'logs/staffWarnings'),entry);
   var currentWarnings=parseInt(s.warnings||0)+1;
   await update(ref(db,'staff/'+sid),{warnings:currentWarnings});
   auditLog('Staff Warning Issued',(s.username||sid)+' — '+reason+' ('+severity+') by '+issuedBy);
@@ -7205,21 +7253,34 @@ function renderWarnLog(c){
   var entries=Object.entries(WARN_LOG).sort(function(a,b){ return (b[1].ts||0)-(a[1].ts||0); });
   c.innerHTML='<div class="ptitle">Staff Warning Log</div>'
     +'<div class="sbox"><div class="stitle">Issue Staff Warning</div><div class="sbody">'
-    +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;">'
-    +'<div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;font-weight:bold;">Staff Member</label>'
-    +'<select id="warn-target" style="width:160px;">'
-    +Object.entries(STAFF).filter(function(e){ return e[1]&&e[1].username&&e[0]!==ME; }).map(function(e){ return '<option value="'+e[0]+'">'+e[1].username+'</option>'; }).join('')
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+    +'<div style="flex:1;min-width:140px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;font-weight:bold;">Staff Member</label>'
+    +'<select id="warn-target" style="width:100%;">'
+    +Object.entries(STAFF).filter(function(e){ return e[1]&&e[1].username&&e[0]!==ME; }).map(function(e){ return '<option value="'+e[0]+'">'+e[1].username+' ('+e[1].level+')</option>'; }).join('')
     +'</select></div>'
-    +'<div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;font-weight:bold;">Severity</label>'
-    +'<select id="warn-severity" style="width:130px;">'
+    +'<div style="min-width:140px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;font-weight:bold;">Severity</label>'
+    +'<select id="warn-severity" style="width:100%;">'
     +'<option value="NOTE">Note (informal)</option>'
     +'<option value="WARNING" selected>Warning (formal)</option>'
     +'<option value="FINAL WARNING">Final Warning</option>'
     +'</select></div>'
-    +'<div style="flex:1;min-width:180px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;font-weight:bold;">Reason</label>'
-    +'<input type="text" id="warn-reason" style="width:100%;" placeholder="Reason for warning..."/></div>'
-    +'<button class="btn" id="warn-submit">Issue Warning</button>'
     +'</div>'
+    +'<div style="margin-top:5px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;font-weight:bold;">Reason (dropdown shown to staff)</label>'
+    +'<select id="warn-reason" style="width:100%;">'
+    +'<option value="Unprofessional Conduct">Unprofessional Conduct</option>'
+    +'<option value="Abuse of Moderation Powers">Abuse of Moderation Powers</option>'
+    +'<option value="Inactivity">Inactivity</option>'
+    +'<option value="Policy Violation">Policy Violation</option>'
+    +'<option value="Inappropriate Behavior">Inappropriate Behavior</option>'
+    +'<option value="Unauthorized Action">Unauthorized Action</option>'
+    +'<option value="Harassment">Harassment</option>'
+    +'<option value="Other">Other</option>'
+    +'</select></div>'
+    +'<div style="margin-top:5px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;font-weight:bold;">Moderator Note (shown to staff in popup)</label>'
+    +'<textarea id="warn-modnote" style="width:100%;height:40px;" placeholder="e.g. Your recent actions in the moderation log were found to be in violation of our staff guidelines..."></textarea></div>'
+    +'<div style="margin-top:5px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;font-weight:bold;">Offensive Item (specific action/item referenced)</label>'
+    +'<input type="text" id="warn-offitem" style="width:100%;" placeholder="e.g. Ban issued on [user] without evidence on [date]"/></div>'
+    +'<div style="margin-top:6px;"><button class="btn" id="warn-submit" style="width:100%;">Issue Warning</button></div>'
     +'<div id="warn-msg" style="font-size:11px;margin-top:4px;color:var(--c-ok);min-height:14px;"></div>'
     +'</div></div>'
     +'<div class="sbox"><div class="stitle">Warning History</div><div class="sbody">'
@@ -7245,14 +7306,18 @@ function renderWarnLog(c){
   if(submitBtn) submitBtn.onclick=async function(){
     var sid=c.querySelector('#warn-target').value;
     var severity=c.querySelector('#warn-severity').value;
-    var reason=(c.querySelector('#warn-reason').value||'').trim();
+    var reason=(c.querySelector('#warn-reason').value||'');
+    var modNote=(c.querySelector('#warn-modnote').value||'').trim();
+    var offItem=(c.querySelector('#warn-offitem').value||'').trim();
     var msgEl=c.querySelector('#warn-msg');
-    if(!reason){ msgEl.style.color='var(--c-ban)'; msgEl.textContent='Reason required.'; return; }
     if(!sid){ msgEl.style.color='var(--c-ban)'; msgEl.textContent='Select a target.'; return; }
-    await issueStaffWarning(sid, reason, severity, ME);
+    if(!modNote){ msgEl.style.color='var(--c-ban)'; msgEl.textContent='Moderator note required.'; return; }
+    await issueStaffWarning(sid, reason, severity, modNote, offItem, ME);
     msgEl.style.color='var(--c-ok)'; msgEl.textContent='Warning issued to '+(STAFF[sid]&&STAFF[sid].username||sid)+'.';
     showToast('Staff warning issued.','warning');
     c.querySelector('#warn-reason').value='';
+    var mn=c.querySelector('#warn-modnote'); if(mn) mn.value='';
+    var oi=c.querySelector('#warn-offitem'); if(oi) oi.value='';
     setTimeout(function(){ if(msgEl) msgEl.textContent=''; }, 2500);
   };
   if(isSuperAdmin()) bindDeleteLogBtns(c);
@@ -8977,6 +9042,60 @@ document.getElementById('loginPass').onkeydown=e=>{ if(e.key==='Enter') doLogin(
 document.getElementById('loginUser').onkeydown=e=>{ if(e.key==='Enter') doLogin(); };
 document.getElementById('logoutBtn').onclick=doLogout;
 document.getElementById('suspOKBtn').onclick=()=>document.getElementById('suspOverlay').classList.remove('show');
+
+// Warning popup wiring
+(function(){
+  var agreeEl=document.getElementById('warnPopupAgree');
+  var continueEl=document.getElementById('warnPopupContinue');
+  var logoutEl=document.getElementById('warnPopupLogout');
+  var errEl=document.getElementById('warnPopupErr');
+  if(agreeEl) agreeEl.onchange=function(){
+    if(continueEl){ continueEl.disabled=!agreeEl.checked; continueEl.style.opacity=agreeEl.checked?'1':'0.5'; continueEl.style.cursor=agreeEl.checked?'pointer':'not-allowed'; }
+  };
+  if(continueEl) continueEl.onclick=function(){
+    if(!agreeEl||!agreeEl.checked){ if(errEl) errEl.textContent='You must acknowledge the warning first.'; return; }
+    document.getElementById('warnPopupOverlay').classList.remove('show');
+    // Mark warning as acknowledged in Firebase
+    if(ME&&window._pendingWarnId){
+      update(ref(db,'logs/staffWarnings/'+window._pendingWarnId),{acknowledged:true,acknowledgedAt:nowStr()}).catch(function(){});
+      window._pendingWarnId=null;
+    }
+  };
+  if(logoutEl) logoutEl.onclick=function(){ document.getElementById('warnPopupOverlay').classList.remove('show'); doLogout(); };
+})();
+
+// Real-time warning listener — fires when a new warning is issued to the logged-in user
+function startWarningListener(){
+  if(!ME) return;
+  onValue(ref(db,'logs/staffWarnings'),function(snap){
+    if(!snap.exists()||!ME) return;
+    var all=snap.val()||{};
+    var myWarnings=Object.entries(all).filter(function(e){
+      var r=e[1];
+      return r&&(STAFF[ME]&&r.username===STAFF[ME].username)&&!r.acknowledged&&r.ts&&(Date.now()-r.ts)<60000;
+    });
+    if(!myWarnings.length) return;
+    // Show the most recent unacknowledged warning
+    var latest=myWarnings.sort(function(a,b){ return (b[1].ts||0)-(a[1].ts||0); })[0];
+    var lid=latest[0], w=latest[1];
+    window._pendingWarnId=lid;
+    var dateEl=document.getElementById('warnPopupDate');
+    var noteEl=document.getElementById('warnPopupModNote');
+    var reasonEl=document.getElementById('warnPopupReason');
+    var offEl=document.getElementById('warnPopupOffItem');
+    var agreeEl=document.getElementById('warnPopupAgree');
+    var continueEl=document.getElementById('warnPopupContinue');
+    var errEl=document.getElementById('warnPopupErr');
+    if(dateEl) dateEl.textContent=w.date||'Unknown';
+    if(noteEl) noteEl.textContent=w.modNote||w.reason||'No additional note.';
+    if(reasonEl) reasonEl.textContent=w.reason||'—';
+    if(offEl) offEl.textContent=w.offensiveItem||'—';
+    if(agreeEl){ agreeEl.checked=false; }
+    if(continueEl){ continueEl.disabled=true; continueEl.style.opacity='0.5'; continueEl.style.cursor='not-allowed'; }
+    if(errEl) errEl.textContent='';
+    document.getElementById('warnPopupOverlay').classList.add('show');
+  });
+}
 document.getElementById('wipedOKBtn').onclick=async()=>{
   document.getElementById('wipedOverlay').classList.remove('show');
   // Mark seen so it doesn't reappear
@@ -9159,6 +9278,7 @@ async function doLogin(){
     if(isSoftwareManager()) startScheduledAlertWatcher();
     // Push login to activity feed
     pushActivityFeed('🟢', ME + ' logged in');
+    startWarningListener();
   }catch(e){ 
     status.textContent='INVALID!'; 
     const sd=collectSessionData();
@@ -9182,18 +9302,156 @@ async function doLogin(){
   }
 }
 
-async function doLogout(){
+async function doLogout(fromPoison){
   if(heartbeatInterval){ clearInterval(heartbeatInterval); heartbeatInterval=null; }
-  // Stop poison if running
-  window._poisonRunning = false;
-  var pp = document.getElementById('poison-panic-overlay'); if(pp) pp.remove();
-  if(ME) await update(ref(db,`staff/${ME}`),{lastActive:nowStr(),lastAction:'Logged out'}).catch(()=>{});
+  var wasMe=ME;
+  // Stop poison canvas/panic UI
+  var pp=document.getElementById('poison-panic-overlay'); if(pp) pp.remove();
+  var gc=document.getElementById('poison-gpu-canvas'); if(gc) gc.remove();
+  var sh=document.getElementById('adminScreen'); if(sh) sh.style.transform='';
+  if(ME) await update(ref(db,'staff/'+ME),{lastActive:nowStr(),lastAction:'Logged out'}).catch(()=>{});
   await signOut(auth);
   ME=''; MY_LEVEL=''; currentPassword='';
   document.getElementById('adminScreen').style.display='none';
-  document.getElementById('loginScreen').style.display='flex';
-  document.getElementById('loginUser').value='';
-  document.getElementById('loginPass').value='';
+
+  // If poison is active for the logged-out user, show lockout screen instead of login
+  if(fromPoison||window._pendingPoisonLogout){
+    window._pendingPoisonLogout=false;
+    showPoisonLockout(wasMe);
+  } else {
+    // Clean up poison running state only when NOT showing lockout
+    window._poisonRunning=false;
+    document.getElementById('loginScreen').style.display='flex';
+    document.getElementById('loginUser').value='';
+    document.getElementById('loginPass').value='';
+    if(typeof window.initLoginBgFn==='function') setTimeout(window.initLoginBgFn,100);
+  }
+}
+
+function showPoisonLockout(username){
+  var el=document.getElementById('poisonLockout');
+  if(!el) return;
+  el.style.display='flex';
+  // Make login screen hidden
+  document.getElementById('loginScreen').style.display='none';
+  // Start the lockout canvas
+  initPoisonLockoutCanvas();
+  // Keep checking Firebase — if cured, show login
+  if(window._poisonLockoutCheck) clearInterval(window._poisonLockoutCheck);
+  window._poisonLockoutCheck=setInterval(async function(){
+    if(!username) return;
+    try{
+      var snap=await get(ref(db,'contingencies/poison/'+username));
+      var p=snap.exists()?snap.val():{};
+      if(!p.active){
+        // Cured — hide lockout, show login
+        clearInterval(window._poisonLockoutCheck);
+        window._poisonRunning=false;
+        window._poisonLockoutRunning=false;
+        el.style.display='none';
+        document.getElementById('loginScreen').style.display='flex';
+        document.getElementById('loginUser').value='';
+        document.getElementById('loginPass').value='';
+        if(typeof window.initLoginBgFn==='function') setTimeout(window.initLoginBgFn,100);
+      }
+    }catch(e){}
+  },4000);
+}
+
+function initPoisonLockoutCanvas(){
+  if(window._poisonLockoutRunning) return;
+  window._poisonLockoutRunning=true;
+  var canvas=document.getElementById('poisonLockoutCanvas');
+  var codeEl=document.getElementById('poisonLockoutCode');
+  if(!canvas||!codeEl) return;
+  canvas.width=window.innerWidth; canvas.height=window.innerHeight;
+  window.addEventListener('resize',function(){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; });
+  var ctx=canvas.getContext('2d');
+  var W=canvas.width, H=canvas.height;
+
+  // Scrolling code lines
+  var CODE_POOL=[
+    'BUG: unable to handle kernel NULL pointer dereference at 0000000000000000',
+    'IP: [<ffffffff8108f36b>] __do_page_fault+0x2ab/0x5a0','PGD 0','Oops: 0002 [#1] SMP PREEMPT',
+    'CPU: 0 PID: 1 Comm: samaritan Not tainted 5.15.0-86-generic #96',
+    'RIP: 0010:[<ffffffff810937c2>] native_write_cr4+0x0/0x40',
+    'RAX: 00000000000406e0 RBX: 0000000000000000 RCX: 0000000000000000',
+    'Call Trace:',' [<ffffffff8104e3c5>] dump_stack+0x45/0x56',' [<ffffffff8104e3c5>] panic+0xd4/0x21e',
+    'Kernel panic - not syncing: VFS: Unable to mount root fs on unknown-block(0,0)',
+    '[samaritan] auth_module: identity verification FAILED — session invalidated',
+    '[samaritan] core: watchdog timer expired — process terminated',
+    '[samaritan] integrity_check: SIGNATURE MISMATCH on samaritan_core.ko',
+    'FATAL: Module samaritan_core not found.','segfault at 7f3b2a1c4000 ip 00007f3b2a1c4000',
+    'Out of memory: Kill process 4421 (auth_daemon) score 982 or sacrifice child',
+    'EXT4-fs error (device sda1): ext4_validate_block_bitmap:376',
+    'NVRM: GPU-00000000:00:03.0 OS Error: NV_ERR_INVALID_STATE 0x0000003B',
+    'kernel BUG at fs/buffer.c:1492!','general protection fault: 0000 [#2] SMP',
+    '---[ end trace 4eaa2a86a8e2da52 ]---','ACPI Error: AE_NOT_FOUND (20180105/dswload-421)',
+    'WARNING: at arch/x86/kernel/cpu/mcheck/mce.c:1523 mce_panic+0xdb/0x17f()',
+    'mce: [Hardware Error]: Machine check events logged',
+    'BUG: soft lockup - CPU#0 stuck for 23s! [kworker/0:1]',
+    'Code: 48 c7 c7 68 a4 d8 81 e8 fb 7a fb ff 66 0f 1f 84 00 00 00 00 00 <48> f7 04',
+  ];
+  var lines=[];
+  var maxLines=Math.ceil(H/14)+5;
+
+  function rHex(n){ return Math.floor(Math.random()*Math.pow(16,n)).toString(16).padStart(n,'0'); }
+
+  function addCodeLine(){
+    var line;
+    if(Math.random()<0.18){
+      var procs=['['+rHex(8)+'.'+rHex(6)+'] EXT4-fs error errno=-'+Math.floor(Math.random()*30),
+        'RAX: '+rHex(16)+' RBX: '+rHex(16)+' RCX: '+rHex(16),
+        ' [<ffff88'+rHex(8)+'>] panic+0x'+rHex(2)+'/0x'+rHex(3),
+        '[samaritan] mem: write to protected region '+rHex(16)+' — FAULT',
+        '---[ end trace '+rHex(16)+' ]---'];
+      line=procs[Math.floor(Math.random()*procs.length)];
+    } else { line=CODE_POOL[Math.floor(Math.random()*CODE_POOL.length)]; }
+    lines.push({text:line, y:-14, opacity:0.55+Math.random()*0.35, speed:0.3+Math.random()*0.5,
+      color:line.includes('panic')||line.includes('FATAL')||line.includes('FAULT')?'#553333':
+            line.includes('samaritan')?'#334433':
+            line.includes('WARNING')||line.includes('Error')?'#443322':'#2a2a2a'});
+    if(lines.length>maxLines*2) lines.splice(0, lines.length-maxLines);
+  }
+
+  var frame=0;
+  function drawLockout(){
+    if(!window._poisonLockoutRunning) return;
+    W=canvas.width; H=canvas.height;
+    ctx.fillStyle='rgba(0,0,0,0.92)';
+    ctx.fillRect(0,0,W,H);
+
+    // Move lines down
+    for(var i=lines.length-1;i>=0;i--){
+      lines[i].y+=lines[i].speed;
+      if(lines[i].y>H+20) lines.splice(i,1);
+    }
+    // Add new lines
+    if(frame%12===0) addCodeLine();
+
+    // Draw lines
+    ctx.font='11px "Courier New", monospace';
+    for(var j=0;j<lines.length;j++){
+      var ln=lines[j];
+      ctx.globalAlpha=ln.opacity;
+      ctx.fillStyle=ln.color;
+      ctx.fillText(ln.text, 10+Math.floor(Math.random()<0.005?Math.random()*4:0), ln.y);
+    }
+    ctx.globalAlpha=1;
+
+    // Subtle occasional horizontal glitch line
+    if(Math.random()<0.03){
+      var gy=Math.random()*H;
+      ctx.globalAlpha=0.04+Math.random()*0.05;
+      ctx.fillStyle=Math.random()>0.5?'#ffffff':'#330000';
+      ctx.fillRect(0,gy,W,1+Math.floor(Math.random()*3));
+      ctx.globalAlpha=1;
+    }
+
+    frame++;
+    requestAnimationFrame(drawLockout);
+  }
+  drawLockout();
 }
 
 // ── ACTIVITY HEARTBEAT ──
@@ -10574,7 +10832,7 @@ function openNotifSettings(){
 </script>
 
 <script>
-// ── SHELL BACKGROUND (subtle animated grid for admin panel) ──
+// ── SHELL BACKGROUND VFX (admin panel) ──
 (function(){
   let shellAnimId=null;
   window.initShellBg = function(){
@@ -10584,48 +10842,91 @@ function openNotifSettings(){
     const ctx=canvas.getContext('2d');
     let W=canvas.width=window.innerWidth;
     let H=canvas.height=window.innerHeight;
-    window.addEventListener('resize',()=>{W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;});
+    window.addEventListener('resize',()=>{
+      W=canvas.width=window.innerWidth;
+      H=canvas.height=window.innerHeight;
+    });
     canvas.style.opacity='1';
     let t=0;
-    // Orb positions (subtle, slow)
+
+    // Larger, slower deep orbs
     const orbs=[
-      {x:W*0.8, y:H*0.15, r:300, speedX:0.15, speedY:0.1},
-      {x:W*0.1, y:H*0.8,  r:250, speedX:-0.12,speedY:0.08},
-      {x:W*0.5, y:H*0.5,  r:200, speedX:0.1,  speedY:-0.12},
+      {x:W*0.85, y:H*0.1,  r:420, speedX:0.08, speedY:0.06, color:'88,166,255'},
+      {x:W*0.05, y:H*0.85, r:360, speedX:-0.07,speedY:0.05, color:'88,166,255'},
+      {x:W*0.5,  y:H*0.45, r:280, speedX:0.06, speedY:-0.08,color:'82,168,80'},
+      {x:W*0.2,  y:H*0.25, r:200, speedX:-0.09,speedY:0.07, color:'130,80,215'},
     ];
+
+    // Flowing particles
+    const particles=Array.from({length:28},(_,i)=>({
+      x:Math.random()*W, y:Math.random()*H,
+      vx:(Math.random()-0.5)*0.25, vy:-0.1-Math.random()*0.2,
+      r:1+Math.random()*1.5, life:Math.random(), maxLife:1,
+    }));
+
     function draw(){
       const isDark=document.body.classList.contains('gh-dark');
       if(!isDark){ canvas.style.opacity='0'; shellAnimId=requestAnimationFrame(draw); return; }
       canvas.style.opacity='1';
-      // Clear
       ctx.clearRect(0,0,W,H);
-      // Very subtle orbs
+
+      // Deep orbs
       orbs.forEach((o,i)=>{
-        o.x+=Math.sin(t*0.2+i*2)*o.speedX;
-        o.y+=Math.cos(t*0.15+i*2)*o.speedY;
+        o.x+=Math.sin(t*0.15+i*1.8)*o.speedX;
+        o.y+=Math.cos(t*0.12+i*1.8)*o.speedY;
         const g=ctx.createRadialGradient(o.x,o.y,0,o.x,o.y,o.r);
-        g.addColorStop(0,'rgba(88,166,255,0.03)');
+        g.addColorStop(0,`rgba(${o.color},0.055)`);
+        g.addColorStop(0.5,`rgba(${o.color},0.02)`);
         g.addColorStop(1,'transparent');
         ctx.fillStyle=g;
         ctx.fillRect(0,0,W,H);
       });
-      // Dot grid — very faint
-      const STEP=60;
+
+      // Dot grid — pulsing with wave pattern
+      const STEP=52;
       for(let x=0;x<W+STEP;x+=STEP){
         for(let y=0;y<H+STEP;y+=STEP){
-          const pulse=Math.sin(t*0.3+x*0.04+y*0.03)*0.5+0.5;
+          const wave=Math.sin(t*0.4+x*0.025+y*0.02)*0.5+0.5;
+          const dist=Math.sqrt((x-W/2)**2+(y-H/2)**2)/(W*0.7);
+          const alpha=(0.04+wave*0.05)*(1-dist*0.6);
           ctx.beginPath();
-          ctx.arc(x,y,0.8+pulse*0.4,0,Math.PI*2);
-          ctx.fillStyle=`rgba(88,166,255,${0.05+pulse*0.04})`;
+          ctx.arc(x,y,0.7+wave*0.5,0,Math.PI*2);
+          ctx.fillStyle=`rgba(88,166,255,${alpha})`;
           ctx.fill();
         }
       }
-      t+=0.008;
+
+      // Subtle diagonal scan line
+      const scanX=(t*18)%(W+H);
+      ctx.strokeStyle='rgba(88,166,255,0.025)';
+      ctx.lineWidth=1;
+      ctx.beginPath();
+      ctx.moveTo(scanX-H,0);
+      ctx.lineTo(scanX,H);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(scanX-H*0.5,0);
+      ctx.lineTo(scanX+H*0.5,H);
+      ctx.stroke();
+
+      // Floating particles
+      particles.forEach(p=>{
+        p.x+=p.vx; p.y+=p.vy; p.life+=0.004;
+        if(p.y<-10||p.life>p.maxLife){
+          p.x=Math.random()*W; p.y=H+10; p.life=0; p.vy=-0.1-Math.random()*0.2;
+        }
+        const a=Math.sin(p.life*Math.PI)*0.35;
+        ctx.beginPath();
+        ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+        ctx.fillStyle=`rgba(88,166,255,${a})`;
+        ctx.fill();
+      });
+
+      t+=0.006;
       shellAnimId=requestAnimationFrame(draw);
     }
     draw();
   };
-  // Start after login
   document.addEventListener('DOMContentLoaded',()=>{ setTimeout(window.initShellBg,200); });
 })();
 </script>
@@ -10639,74 +10940,96 @@ function openNotifSettings(){
     let W=canvas.width=window.innerWidth;
     let H=canvas.height=window.innerHeight;
     window.addEventListener('resize',()=>{W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;});
-
-    // Dot grid
-    const COLS=Math.ceil(W/44)+2, ROWS=Math.ceil(H/44)+2;
     let t=0;
+    let animId=null;
 
-    // Floating orbs
+    // Larger glowing orbs
     const orbs=[
-      {x:W*0.15,y:H*0.2,r:180,color:'rgba(88,166,255,0.06)'},
-      {x:W*0.85,y:H*0.75,r:220,color:'rgba(88,166,255,0.05)'},
-      {x:W*0.7,y:H*0.15,r:140,color:'rgba(63,185,80,0.04)'},
+      {x:W*0.15,y:H*0.25,r:260,vx:0.18,vy:0.12,color:'88,166,255',alpha:0.09},
+      {x:W*0.82,y:H*0.7, r:320,vx:-0.14,vy:0.1,color:'88,166,255',alpha:0.07},
+      {x:W*0.65,y:H*0.1, r:190,vx:0.1, vy:0.15,color:'82,168,80', alpha:0.06},
+      {x:W*0.35,y:H*0.85,r:220,vx:-0.12,vy:-0.08,color:'130,80,215',alpha:0.05},
     ];
 
-    function draw(){
-      const isDark=document.body.classList.contains('gh-dark');
-      const bg=isDark?'#0d1117':'#f6f8fa';
-      const dotColor=isDark?'rgba(88,166,255,0.12)':'rgba(9,105,218,0.08)';
-      const lineColor=isDark?'rgba(88,166,255,0.04)':'rgba(9,105,218,0.03)';
+    // Flowing line particles
+    const lines=Array.from({length:12},()=>({
+      x:Math.random()*W, y:Math.random()*H,
+      len:30+Math.random()*80, angle:-Math.PI/2+(Math.random()-0.5)*0.4,
+      speed:0.3+Math.random()*0.5, alpha:0.04+Math.random()*0.06,
+    }));
 
-      ctx.fillStyle=bg;
+    const STEP=44;
+    const COLS=Math.ceil(W/STEP)+2, ROWS=Math.ceil(H/STEP)+2;
+
+    function draw(){
+      if(!document.getElementById('loginScreen')||document.getElementById('loginScreen').style.display==='none') return;
+      const isDark=document.body.classList.contains('gh-dark');
+      ctx.fillStyle=isDark?'#0d1117':'#f6f8fa';
       ctx.fillRect(0,0,W,H);
 
       // Orbs
       orbs.forEach((o,i)=>{
-        o.x+=Math.sin(t*0.3+i)*0.3;
-        o.y+=Math.cos(t*0.2+i)*0.2;
+        o.x+=Math.sin(t*0.25+i)*o.vx;
+        o.y+=Math.cos(t*0.18+i)*o.vy;
         const g=ctx.createRadialGradient(o.x,o.y,0,o.x,o.y,o.r);
-        g.addColorStop(0,o.color);
+        g.addColorStop(0,`rgba(${o.color},${o.alpha})`);
+        g.addColorStop(0.5,`rgba(${o.color},${o.alpha*0.4})`);
         g.addColorStop(1,'transparent');
         ctx.fillStyle=g;
         ctx.fillRect(0,0,W,H);
       });
 
-      // Grid dots
+      // Grid dots with ripple
+      const cx=W/2, cy=H/2;
       for(let col=0;col<COLS;col++){
         for(let row=0;row<ROWS;row++){
-          const x=col*44, y=row*44;
-          const pulse=Math.sin(t*0.5+col*0.3+row*0.2)*0.5+0.5;
+          const x=col*STEP, y=row*STEP;
+          const dist=Math.sqrt((x-cx)**2+(y-cy)**2);
+          const ripple=Math.sin(t*1.2-dist*0.015)*0.5+0.5;
+          const pulse=Math.sin(t*0.5+col*0.3+row*0.25)*0.5+0.5;
+          const alpha=isDark?(0.06+ripple*0.08+pulse*0.04):(0.05+ripple*0.05);
           ctx.beginPath();
-          ctx.arc(x,y,1+pulse*0.5,0,Math.PI*2);
-          ctx.fillStyle=dotColor;
+          ctx.arc(x,y,0.8+pulse*0.6,0,Math.PI*2);
+          ctx.fillStyle=isDark?`rgba(88,166,255,${alpha})`:`rgba(9,105,218,${alpha*0.7})`;
           ctx.fill();
         }
       }
 
-      // Sparse horizontal lines
-      for(let row=0;row<ROWS;row+=3){
-        const y=row*44;
-        const alpha=Math.sin(t*0.4+row*0.5)*0.5+0.5;
-        ctx.strokeStyle=lineColor;
+      // Flowing line streaks
+      lines.forEach(l=>{
+        l.y+=l.speed;
+        if(l.y>H+l.len) l.y=-l.len;
+        const x2=l.x+Math.cos(l.angle)*l.len, y2=l.y+Math.sin(l.angle)*l.len;
+        const grad=ctx.createLinearGradient(l.x,l.y,x2,y2);
+        grad.addColorStop(0,'transparent');
+        grad.addColorStop(0.5,`rgba(88,166,255,${l.alpha})`);
+        grad.addColorStop(1,'transparent');
+        ctx.strokeStyle=grad;
         ctx.lineWidth=1;
-        ctx.globalAlpha=alpha;
+        ctx.globalAlpha=1;
         ctx.beginPath();
-        ctx.moveTo(0,y);
-        ctx.lineTo(W,y);
+        ctx.moveTo(l.x,l.y);
+        ctx.lineTo(x2,y2);
         ctx.stroke();
-      }
-      ctx.globalAlpha=1;
+      });
 
-      t+=0.015;
-      if(document.getElementById('loginScreen')&&document.getElementById('loginScreen').style.display!=='none'){
-        requestAnimationFrame(draw);
+      // Horizon glow at bottom (dark mode)
+      if(isDark){
+        const hg=ctx.createLinearGradient(0,H*0.75,0,H);
+        hg.addColorStop(0,'transparent');
+        hg.addColorStop(1,'rgba(88,166,255,0.04)');
+        ctx.fillStyle=hg;
+        ctx.fillRect(0,H*0.75,W,H*0.25);
       }
+
+      t+=0.012;
+      animId=requestAnimationFrame(draw);
     }
+    if(animId) cancelAnimationFrame(animId);
     draw();
-  }
-  // Init immediately and also re-init after login screen toggling
-  document.addEventListener('DOMContentLoaded', initLoginBgFn);
-  setTimeout(initLoginBgFn, 100);
+  };
+  document.addEventListener('DOMContentLoaded', window.initLoginBgFn);
+  setTimeout(window.initLoginBgFn, 100);
 })();
 </script>
 </body>
