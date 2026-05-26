@@ -7617,332 +7617,531 @@ function renderMonitorContingency(panel){
 
 function renderLiveMonitor(c){
   window._monitorActive=true;
-  // Register watcher presence so snapshot pusher activates on other sessions
   set(ref(db,'meta/monitorWatchers/'+ME),{ts:Date.now()}).catch(()=>{});
-  // Clean up watcher when leaving
   if(window._monitorCleanup) window._monitorCleanup();
   window._monitorCleanup=function(){
     window._monitorActive=false;
     remove(ref(db,'meta/monitorWatchers/'+ME)).catch(()=>{});
   };
+  if(!window._monitorSelected) window._monitorSelected=new Set();
+  window._monitorTilesPerRow=4;
 
   c.innerHTML=`
-  <div class="ptitle" style="display:flex;align-items:center;justify-content:space-between;">
-    <span>📺 Live Staff Monitor</span>
-    <span id="monitor-live-badge" style="font-size:10px;background:#1a7f37;color:#fff;padding:2px 8px;border-radius:10px;letter-spacing:1px;display:flex;align-items:center;gap:4px;">
-      <span style="width:6px;height:6px;background:#fff;border-radius:50%;display:inline-block;animation:pulse-active 1.5s infinite;"></span> LIVE
-    </span>
-  </div>
-
-  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
-    <div style="display:flex;gap:4px;align-items:center;">
-      <span style="font-size:11px;color:var(--c-text2);">Tiles per row:</span>
-      ${[2,3,4,5,6].map(n=>`<button class="btn small monitor-tile-size" data-n="${n}" style="min-width:24px;padding:2px 6px;${n===4?'background:var(--c-link);color:#fff;':''}">${n}</button>`).join('')}
-    </div>
-    <div style="display:flex;gap:4px;align-items:center;margin-left:8px;">
-      <span style="font-size:11px;color:var(--c-text2);">Sort:</span>
-      <select id="monitor-sort" style="font-size:11px;background:var(--bg-input);color:var(--c-text);border:1px solid var(--c-border);border-radius:3px;padding:2px 4px;">
-        <option value="name">Name</option>
-        <option value="active">Active First</option>
-        <option value="page">Current Page</option>
-        <option value="level">Level</option>
-      </select>
-    </div>
-    <div style="display:flex;gap:4px;align-items:center;">
-      <span style="font-size:11px;color:var(--c-text2);">Filter:</span>
-      <select id="monitor-filter" style="font-size:11px;background:var(--bg-input);color:var(--c-text);border:1px solid var(--c-border);border-radius:3px;padding:2px 4px;">
-        <option value="all">All Staff</option>
-        <option value="active">Active Only</option>
-        <option value="idle">Idle/Offline</option>
-      </select>
-    </div>
-    <div style="margin-left:auto;display:flex;gap:4px;flex-wrap:wrap;" id="monitor-bulk-actions" style="display:none;">
-      <span id="monitor-sel-count" style="font-size:11px;color:var(--c-text2);align-self:center;"></span>
-      <button class="btn small" id="monitor-btn-lock">🔒 Lock Selected</button>
-      <button class="btn small" id="monitor-btn-logout">⚡ Logout Selected</button>
-      <button class="btn small" id="monitor-btn-msg">💬 Message Selected</button>
-      <button class="btn small red" id="monitor-btn-deselect">Deselect All</button>
+  <!-- GoGuardian-style top bar -->
+  <div style="background:var(--bg-topinfo);border:1px solid var(--c-border);border-radius:8px;padding:8px 12px;margin-bottom:8px;">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <span style="font-size:13px;font-weight:700;color:var(--c-text);">📺 Live Monitor</span>
+      <span id="monitor-live-badge" style="font-size:10px;background:#1a7f37;color:#fff;padding:2px 8px;border-radius:10px;letter-spacing:1px;display:inline-flex;align-items:center;gap:4px;">
+        <span style="width:6px;height:6px;background:#fff;border-radius:50%;display:inline-block;animation:pulse-active 1.5s infinite;"></span> LIVE
+      </span>
+      <span id="monitor-staff-count" style="font-size:11px;color:var(--c-text2);"></span>
+      <div style="margin-left:auto;display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
+        <span style="font-size:11px;color:var(--c-text2);">Tiles:</span>
+        ${[2,3,4,5,6].map(n=>`<button class="btn small monitor-tile-size" data-n="${n}" style="padding:1px 7px;min-width:26px;${n===4?'background:var(--c-link);color:#fff;border-color:var(--c-link);':''}">${n}</button>`).join('')}
+        <span style="font-size:11px;color:var(--c-text2);margin-left:6px;">Sort:</span>
+        <select id="monitor-sort" style="font-size:11px;background:var(--bg-input);color:var(--c-text);border:1px solid var(--c-border);border-radius:3px;padding:2px 5px;">
+          <option value="active">Active First</option>
+          <option value="name">Name</option>
+          <option value="page">Page</option>
+          <option value="level">Level</option>
+        </select>
+        <select id="monitor-filter" style="font-size:11px;background:var(--bg-input);color:var(--c-text);border:1px solid var(--c-border);border-radius:3px;padding:2px 5px;">
+          <option value="all">All Staff</option>
+          <option value="active">Active Only</option>
+          <option value="idle">Idle/Offline</option>
+        </select>
+      </div>
     </div>
   </div>
 
-  <div id="monitor-msg-bar" style="display:none;background:rgba(88,166,255,0.08);border:1px solid rgba(88,166,255,0.25);border-radius:6px;padding:8px 12px;margin-bottom:8px;gap:8px;align-items:center;">
-    <span style="font-size:11px;color:var(--c-text);flex:1;">Broadcast message to selected staff:</span>
-    <input type="text" id="monitor-broadcast-input" style="flex:2;font-size:11px;" placeholder="Type message..."/>
-    <button class="btn small" id="monitor-broadcast-send">Send</button>
+  <!-- Bulk action bar — hidden until selection -->
+  <div id="monitor-bulk-bar" style="display:none;background:rgba(88,166,255,0.07);border:1px solid rgba(88,166,255,0.25);border-radius:8px;padding:7px 12px;margin-bottom:8px;gap:7px;align-items:center;flex-wrap:wrap;">
+    <span id="monitor-sel-label" style="font-size:12px;font-weight:700;color:var(--c-link);"></span>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-left:4px;">
+      <button class="btn small" id="monitor-bulk-lock" style="padding:3px 10px;">🔒 Lock All</button>
+      <button class="btn small" id="monitor-bulk-unlock" style="padding:3px 10px;">🔓 Unlock All</button>
+      <button class="btn small" id="monitor-bulk-logout" style="padding:3px 10px;">⚡ Force Logout</button>
+      <button class="btn small" id="monitor-bulk-msg" style="padding:3px 10px;">💬 Broadcast</button>
+      <button class="btn small" id="monitor-bulk-audit" style="padding:3px 10px;">📋 View Audit Log</button>
+    </div>
+    <button class="btn small red" id="monitor-bulk-deselect" style="margin-left:auto;padding:3px 10px;">✕ Deselect</button>
   </div>
 
-  <div id="monitor-tiles-wrap" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;"></div>
+  <!-- Broadcast bar -->
+  <div id="monitor-msg-bar" style="display:none;background:rgba(88,166,255,0.06);border:1px solid rgba(88,166,255,0.2);border-radius:6px;padding:8px 12px;margin-bottom:8px;gap:8px;align-items:center;flex-wrap:wrap;">
+    <span style="font-size:11px;color:var(--c-text);font-weight:600;">Broadcast to selected:</span>
+    <input type="text" id="monitor-broadcast-input" style="flex:1;min-width:200px;font-size:11px;" placeholder="Type message to send..."/>
+    <button class="btn small" id="monitor-broadcast-send" style="padding:3px 12px;">Send</button>
+    <button class="btn small" id="monitor-broadcast-cancel" style="padding:3px 8px;">Cancel</button>
+  </div>
+
+  <!-- Tile grid -->
+  <div id="monitor-tiles-wrap" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;"></div>
   `;
 
   // Wire tile size buttons
   c.querySelectorAll('.monitor-tile-size').forEach(btn=>{
     btn.onclick=()=>{
-      c.querySelectorAll('.monitor-tile-size').forEach(b=>{ b.style.background=''; b.style.color=''; });
-      btn.style.background='var(--c-link)'; btn.style.color='#fff';
-      var n=parseInt(btn.dataset.n)||4;
+      c.querySelectorAll('.monitor-tile-size').forEach(b=>{ b.style.background=''; b.style.color=''; b.style.borderColor=''; });
+      btn.style.background='var(--c-link)'; btn.style.color='#fff'; btn.style.borderColor='var(--c-link)';
+      window._monitorTilesPerRow=parseInt(btn.dataset.n)||4;
       var wrap=document.getElementById('monitor-tiles-wrap');
-      if(wrap) wrap.style.gridTemplateColumns=`repeat(${n},1fr)`;
+      if(wrap) wrap.style.gridTemplateColumns='repeat('+window._monitorTilesPerRow+',1fr)';
     };
   });
+  ['monitor-sort','monitor-filter'].forEach(id=>{ var el=document.getElementById(id); if(el) el.onchange=renderMonitorTiles; });
 
-  // Wire sort/filter
-  ['monitor-sort','monitor-filter'].forEach(id=>{
-    var el=document.getElementById(id);
-    if(el) el.onchange=renderMonitorTiles;
-  });
-
-  // Wire bulk actions
-  var lockBtn=document.getElementById('monitor-btn-lock');
-  var logoutBtn=document.getElementById('monitor-btn-logout');
-  var msgBtn=document.getElementById('monitor-btn-msg');
-  var deselectBtn=document.getElementById('monitor-btn-deselect');
-  if(lockBtn) lockBtn.onclick=()=>bulkMonitorAction('lock');
-  if(logoutBtn) logoutBtn.onclick=()=>bulkMonitorAction('logout');
-  if(msgBtn) msgBtn.onclick=()=>{
+  // Bulk action wiring
+  document.getElementById('monitor-bulk-lock').onclick=()=>monitorBulkAction('lock');
+  document.getElementById('monitor-bulk-unlock').onclick=()=>monitorBulkAction('unlock');
+  document.getElementById('monitor-bulk-logout').onclick=()=>monitorBulkAction('logout');
+  document.getElementById('monitor-bulk-audit').onclick=()=>openMonitorAuditLog([...window._monitorSelected]);
+  document.getElementById('monitor-bulk-msg').onclick=()=>{
     var bar=document.getElementById('monitor-msg-bar');
-    if(bar) bar.style.display=bar.style.display==='none'?'flex':'none';
+    if(bar) bar.style.display=bar.style.display==='none'||!bar.style.display?'flex':'none';
   };
-  if(deselectBtn) deselectBtn.onclick=()=>{
-    window._monitorSelected=new Set();
-    renderMonitorTiles();
-  };
-  var sendBtn=document.getElementById('monitor-broadcast-send');
-  if(sendBtn) sendBtn.onclick=()=>{
-    var msg=document.getElementById('monitor-broadcast-input').value.trim();
-    if(!msg||!window._monitorSelected||!window._monitorSelected.size) return;
+  document.getElementById('monitor-bulk-deselect').onclick=()=>{ window._monitorSelected=new Set(); renderMonitorTiles(); };
+  document.getElementById('monitor-broadcast-send').onclick=()=>{
+    var msg=(document.getElementById('monitor-broadcast-input').value||'').trim();
+    if(!msg||!window._monitorSelected.size) return;
     window._monitorSelected.forEach(sid=>{
       var s=STAFF[sid]||{};
-      push(ref(db,'staffMessages'),{from:ME,to:s.username||sid,subject:'Broadcast from Monitor',body:msg,date:nowStr(),ts:Date.now()}).catch(()=>{});
+      push(ref(db,'staffMessages'),{from:ME,to:s.username||sid,subject:'[Monitor Broadcast]',body:msg,date:nowStr(),ts:Date.now()}).catch(()=>{});
     });
     showToast('Broadcast sent to '+window._monitorSelected.size+' staff.','success');
+    auditLog('Monitor Broadcast','To '+window._monitorSelected.size+' staff: '+msg.substring(0,60));
     document.getElementById('monitor-broadcast-input').value='';
     document.getElementById('monitor-msg-bar').style.display='none';
   };
+  document.getElementById('monitor-broadcast-cancel').onclick=()=>{ document.getElementById('monitor-msg-bar').style.display='none'; };
 
-  if(!window._monitorSelected) window._monitorSelected=new Set();
   renderMonitorTiles();
-
-  // Refresh tiles every 5 seconds for live updates even without snapshot changes
   if(window._monitorRefreshInterval) clearInterval(window._monitorRefreshInterval);
-  window._monitorRefreshInterval=setInterval(()=>{ if(document.getElementById('monitor-tiles-wrap')) renderMonitorTiles(); else { clearInterval(window._monitorRefreshInterval); if(window._monitorCleanup){ window._monitorCleanup(); window._monitorCleanup=null; } } },5000);
+  window._monitorRefreshInterval=setInterval(()=>{
+    if(document.getElementById('monitor-tiles-wrap')) renderMonitorTiles();
+    else { clearInterval(window._monitorRefreshInterval); if(window._monitorCleanup){ window._monitorCleanup(); window._monitorCleanup=null; } }
+  },4000);
 }
 
 function renderMonitorTiles(){
   var wrap=document.getElementById('monitor-tiles-wrap');
   if(!wrap) return;
-
-  var sort=(document.getElementById('monitor-sort')||{}).value||'name';
+  var sort=(document.getElementById('monitor-sort')||{}).value||'active';
   var filter=(document.getElementById('monitor-filter')||{}).value||'all';
   var now=new Date();
 
   var sArr=Object.entries(STAFF).filter(([,s])=>s&&s.username);
-
-  // Apply filter
   sArr=sArr.filter(([sid,s])=>{
-    var snap=SCREEN_SNAPSHOTS[sid];
-    var lastActive=s.lastActive&&s.lastActive!=='Never'?new Date(s.lastActive):null;
-    var diffMs=lastActive?(now-lastActive):Infinity;
-    var isActive=lastActive&&diffMs<300000&&s.lastAction!=='Logged out';
-    if(filter==='active') return isActive;
-    if(filter==='idle') return !isActive;
+    var la=s.lastActive&&s.lastActive!=='Never'?new Date(s.lastActive):null;
+    var diff=la?(now-la):Infinity;
+    var active=la&&diff<300000&&s.lastAction!=='Logged out';
+    if(filter==='active') return active;
+    if(filter==='idle') return !active;
     return true;
   });
-
-  // Apply sort
   sArr.sort(([aid,a],[bid,b])=>{
     if(sort==='name') return (a.username||'').localeCompare(b.username||'');
-    if(sort==='level'){
-      const ranks=['TRIAL MODERATOR','MODERATOR','ADMINISTRATOR','SUPER ADMINISTRATOR','SENIOR ADMINISTRATOR','SOFTWARE MANAGER'];
-      return ranks.indexOf(b.level||'')-ranks.indexOf(a.level||'');
-    }
+    if(sort==='level'){ const R=['TRIAL MODERATOR','MODERATOR','ADMINISTRATOR','SUPER ADMINISTRATOR','SENIOR ADMINISTRATOR','SOFTWARE MANAGER']; return R.indexOf(b.level||'')-R.indexOf(a.level||''); }
     if(sort==='page') return (a.currentPage||'').localeCompare(b.currentPage||'');
-    if(sort==='active'){
-      const aActive=a.lastActive&&a.lastActive!=='Never'?new Date(a.lastActive).getTime():0;
-      const bActive=b.lastActive&&b.lastActive!=='Never'?new Date(b.lastActive).getTime():0;
-      return bActive-aActive;
-    }
-    return 0;
+    const at=a.lastActive&&a.lastActive!=='Never'?new Date(a.lastActive).getTime():0;
+    const bt=b.lastActive&&b.lastActive!=='Never'?new Date(b.lastActive).getTime():0;
+    return bt-at;
   });
 
-  // Update selection counter
+  // Update bulk bar
   var selCount=window._monitorSelected?window._monitorSelected.size:0;
-  var selCountEl=document.getElementById('monitor-sel-count');
-  if(selCountEl) selCountEl.textContent=selCount>0?selCount+' selected':'';
-  var bulkBar=document.getElementById('monitor-bulk-actions');
+  var bulkBar=document.getElementById('monitor-bulk-bar');
+  var selLabel=document.getElementById('monitor-sel-label');
   if(bulkBar) bulkBar.style.display=selCount>0?'flex':'none';
+  if(selLabel) selLabel.textContent=selCount+' staff selected';
+  var cntEl=document.getElementById('monitor-staff-count');
+  if(cntEl) cntEl.textContent=sArr.length+' staff shown';
 
   wrap.innerHTML=sArr.map(([sid,s])=>{
     var snap=SCREEN_SNAPSHOTS[sid];
-    var lastActive=s.lastActive&&s.lastActive!=='Never'?new Date(s.lastActive):null;
-    var diffMs=lastActive?(now-lastActive):Infinity;
-    var isActive=lastActive&&diffMs<300000&&s.lastAction!=='Logged out';
-    var isIdle=lastActive&&diffMs>=300000&&diffMs<1200000&&s.lastAction!=='Logged out';
-    var dotClass=s.suspended?'suspended':isActive?'active':isIdle?'idle':'offline';
-    var statusLabel=s.suspended?'SUSPENDED':s.secured?'SECURED':isActive?'Active':isIdle?'Idle':'Offline';
-    var statusColor=s.suspended?'#9a6700':s.secured?'#cf222e':isActive?'#3fb950':isIdle?'#e3b341':'#6e7681';
-    var currentPageName=s.currentPage||'—';
-    var pageIcon=PAGE_ICONS[s.currentPage]||'📄';
-    var lastSeen=snap&&snap.ts?timeAgo(snap.ts):'No data';
+    var la=s.lastActive&&s.lastActive!=='Never'?new Date(s.lastActive):null;
+    var diff=la?(now-la):Infinity;
+    var active=la&&diff<300000&&s.lastAction!=='Logged out';
+    var idle=la&&diff>=300000&&diff<1200000&&s.lastAction!=='Logged out';
+    var dotClass=s.suspended?'suspended':active?'active':idle?'idle':'offline';
+    var statusLabel=s.suspended?'SUSPENDED':s.secured?'SECURED':active?'Active':idle?'Idle':'Offline';
+    var statusColor=s.suspended?'var(--c-sus)':s.secured?'var(--c-ban)':active?'#3fb950':idle?'#e3b341':'var(--c-text2)';
     var isSelected=window._monitorSelected&&window._monitorSelected.has(sid);
     var snapAge=snap&&snap.ts?(now-snap.ts):Infinity;
-    var snapFresh=snapAge<30000; // snapshot less than 30s old = fresh
+    var snapFresh=snapAge<25000;
+    var isFrozen=FREEZE_DATA&&FREEZE_DATA[sid]&&FREEZE_DATA[sid].active;
+    var pageIcon=PAGE_ICONS[s.currentPage]||'📄';
+    var pageName=s.currentPage?s.currentPage.charAt(0).toUpperCase()+s.currentPage.slice(1):'—';
 
-    return `<div class="monitor-tile${isSelected?' monitor-tile-selected':''}" data-sid="${sid}" style="
-      background:var(--bg-sbox);border:1.5px solid ${isSelected?'var(--c-link)':snapFresh&&isActive?'rgba(63,185,80,0.4)':'var(--c-border)'};
-      border-radius:8px;overflow:hidden;cursor:pointer;transition:border-color 0.2s,box-shadow 0.2s;position:relative;
-      ${isSelected?'box-shadow:0 0 0 2px var(--c-link)40;':''}">
-      <!-- Header -->
-      <div style="padding:5px 8px;display:flex;align-items:center;gap:5px;border-bottom:1px solid var(--c-border);background:var(--bg-topinfo);">
-        <input type="checkbox" class="monitor-cb" data-sid="${sid}" ${isSelected?'checked':''} onclick="event.stopPropagation();" style="cursor:pointer;"/>
+    return `<div class="monitor-tile${isSelected?' monitor-tile-sel':''}" data-sid="${sid}"
+      style="background:var(--bg-sbox);border:2px solid ${isSelected?'var(--c-link)':isFrozen?'#cf222e':snapFresh&&active?'rgba(63,185,80,0.5)':'var(--c-border)'};
+      border-radius:8px;overflow:hidden;cursor:pointer;position:relative;transition:border-color 0.2s,box-shadow 0.15s,transform 0.1s;">
+      <!-- Header strip -->
+      <div style="padding:5px 8px;display:flex;align-items:center;gap:5px;background:var(--bg-topinfo);border-bottom:1px solid var(--c-border);">
+        <input type="checkbox" class="monitor-cb" data-sid="${sid}" ${isSelected?'checked':''} style="cursor:pointer;flex-shrink:0;" onclick="event.stopPropagation();"/>
         <span class="activity-dot ${dotClass}" style="flex-shrink:0;"></span>
-        <span style="font-size:11px;font-weight:600;color:var(--c-text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.username||sid}</span>
-        <span style="font-size:9px;font-weight:bold;color:${statusColor};">${statusLabel}</span>
+        <span style="font-size:11px;font-weight:700;color:var(--c-text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.username||sid}</span>
+        ${isFrozen?'<span style="font-size:9px;background:#cf222e;color:#fff;padding:1px 4px;border-radius:3px;font-weight:700;">LOCKED</span>':''}
+        <span style="font-size:9px;font-weight:600;color:${statusColor};">${statusLabel}</span>
       </div>
-      <!-- Screen preview area -->
-      <div style="position:relative;background:var(--bg-content);border-top:1px solid var(--c-border);height:140px;overflow:hidden;">
-        ${snap&&snap.html?`
-          <div style="position:absolute;inset:0;transform:scale(0.28);transform-origin:top left;width:357%;height:357%;pointer-events:none;overflow:hidden;background:var(--bg-page);">
-            <div style="font-size:11px;color:var(--c-text);padding:4px;">${snap.html}</div>
-          </div>
-          <div style="position:absolute;inset:0;background:transparent;"></div>
-          ${!snapFresh?`<div style="position:absolute;top:4px;right:4px;font-size:9px;background:rgba(0,0,0,0.7);color:#e3b341;padding:1px 4px;border-radius:3px;">⏱ ${lastSeen}</div>`:''}
-        `:`
-          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;">
-            <div style="font-size:22px;opacity:0.3;">${pageIcon}</div>
-            <div style="font-size:10px;color:var(--c-text2);text-align:center;">${isActive?'Waiting for snapshot…':'Not active'}</div>
-          </div>
-        `}
+      <!-- Snapshot preview -->
+      <div style="position:relative;background:var(--bg-content);height:150px;overflow:hidden;">
+        ${snap&&snap.html
+          ?`<div style="position:absolute;inset:0;transform:scale(0.26);transform-origin:top left;width:385%;height:385%;pointer-events:none;overflow:hidden;background:var(--bg-page);color:var(--c-text);font-size:11px;line-height:1.3;">${snap.html}</div>
+             <div style="position:absolute;inset:0;"></div>
+             <div style="position:absolute;bottom:3px;right:3px;font-size:9px;background:rgba(0,0,0,0.6);color:${snapFresh?'#3fb950':'#e3b341'};padding:1px 5px;border-radius:3px;">${snapFresh?'● live':timeAgo(snap.ts)}</div>`
+          :`<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;">
+              <span style="font-size:28px;opacity:0.2;">${pageIcon}</span>
+              <span style="font-size:10px;color:var(--c-text2);">${active?'Loading snapshot…':'Offline'}</span>
+            </div>`}
       </div>
       <!-- Footer -->
-      <div style="padding:5px 8px;">
-        <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;">
-          <span style="font-size:12px;">${pageIcon}</span>
-          <span style="font-size:11px;color:var(--c-link);font-weight:600;">${currentPageName.charAt(0).toUpperCase()+currentPageName.slice(1)}</span>
-          ${snap&&snap.scrollY>50?`<span style="font-size:9px;color:var(--c-text2);margin-left:auto;">↕ ${snap.scrollY}px</span>`:''}
-        </div>
-        <div style="font-size:10px;color:var(--c-text2);">${levelBadge(s.level)} &mdash; ${s.lastAction||'—'}</div>
+      <div style="padding:4px 8px 5px;display:flex;align-items:center;gap:5px;border-top:1px solid var(--c-border);">
+        <span style="font-size:13px;">${pageIcon}</span>
+        <span style="font-size:11px;color:var(--c-link);font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${pageName}</span>
+        ${snap&&snap.scrollY>30?`<span style="font-size:9px;color:var(--c-text2);">↕${snap.scrollY}px</span>`:''}
       </div>
-      <!-- Quick actions (show on hover via CSS) -->
-      <div class="monitor-quick-actions" style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.88);padding:5px 6px;display:none;gap:4px;justify-content:center;flex-wrap:wrap;">
-        <button class="btn small monitor-action-btn" data-action="view" data-sid="${sid}" style="font-size:10px;padding:2px 7px;">👤 Profile</button>
-        <button class="btn small monitor-action-btn" data-action="lock" data-sid="${sid}" style="font-size:10px;padding:2px 7px;">🔒 Lock</button>
-        <button class="btn small monitor-action-btn red" data-action="logout" data-sid="${sid}" style="font-size:10px;padding:2px 7px;">⚡ Logout</button>
+      <!-- Hover action bar -->
+      <div class="mtile-hover" style="display:none;position:absolute;bottom:0;left:0;right:0;background:rgba(13,17,23,0.92);backdrop-filter:blur(2px);padding:5px 5px;gap:4px;flex-wrap:wrap;justify-content:center;border-top:1px solid rgba(255,255,255,0.08);">
+        <button class="btn small mon-act" data-a="profile" data-sid="${sid}" style="padding:3px 8px;font-size:10px;">👤 Profile</button>
+        ${isFrozen
+          ?`<button class="btn small mon-act" data-a="unlock" data-sid="${sid}" style="padding:3px 8px;font-size:10px;background:#1a7f37;color:#fff;border-color:#1a7f37;">🔓 Unlock</button>`
+          :`<button class="btn small mon-act" data-a="lock" data-sid="${sid}" style="padding:3px 8px;font-size:10px;">🔒 Lock</button>`}
+        <button class="btn small mon-act" data-a="audit" data-sid="${sid}" style="padding:3px 8px;font-size:10px;">📋 Audit</button>
+        <button class="btn small mon-act red" data-a="logout" data-sid="${sid}" style="padding:3px 8px;font-size:10px;">⚡ Logout</button>
       </div>
     </div>`;
   }).join('');
 
-  // Wire checkboxes
+  // Event wiring
   wrap.querySelectorAll('.monitor-cb').forEach(cb=>{
-    cb.onchange=()=>{
-      if(cb.checked) window._monitorSelected.add(cb.dataset.sid);
-      else window._monitorSelected.delete(cb.dataset.sid);
-      renderMonitorTiles();
-    };
+    cb.onchange=()=>{ if(cb.checked) window._monitorSelected.add(cb.dataset.sid); else window._monitorSelected.delete(cb.dataset.sid); renderMonitorTiles(); };
   });
-
-  // Wire tile clicks (expand snapshot)
   wrap.querySelectorAll('.monitor-tile').forEach(tile=>{
-    tile.onmouseenter=()=>{ var qa=tile.querySelector('.monitor-quick-actions'); if(qa) qa.style.display='flex'; };
-    tile.onmouseleave=()=>{ var qa=tile.querySelector('.monitor-quick-actions'); if(qa) qa.style.display='none'; };
-    tile.onclick=(e)=>{
-      if(e.target.closest('.monitor-cb,.monitor-action-btn')) return;
-      var sid=tile.dataset.sid;
-      openMonitorDetail(sid);
-    };
+    tile.onmouseenter=()=>{ var h=tile.querySelector('.mtile-hover'); if(h) h.style.display='flex'; };
+    tile.onmouseleave=()=>{ var h=tile.querySelector('.mtile-hover'); if(h) h.style.display='none'; };
+    tile.onclick=e=>{ if(e.target.closest('.monitor-cb,.mon-act')) return; openMonitorDetail(tile.dataset.sid); };
   });
-
-  // Wire quick action buttons
-  wrap.querySelectorAll('.monitor-action-btn').forEach(btn=>{
-    btn.onclick=(e)=>{
-      e.stopPropagation();
-      var sid=btn.dataset.sid, action=btn.dataset.action;
-      if(action==='view'){ currentStaffId=sid; nav('staff'); }
-      else if(action==='lock') promptFreezeFrame(sid);
-      else if(action==='logout') promptForceLogout(sid);
-    };
+  wrap.querySelectorAll('.mon-act').forEach(btn=>{
+    btn.onclick=e=>{ e.stopPropagation(); monitorTileAction(btn.dataset.a, btn.dataset.sid); };
   });
 }
 
-function promptFreezeFrame(sid){
+function monitorTileAction(action, sid){
   var s=STAFF[sid]||{};
-  openDialog('Lock Screen',`Freeze Frame <b>${s.username||sid}</b>'s session?`,'',async()=>{
+  if(action==='profile') openMonitorProfile(sid);
+  else if(action==='lock') monitorLockSession(sid, true);
+  else if(action==='unlock') monitorLockSession(sid, false);
+  else if(action==='logout') monitorConfirmLogout([sid]);
+  else if(action==='audit') openMonitorAuditLog([sid]);
+}
+
+// ── Lock/Unlock (no openDialog — works from overlays too) ──
+async function monitorLockSession(sid, lock){
+  var s=STAFF[sid]||{};
+  if(lock){
     await update(ref(db,'contingencies/freeze/'+sid),{active:true,expiry:0,by:ME,ts:Date.now()});
     await update(ref(db,'staff/'+sid),{freezeActive:true});
-    showToast((s.username||sid)+' has been locked.','warning');
-    auditLog('Monitor: Screen Locked',s.username||sid);
-  });
+    if(FREEZE_DATA) FREEZE_DATA[sid]={active:true};
+    showToast((s.username||sid)+' locked.','warning');
+    auditLog('Monitor: Locked',(s.username||sid)+' by '+ME);
+  } else {
+    await update(ref(db,'contingencies/freeze/'+sid),{active:false});
+    await update(ref(db,'staff/'+sid),{freezeActive:false});
+    if(FREEZE_DATA) FREEZE_DATA[sid]={active:false};
+    showToast((s.username||sid)+' unlocked.','success');
+    auditLog('Monitor: Unlocked',(s.username||sid)+' by '+ME);
+  }
+  renderMonitorTiles();
 }
 
-async function bulkMonitorAction(action){
+// ── Bulk actions ──
+async function monitorBulkAction(action){
   if(!window._monitorSelected||!window._monitorSelected.size) return;
   var sids=[...window._monitorSelected];
   if(action==='lock'){
-    openDialog('Lock Selected','Lock '+sids.length+' staff member(s)?','',async()=>{
-      for(var sid of sids){
-        await update(ref(db,'contingencies/freeze/'+sid),{active:true,expiry:0,by:ME,ts:Date.now()});
-        await update(ref(db,'staff/'+sid),{freezeActive:true});
-      }
-      showToast(sids.length+' session(s) locked.','warning');
-      auditLog('Monitor: Bulk Lock',sids.length+' staff locked by '+ME);
-    });
+    for(var sid of sids) await monitorLockSession(sid,true);
+    showToast(sids.length+' session(s) locked.','warning');
+  } else if(action==='unlock'){
+    for(var sid of sids) await monitorLockSession(sid,false);
+    showToast(sids.length+' session(s) unlocked.','success');
   } else if(action==='logout'){
-    openDialog('Logout Selected','Force logout '+sids.length+' staff member(s)?','',async()=>{
-      for(var sid of sids){
-        await update(ref(db,'staff/'+sid),{forceLogout:true});
-      }
-      showToast(sids.length+' staff force-logged out.','warning');
-      auditLog('Monitor: Bulk Force Logout',sids.length+' staff by '+ME);
-      window._monitorSelected=new Set();
-      renderMonitorTiles();
-    });
+    monitorConfirmLogout(sids);
   }
 }
 
+function monitorConfirmLogout(sids){
+  // Use an inline confirm panel instead of openDialog (safe from overlays)
+  var panel=document.createElement('div');
+  panel.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:99999;background:var(--bg-dialog);border:2px solid var(--c-ban);border-radius:10px;padding:18px 22px;box-shadow:0 12px 40px rgba(0,0,0,0.5);min-width:320px;text-align:center;';
+  panel.innerHTML='<div style="font-size:13px;font-weight:700;color:var(--c-text);margin-bottom:10px;">Force logout '+sids.length+' staff member(s)?</div>'
+    +'<div style="font-size:11px;color:var(--c-text2);margin-bottom:14px;">They will be auto-logged out on their next heartbeat.</div>'
+    +'<div style="display:flex;gap:8px;justify-content:center;">'
+    +'<button class="btn red" id="mlc-confirm" style="padding:4px 18px;">Confirm</button>'
+    +'<button class="btn" id="mlc-cancel" style="padding:4px 14px;">Cancel</button></div>';
+  var backdrop=document.createElement('div');
+  backdrop.style.cssText='position:fixed;inset:0;z-index:99998;background:var(--bg-overlay);';
+  document.body.appendChild(backdrop);
+  document.body.appendChild(panel);
+  panel.querySelector('#mlc-confirm').onclick=async()=>{
+    backdrop.remove(); panel.remove();
+    for(var sid of sids) await update(ref(db,'staff/'+sid),{forceLogout:true});
+    showToast(sids.length+' staff force-logged out.','warning');
+    auditLog('Monitor: Bulk Force Logout',sids.length+' by '+ME);
+    window._monitorSelected=new Set(); renderMonitorTiles();
+  };
+  panel.querySelector('#mlc-cancel').onclick=()=>{ backdrop.remove(); panel.remove(); };
+}
+
+// ── Staff Profile popup (no navigation) ──
+function openMonitorProfile(sid){
+  var s=STAFF[sid]||{};
+  var warns=Object.values(WARN_LOG||{}).filter(w=>w&&w.username===s.username);
+  var suspLogs=Object.values(SUSPEND_LOG||{}).filter(l=>l&&l.username===s.username).slice(-3);
+  var modCount=Object.values(MOD_LOG||{}).filter(r=>r&&r.mod===s.username).length;
+  var panel=document.createElement('div');
+  panel.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:99999;background:var(--bg-dialog);border:1px solid var(--c-border);border-radius:12px;overflow:hidden;width:min(90vw,460px);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.5);';
+  var backdrop=document.createElement('div');
+  backdrop.style.cssText='position:fixed;inset:0;z-index:99998;background:var(--bg-overlay);';
+  var la=s.lastActive&&s.lastActive!=='Never'?new Date(s.lastActive):null;
+  var diff=la?(new Date()-la):Infinity;
+  var active=la&&diff<300000&&s.lastAction!=='Logged out';
+  var dotClass=s.suspended?'suspended':active?'active':'offline';
+  panel.innerHTML=`
+    <div style="background:var(--bg-stitle);color:var(--c-stitle-text);padding:10px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <span style="font-size:14px;font-weight:700;flex:1;">${s.username||sid}</span>
+      <span class="activity-dot ${dotClass}"></span>
+      <span style="cursor:pointer;font-size:18px;opacity:0.7;" id="mprof-close">✕</span>
+    </div>
+    <div style="overflow-y:auto;padding:14px 16px;flex:1;">
+      <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;">
+        <div class="avatar-box" style="width:52px;height:52px;flex-shrink:0;">${avatarHTML(s,52)}</div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--c-text);">${s.username||sid}</div>
+          <div style="margin:3px 0;">${levelBadge(s.level)}</div>
+          <div style="font-size:11px;color:var(--c-text2);">${s.suspended?'<span class="sus">SUSPENDED</span>':s.secured?'<span class="ban">SECURED</span>':'<span class="ok">Active</span>'}</div>
+          <div style="font-size:10px;color:var(--c-text2);margin-top:2px;">Joined: ${s.joined||'—'} &mdash; Last active: ${s.lastActive||'Never'}</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px;">
+        ${[['Mod Actions',modCount,'var(--c-link)'],['Warnings',warns.length,warns.length>0?'var(--c-sus)':'var(--c-text2)'],['Suspensions',suspLogs.length,suspLogs.length>0?'var(--c-ban)':'var(--c-text2)']].map(([l,v,c])=>`
+          <div style="background:var(--bg-tbl-odd);border:1px solid var(--c-border);border-radius:6px;padding:7px 10px;text-align:center;">
+            <div style="font-size:18px;font-weight:900;color:${c};">${v}</div>
+            <div style="font-size:10px;color:var(--c-text2);">${l}</div>
+          </div>`).join('')}
+      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--c-text);margin-bottom:4px;">Current Session</div>
+      <div style="background:var(--bg-tbl-odd);border:1px solid var(--c-border);border-radius:5px;padding:7px 10px;margin-bottom:10px;font-size:11px;color:var(--c-text);">
+        Page: <b>${(s.currentPage||'—').charAt(0).toUpperCase()+(s.currentPage||'—').slice(1)}</b>
+        &mdash; Last action: <b>${s.lastAction||'—'}</b><br/>
+        ${FREEZE_DATA&&FREEZE_DATA[sid]&&FREEZE_DATA[sid].active?'<span style="color:var(--c-ban);font-weight:700;">🔒 SESSION LOCKED</span>':'<span style="color:var(--c-ok);">Session active</span>'}
+      </div>
+      ${warns.length?`<div style="font-size:11px;font-weight:700;color:var(--c-text);margin-bottom:4px;">Recent Warnings</div>
+        <div style="margin-bottom:10px;">${warns.slice(-3).map(w=>`<div style="font-size:11px;padding:4px 8px;background:var(--bg-tbl-odd);border-left:3px solid var(--c-sus);margin-bottom:3px;border-radius:2px;">${w.severity}: ${w.reason} <span style="color:var(--c-text2);">(${w.date})</span></div>`).join('')}</div>`:''}
+    </div>
+    <div style="border-top:1px solid var(--c-border);padding:8px 12px;display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;">
+      ${FREEZE_DATA&&FREEZE_DATA[sid]&&FREEZE_DATA[sid].active
+        ?`<button class="btn small" id="mprof-unlock" style="background:#1a7f37;color:#fff;border-color:#1a7f37;padding:3px 10px;">🔓 Unlock Session</button>`
+        :`<button class="btn small" id="mprof-lock" style="padding:3px 10px;">🔒 Lock Session</button>`}
+      <button class="btn small" id="mprof-logout" style="padding:3px 10px;">⚡ Force Logout</button>
+      <button class="btn small" id="mprof-audit" style="padding:3px 10px;">📋 Full Audit Log</button>
+      <button class="btn small red" id="mprof-close2" style="margin-left:auto;padding:3px 10px;">Close</button>
+    </div>`;
+  document.body.appendChild(backdrop);
+  document.body.appendChild(panel);
+  var close=()=>{ backdrop.remove(); panel.remove(); };
+  panel.querySelector('#mprof-close').onclick=close;
+  panel.querySelector('#mprof-close2').onclick=close;
+  var lockBtn=panel.querySelector('#mprof-lock');
+  var unlockBtn=panel.querySelector('#mprof-unlock');
+  if(lockBtn) lockBtn.onclick=()=>{ close(); monitorLockSession(sid,true); };
+  if(unlockBtn) unlockBtn.onclick=()=>{ close(); monitorLockSession(sid,false); };
+  panel.querySelector('#mprof-logout').onclick=()=>{ close(); monitorConfirmLogout([sid]); };
+  panel.querySelector('#mprof-audit').onclick=()=>{ close(); openMonitorAuditLog([sid]); };
+  backdrop.onclick=close;
+}
+
+// ── Audit Log overlay (filterable, multi-staff) ──
+function openMonitorAuditLog(sids){
+  var staffNames=sids.map(sid=>(STAFF[sid]&&STAFF[sid].username)||sid);
+  // Gather all relevant log entries across all sources
+  var entries=[];
+  var now=Date.now();
+
+  // Mod log actions by these staff
+  Object.entries(MOD_LOG||{}).forEach(([lid,r])=>{
+    if(r&&r.mod&&staffNames.includes(r.mod))
+      entries.push({ts:r.date?new Date(r.date).getTime():0,date:r.date||'—',type:'Mod Action',actor:r.mod,detail:`${r.action} on ${r.user}${r.reason?' — '+r.reason:''}`,color:'var(--c-link)'});
+  });
+  // Login log
+  Object.entries(LOGIN_LOG||{}).forEach(([lid,r])=>{
+    if(r&&r.username&&staffNames.includes(r.username))
+      entries.push({ts:r.date?new Date(r.date).getTime():0,date:r.date||'—',type:'Login',actor:r.username,detail:`${r.result||'—'}${r.ip&&r.ip!=='—'?' (IP: '+r.ip+')':''}`,color:'var(--c-ok)'});
+  });
+  // Suspend log
+  Object.entries(SUSPEND_LOG||{}).forEach(([lid,r])=>{
+    if(r&&(staffNames.includes(r.username)||staffNames.includes(r.by)))
+      entries.push({ts:r.date?new Date(r.date).getTime():0,date:r.date||'—',type:'Suspension',actor:r.by||r.username,detail:`${r.action||'—'} — ${r.username}${r.reason?' ('+r.reason+')':''}`,color:'var(--c-sus)'});
+  });
+  // Warnings
+  Object.entries(WARN_LOG||{}).forEach(([lid,r])=>{
+    if(r&&(staffNames.includes(r.username)||staffNames.includes(r.by)))
+      entries.push({ts:r.ts||0,date:r.date||'—',type:'Warning',actor:r.by,detail:`${r.severity} to ${r.username}: ${r.reason}`,color:'#e3b341'});
+  });
+  // Audit log (actions by these staff)
+  Object.entries(AUDIT_LOG||{}).forEach(([lid,r])=>{
+    if(r&&r.by&&staffNames.includes(r.by))
+      entries.push({ts:r.date?new Date(r.date).getTime():0,date:r.date||'—',type:'Audit',actor:r.by,detail:`${r.action||'—'}${r.detail?' — '+r.detail:''}`,color:'var(--c-text2)'});
+  });
+
+  entries.sort((a,b)=>b.ts-a.ts);
+
+  var panel=document.createElement('div');
+  panel.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:99999;background:var(--bg-dialog);border:1px solid var(--c-border);border-radius:12px;overflow:hidden;width:min(95vw,720px);height:min(85vh,600px);display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.5);';
+  var backdrop=document.createElement('div');
+  backdrop.style.cssText='position:fixed;inset:0;z-index:99998;background:var(--bg-overlay);';
+
+  panel.innerHTML=`
+    <div style="background:var(--bg-stitle);color:var(--c-stitle-text);padding:10px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <span style="font-size:13px;font-weight:700;flex:1;">📋 Audit Log — ${staffNames.join(', ')}</span>
+      <span style="cursor:pointer;font-size:18px;opacity:0.7;" id="maud-close">✕</span>
+    </div>
+    <div style="padding:8px 12px;border-bottom:1px solid var(--c-border);display:flex;gap:6px;flex-wrap:wrap;align-items:center;flex-shrink:0;">
+      <input type="text" id="maud-search" style="flex:1;min-width:140px;font-size:11px;" placeholder="Filter by keyword..."/>
+      <select id="maud-type" style="font-size:11px;background:var(--bg-input);color:var(--c-text);border:1px solid var(--c-border);border-radius:3px;padding:2px 6px;">
+        <option value="">All Types</option>
+        <option value="Mod Action">Mod Actions</option>
+        <option value="Login">Logins</option>
+        <option value="Suspension">Suspensions</option>
+        <option value="Warning">Warnings</option>
+        <option value="Audit">Audit</option>
+      </select>
+      <span id="maud-count" style="font-size:11px;color:var(--c-text2);"></span>
+    </div>
+    <div id="maud-list" style="flex:1;overflow-y:auto;padding:6px 12px;"></div>`;
+
+  document.body.appendChild(backdrop);
+  document.body.appendChild(panel);
+  backdrop.onclick=()=>{ backdrop.remove(); panel.remove(); };
+  panel.querySelector('#maud-close').onclick=()=>{ backdrop.remove(); panel.remove(); };
+
+  function renderAudit(){
+    var kw=(panel.querySelector('#maud-search').value||'').toLowerCase();
+    var type=(panel.querySelector('#maud-type').value||'');
+    var filtered=entries.filter(e=>{
+      if(type&&e.type!==type) return false;
+      if(kw&&!e.detail.toLowerCase().includes(kw)&&!e.actor.toLowerCase().includes(kw)&&!e.type.toLowerCase().includes(kw)) return false;
+      return true;
+    });
+    var cntEl=panel.querySelector('#maud-count');
+    if(cntEl) cntEl.textContent=filtered.length+' entries';
+    var listEl=panel.querySelector('#maud-list');
+    if(!listEl) return;
+    if(!filtered.length){ listEl.innerHTML='<div style="padding:20px;text-align:center;color:var(--c-text2);font-size:12px;">No entries found.</div>'; return; }
+    listEl.innerHTML=filtered.map(e=>`
+      <div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--c-border);">
+        <div style="flex-shrink:0;width:3px;background:${e.color};border-radius:2px;align-self:stretch;min-height:16px;"></div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
+            <span style="font-size:10px;font-weight:700;color:${e.color};background:${e.color}22;padding:1px 5px;border-radius:3px;">${e.type}</span>
+            <span style="font-size:11px;color:var(--c-text);">${e.actor}</span>
+            <span style="font-size:10px;color:var(--c-text2);margin-left:auto;">${e.date}</span>
+          </div>
+          <div style="font-size:11px;color:var(--c-text2);margin-top:2px;white-space:normal;">${e.detail}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  renderAudit();
+  panel.querySelector('#maud-search').oninput=renderAudit;
+  panel.querySelector('#maud-type').onchange=renderAudit;
+}
+
+// ── Full detail overlay (click on tile) ──
 function openMonitorDetail(sid){
   var s=STAFF[sid]||{};
   var snap=SCREEN_SNAPSHOTS[sid];
+  var isFrozen=FREEZE_DATA&&FREEZE_DATA[sid]&&FREEZE_DATA[sid].active;
+
   var overlay=document.createElement('div');
-  overlay.style.cssText='position:fixed;inset:0;background:var(--bg-overlay);z-index:9000;display:flex;align-items:center;justify-content:center;';
+  overlay.style.cssText='position:fixed;inset:0;z-index:99999;background:var(--bg-overlay);display:flex;align-items:center;justify-content:center;';
   var box=document.createElement('div');
-  box.style.cssText='background:var(--bg-dialog);border:1px solid var(--c-border);border-radius:10px;overflow:hidden;width:min(95vw,900px);height:min(90vh,700px);display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(1,4,9,0.5);';
-  var header=`<div style="background:var(--bg-stitle);color:var(--c-stitle-text);padding:10px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0;">
-    <span class="activity-dot ${s.lastActive&&(new Date()-new Date(s.lastActive))<300000?'active':'offline'}"></span>
-    <span style="font-size:13px;font-weight:600;flex:1;">${s.username||sid} — Live Screen</span>
-    <span style="font-size:10px;color:var(--c-topbar-sub);">${PAGE_ICONS[s.currentPage]||'📄'} ${s.currentPage||'unknown page'}</span>
-    <button class="btn small" id="monitor-detail-lock">🔒 Lock</button>
-    <button class="btn small red" id="monitor-detail-logout">⚡ Force Logout</button>
-    <span style="cursor:pointer;font-size:18px;opacity:0.7;margin-left:8px;" id="monitor-detail-close">✕</span>
-  </div>`;
-  var body=snap&&snap.html
-    ?`<div style="flex:1;overflow:auto;background:var(--bg-page);color:var(--c-text);padding:8px;position:relative;">
-        <div style="font-size:11px;color:var(--c-text);">${snap.html}</div>
-        ${snap.scrollY>0?`<div style="position:sticky;top:0;right:0;float:right;font-size:10px;background:var(--bg-stitle);color:var(--c-stitle-text);padding:2px 6px;border-radius:0 0 0 4px;opacity:0.8;">Scroll position: ${snap.scrollY}px</div>`:''}
-      </div>`
-    :`<div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--c-text2);">
-        <div style="font-size:32px;">${PAGE_ICONS[s.currentPage]||'📄'}</div>
-        <div style="font-size:13px;">No snapshot available</div>
-        <div style="font-size:11px;">Staff member may be inactive or snapshot not yet received.</div>
-      </div>`;
-  var footer=`<div style="border-top:1px solid var(--c-border);padding:8px 14px;display:flex;gap:6px;align-items:center;flex-shrink:0;font-size:11px;color:var(--c-text2);">
-    Last updated: ${snap&&snap.ts?new Date(snap.ts).toLocaleTimeString():'Never'}
-    &mdash; ${levelBadge(s.level)} &mdash; Last action: ${s.lastAction||'—'}
-    <span style="margin-left:auto;font-size:10px;">Snapshot auto-refreshes. Scroll reflects their position.</span>
-  </div>`;
-  box.innerHTML=header+body+footer;
+  box.style.cssText='background:var(--bg-dialog);border:1px solid var(--c-border);border-radius:12px;overflow:hidden;width:min(96vw,1100px);height:min(92vh,780px);display:flex;flex-direction:column;box-shadow:0 28px 80px rgba(0,0,0,0.6);';
+
+  var la=s.lastActive&&s.lastActive!=='Never'?new Date(s.lastActive):null;
+  var diff=la?(new Date()-la):Infinity;
+  var active=la&&diff<300000&&s.lastAction!=='Logged out';
+  var dotClass=s.suspended?'suspended':active?'active':'offline';
+
+  box.innerHTML=`
+    <div style="background:var(--bg-stitle);color:var(--c-stitle-text);padding:10px 16px;display:flex;align-items:center;gap:8px;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,0.06);">
+      <span class="activity-dot ${dotClass}"></span>
+      <span style="font-size:14px;font-weight:700;flex:1;">${s.username||sid}</span>
+      <span style="font-size:11px;color:var(--c-topbar-sub);">${levelBadge(s.level)}</span>
+      <span style="font-size:11px;color:var(--c-topbar-sub);">${PAGE_ICONS[s.currentPage]||'📄'} ${(s.currentPage||'unknown').charAt(0).toUpperCase()+(s.currentPage||'unknown').slice(1)}</span>
+      <div style="display:flex;gap:5px;margin-left:8px;">
+        <button class="btn small" id="det-profile" style="padding:3px 10px;">👤 Profile</button>
+        ${isFrozen
+          ?`<button class="btn small" id="det-lock" style="padding:3px 10px;background:#1a7f37;color:#fff;border-color:#1a7f37;">🔓 Unlock</button>`
+          :`<button class="btn small" id="det-lock" style="padding:3px 10px;">🔒 Lock</button>`}
+        <button class="btn small" id="det-audit" style="padding:3px 10px;">📋 Audit</button>
+        <button class="btn small red" id="det-logout" style="padding:3px 10px;">⚡ Logout</button>
+      </div>
+      <span style="cursor:pointer;font-size:20px;opacity:0.6;margin-left:10px;line-height:1;" id="det-close">✕</span>
+    </div>
+    <div style="flex:1;overflow:auto;background:var(--bg-page);color:var(--c-text);position:relative;" id="det-body">
+      ${snap&&snap.html
+        ?`<div style="padding:6px;min-height:100%;font-size:11px;color:var(--c-text);" id="det-content">${snap.html}</div>`
+        :`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:var(--c-text2);">
+            <div style="font-size:40px;">${PAGE_ICONS[s.currentPage]||'📄'}</div>
+            <div style="font-size:14px;">No snapshot available</div>
+            <div style="font-size:11px;">This staff member has not sent a snapshot yet.</div>
+          </div>`}
+    </div>
+    <div style="border-top:1px solid var(--c-border);padding:6px 14px;display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap;background:var(--bg-topinfo);">
+      <span style="font-size:10px;color:var(--c-text2);">Last snapshot: <b>${snap&&snap.ts?new Date(snap.ts).toLocaleTimeString():'Never'}</b></span>
+      ${snap&&snap.scrollY>0?`<span style="font-size:10px;color:var(--c-text2);">Scroll: <b>${snap.scrollY}px</b></span>`:''}
+      <span style="font-size:10px;color:var(--c-text2);">Last action: <b>${s.lastAction||'—'}</b></span>
+      <span id="det-refresh-badge" style="margin-left:auto;font-size:10px;color:var(--c-text2);">Auto-refreshing every 2s</span>
+    </div>`;
+
   overlay.appendChild(box);
   document.body.appendChild(overlay);
-  overlay.onclick=(e)=>{ if(e.target===overlay){ document.body.removeChild(overlay); } };
-  box.querySelector('#monitor-detail-close').onclick=()=>document.body.removeChild(overlay);
-  box.querySelector('#monitor-detail-lock').onclick=()=>promptFreezeFrame(sid);
-  box.querySelector('#monitor-detail-logout').onclick=()=>promptForceLogout(sid);
-  // Auto-refresh snapshot in detail view
+
+  var close=()=>{ clearInterval(refreshId); overlay.remove(); };
+  overlay.onclick=e=>{ if(e.target===overlay) close(); };
+  box.querySelector('#det-close').onclick=close;
+  box.querySelector('#det-profile').onclick=()=>{ close(); openMonitorProfile(sid); };
+  box.querySelector('#det-audit').onclick=()=>{ close(); openMonitorAuditLog([sid]); };
+  box.querySelector('#det-logout').onclick=()=>{ close(); monitorConfirmLogout([sid]); };
+  box.querySelector('#det-lock').onclick=async()=>{
+    var frozen=FREEZE_DATA&&FREEZE_DATA[sid]&&FREEZE_DATA[sid].active;
+    await monitorLockSession(sid,!frozen);
+    close();
+    openMonitorDetail(sid); // reopen with updated state
+  };
+
+  // Scroll to match their scroll position
+  var bodyEl=box.querySelector('#det-body');
+  if(snap&&snap.scrollY>0&&bodyEl) setTimeout(()=>{ bodyEl.scrollTop=snap.scrollY; },100);
+
+  // Auto-refresh content
+  var lastTs=snap&&snap.ts||0;
   var refreshId=setInterval(()=>{
     if(!document.body.contains(overlay)){ clearInterval(refreshId); return; }
-    var newSnap=SCREEN_SNAPSHOTS[sid];
-    if(newSnap&&newSnap.ts&&snap&&newSnap.ts>snap.ts){
-      snap=newSnap;
-      var bodyEl=box.querySelector('div[style*="overflow:auto"]')||box.querySelector('div[style*="flex:1"]');
-      if(bodyEl&&newSnap.html) bodyEl.innerHTML=`<div style="font-size:11px;color:var(--c-text);">${newSnap.html}</div>`;
+    var ns=SCREEN_SNAPSHOTS[sid];
+    if(ns&&ns.ts>lastTs){
+      lastTs=ns.ts;
+      var contentEl=box.querySelector('#det-content');
+      var bodyEl2=box.querySelector('#det-body');
+      if(contentEl&&ns.html) contentEl.innerHTML=ns.html;
+      else if(bodyEl2&&ns.html&&!contentEl){
+        bodyEl2.innerHTML='<div style="padding:6px;min-height:100%;font-size:11px;color:var(--c-text);" id="det-content">'+ns.html+'</div>';
+      }
+      var badge=box.querySelector('#det-refresh-badge');
+      if(badge) badge.textContent='Updated '+timeAgo(ns.ts);
+      var snapInfo=box.querySelector('span[style*="Last snapshot"]');
+      if(snapInfo) snapInfo.innerHTML='Last snapshot: <b>'+new Date(ns.ts).toLocaleTimeString()+'</b>';
     }
   },2000);
 }
