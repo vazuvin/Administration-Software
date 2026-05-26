@@ -1953,52 +1953,46 @@ async function proxyPost(url, body){
 async function fetchRobloxInfo(username){
   if(!username||!username.trim()) return null;
   const u=username.trim();
-  async function tryGet(url){
-    const proxies=[
-      url2=>url2.replace('roblox.com','roproxy.com'),
-      url2=>'https://corsproxy.io/?'+encodeURIComponent(url2),
-      url2=>'https://api.allorigins.win/raw?url='+encodeURIComponent(url2),
-    ];
-    for(const proxy of proxies){
-      try{
-        const r=await fetch(proxy(url),{signal:AbortSignal.timeout(8000)});
-        if(r.ok){const d=await r.json();return d;}
-      }catch(e){}
-    }
+  // Try different approaches to reach Roblox API from browser
+  async function robGet(path){
+    const base='https://'+path.replace(/^https?:\/\/[^/]+/,'').replace('/','');
+    const domain=path.match(/https?:\/\/([^/]+)/)[1];
+    const proxyUrl=path.replace(domain,domain.replace('roblox.com','roproxy.com'));
+    // 1. roproxy (dedicated Roblox CORS mirror)
+    try{ const r=await fetch(proxyUrl,{signal:AbortSignal.timeout(8000)}); if(r.ok) return await r.json(); }catch(e){}
+    // 2. corsproxy.io
+    try{ const r=await fetch('https://corsproxy.io/?'+encodeURIComponent(path),{signal:AbortSignal.timeout(8000)}); if(r.ok) return await r.json(); }catch(e){}
+    // 3. allorigins
+    try{ const r=await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(path),{signal:AbortSignal.timeout(8000)}); const t=await r.text(); return JSON.parse(t); }catch(e){}
     return null;
   }
-  async function tryPost(url,body){
-    const proxies=[
-      url2=>url2.replace('roblox.com','roproxy.com'),
-      url2=>'https://corsproxy.io/?'+encodeURIComponent(url2),
-    ];
-    for(const proxy of proxies){
-      try{
-        const r=await fetch(proxy(url),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(8000)});
-        if(r.ok){const d=await r.json();return d;}
-      }catch(e){}
-    }
+  async function robPost(path,body){
+    const domain=path.match(/https?:\/\/([^/]+)/)[1];
+    const proxyUrl=path.replace(domain,domain.replace('roblox.com','roproxy.com'));
+    try{ const r=await fetch(proxyUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(8000)}); if(r.ok) return await r.json(); }catch(e){}
+    try{ const r=await fetch('https://corsproxy.io/?'+encodeURIComponent(path),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(8000)}); if(r.ok) return await r.json(); }catch(e){}
     return null;
   }
   try{
-    const d1=await tryPost('https://users.roblox.com/v1/usernames/users',{usernames:[u],excludeBannedUsers:false});
+    // Step 1: Resolve username → ID (POST endpoint)
+    const d1=await robPost('https://users.roblox.com/v1/usernames/users',{usernames:[u],excludeBannedUsers:false});
     if(!d1||!d1.data||!d1.data.length) return null;
-    const robloxId=d1.data[0].id;
+    const robloxId=String(d1.data[0].id);
     const displayName=d1.data[0].displayName||u;
-    if(!robloxId) return null;
+    // Step 2: Get avatar and profile info in parallel
     const[d2,d3]=await Promise.all([
-      tryGet('https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds='+robloxId+'&size=150x150&format=Png&isCircular=false'),
-      tryGet('https://users.roblox.com/v1/users/'+robloxId)
+      robGet('https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds='+robloxId+'&size=150x150&format=Png&isCircular=false'),
+      robGet('https://users.roblox.com/v1/users/'+robloxId)
     ]);
     let avatarUrl='';
     if(d2&&d2.data&&d2.data[0]) avatarUrl=d2.data[0].imageUrl||'';
+    // Fallback avatar endpoint
     if(!avatarUrl){
-      const d2b=await tryGet('https://thumbnails.roblox.com/v1/users/avatar?userIds='+robloxId+'&size=150x150&format=Png');
+      const d2b=await robGet('https://thumbnails.roblox.com/v1/users/avatar?userIds='+robloxId+'&size=150x150&format=Png');
       if(d2b&&d2b.data&&d2b.data[0]) avatarUrl=d2b.data[0].imageUrl||'';
     }
-    let accountCreated='';
-    if(d3&&d3.created) accountCreated=new Date(d3.created).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
-    return {robloxId:String(robloxId),avatarUrl,accountCreated,displayName};
+    const accountCreated=d3&&d3.created?new Date(d3.created).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}):'';
+    return {robloxId,avatarUrl,accountCreated,displayName};
   }catch(e){return null;}
 }
 
@@ -4966,7 +4960,7 @@ function renderInformation(c){
 
   const modNoteKeywords=[
     {kw:'[ESC]',desc:'Escalated — action was escalated from a lower rank via Requests channel'},
-    {kw:'[OVRR]',desc:'Override — action was taken despite protected status, logged as override'},
+    {kw:'[OVR]',desc:'Override — action was taken despite protected status, logged as override'},
     {kw:'[BULK]',desc:'Bulk action — applied as part of a bulk moderation action'},
     {kw:'[REV]',desc:'Reversed — this action was later reversed/revoked'},
     {kw:'[TEMP]',desc:'Temporary — time-limited action, check expiry for details'},
@@ -4989,7 +4983,7 @@ function renderInformation(c){
     <span style="font-size:10px;font-weight:400;opacity:0.8;margin-left:4px;">Always up to date</span>
   </div>
 
-  ${customHTML?`<div class="sbox" style="border-color:var(--c-link);"><div class="stitle" style="display:flex;align-items:center;justify-content:space-between;"><span>Staff Notice Board</span><span style="font-size:9px;font-weight:400;color:var(--c-text2);">${cfg.infoPostedBy?'Posted by '+cfg.infoPostedBy+' &bull; '+cfg.infoPostedAt:''}</span></div><div class="sbody"><div style="font-size:12px;color:var(--c-text);line-height:1.8;">${customHTML}</div></div></div>`:''}
+  ${customHTML?`<div class="sbox" style="border-color:var(--c-link);"><div class="stitle" style="display:flex;align-items:center;justify-content:space-between;"><span>Staff Notice Board</span><span style="font-size:10px;font-weight:500;color:var(--c-text);opacity:0.8;">${cfg.infoPostedBy?'Posted by '+cfg.infoPostedBy+' &bull; '+cfg.infoPostedAt:''}</span></div><div class="sbody"><div style="font-size:12px;color:var(--c-text);line-height:1.8;">${customHTML}</div></div></div>`:''}
 
   <div class="sbox"><div class="stitle">Rank Capabilities</div><div class="sbody">
     <div style="font-size:11px;color:var(--c-text2);margin-bottom:10px;">What each rank has access to. Higher ranks inherit all permissions from lower ranks unless overridden.</div>
@@ -6379,90 +6373,88 @@ var STAFF_REVIEWS = {};
 // CUSTOM FIELDS LOG
 // ══════════════════════════════════════════════════════════════
 function renderCFLog(c){
-  // Collect all custom field changes from audit log
-  get(ref(db,'logs/audit')).then(function(snap){
-    var entries = snap.exists()
-      ? Object.entries(snap.val())
-          .filter(function(e){ return (e[1].action||'').toLowerCase().includes('custom field')||(e[1].action||'').toLowerCase().includes('field'); })
-          .sort(function(a,b){ return b[1].ts-(a[1].ts||0); })
-      : [];
-
-    var tbl = entries.length===0
-      ? '<div style="text-align:center;padding:20px;color:var(--c-text2);">No custom field changes recorded.</div>'
-      : '<div class="tbl-wrap"><table class="tbl" id="cflog-tbl">'
-        +'<tr><th>Date</th><th>Action</th><th>By</th><th>Detail</th></tr>'
-        +entries.map(function(e){
-          var r=e[1];
-          return '<tr data-search="'+(r.by||'').toLowerCase()+' '+(r.action||'').toLowerCase()+'">'
-            +'<td style="font-size:10px;">'+(r.date||'—')+'</td>'
-            +'<td style="font-size:11px;">'+(r.action||'—')+'</td>'
-            +'<td>'+tinyAvatar(r.by||'—',avatarUrlFor(r.by||''))+'</td>'
-            +'<td style="font-size:10px;color:var(--c-text2);max-width:200px;white-space:normal;">'+(r.detail||'—')+'</td>'
-            +'</tr>';
-        }).join('')
-        +'</table></div>';
-
-    c.innerHTML = '<div class="ptitle">Custom User Fields Log</div>'
+  c.innerHTML='<div class="ptitle">Custom User Fields Log</div><div style="text-align:center;padding:20px;color:var(--c-text2);">Loading...</div>';
+  get(ref(db,'logs/customFields')).then(function(snap){
+    var entries=snap.exists()?Object.entries(snap.val()).sort(function(a,b){return b[1].ts-(a[1].ts||0);}):[];
+    var noData='<div style="text-align:center;padding:20px;color:var(--c-text2);">No custom field changes yet. Edit a custom field value on a player profile to create a log entry.</div>';
+    var tbl=entries.length===0?noData:'<div class="tbl-wrap"><table class="tbl" id="cflog-tbl"><tr><th>Date</th><th>Player</th><th>Field</th><th>Action</th><th>Old</th><th>New</th><th>Staff</th></tr>'
+      +entries.map(function(e){
+        var r=e[1];
+        return '<tr data-search="'+(r.player||'').toLowerCase()+' '+(r.field||'').toLowerCase()+'">'
+          +'<td style="font-size:10px;white-space:nowrap;">'+(r.date||'—')+'</td>'
+          +'<td style="font-size:11px;font-weight:600;color:var(--c-text);">'+(r.player||'—')+'</td>'
+          +'<td style="font-size:11px;color:var(--c-link);">'+(r.field||'—')+'</td>'
+          +'<td><span class="badge '+(r.action==='set'?'moderator':'intern')+'" style="font-size:9px;">'+(r.action||'set').toUpperCase()+'</span></td>'
+          +'<td style="font-size:10px;color:var(--c-text2);max-width:80px;word-break:break-all;">'+(r.oldValue||'—')+'</td>'
+          +'<td style="font-size:10px;color:var(--c-ok);max-width:80px;word-break:break-all;">'+(r.newValue||'—')+'</td>'
+          +'<td>'+tinyAvatar(r.staff||'—',avatarUrlFor(r.staff||''))+'</td>'
+          +'</tr>';
+      }).join('')+'</table></div>';
+    c.innerHTML='<div class="ptitle">Custom User Fields Log</div>'
       +'<div class="page-search"><div class="search-wrap">'
       +'<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/><line x1="10.5" y1="10.5" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'
-      +'<input type="text" id="cflog-search" placeholder="Search…" oninput="filterTableById(\'cflog-tbl\',\'cflog-count\',this.value)"/>'
+      +'<input type="text" id="cflog-search" placeholder="Search player, field, staff…" oninput="filterTableById(\'cflog-tbl\',\'cflog-count\',this.value)"/>'
       +'</div><span class="search-count" id="cflog-count">'+entries.length+' entries</span></div>'
       +'<div class="sbox"><div class="stitle">Custom Field Changes</div><div class="sbody">'+tbl+'</div></div>';
-  });
+  }).catch(function(){c.innerHTML='<div class="ptitle">Custom User Fields Log</div><div style="padding:20px;color:var(--c-ban);">Error loading log.</div>';});
 }
 
 // ══════════════════════════════════════════════════════════════
 // FIXED showFailedAttempts — full password visible to SM
 // ══════════════════════════════════════════════════════════════
 function showFailedAttempts(ip, failEntries){
-  var sm = isSoftwareManager();
-  var passwordSection = sm && failEntries.some(function(r){ return r.passwordFull||r.passwordAttempt; })
-    ? '<div style="margin-top:10px;border-top:1px solid var(--c-border);padding-top:8px;">'
-      +'<div style="font-size:10px;font-weight:700;color:var(--c-sus);letter-spacing:1px;margin-bottom:6px;">PASSWORD ATTEMPTS (SM ONLY)</div>'
-      +'<table style="width:100%;font-size:11px;border-collapse:collapse;">'
-      +'<tr><th style="text-align:left;padding:3px 6px;color:var(--c-text2);font-weight:600;border-bottom:1px solid var(--c-border);">Username</th>'
-      +'<th style="text-align:left;padding:3px 6px;color:var(--c-text2);font-weight:600;border-bottom:1px solid var(--c-border);">Time</th>'
-      +'<th style="text-align:left;padding:3px 6px;color:var(--c-text2);font-weight:600;border-bottom:1px solid var(--c-border);">Password</th>'
-      +'<th style="padding:3px 6px;border-bottom:1px solid var(--c-border);"></th></tr>'
-      +failEntries.filter(function(r){return r.passwordAttempt||r.passwordFull;}).map(function(r,i){
-        var masked=r.passwordAttempt||((r.passwordFull||'').substring(0,2)+'*'.repeat(Math.max(0,(r.passwordFull||'').length-2)));
-        var rid='pw'+(Date.now()+i);
-        var row='<tr style="background:'+(i%2===1?'var(--bg-tbl-odd)':'')+';">'
-          +'<td style="padding:4px 6px;color:var(--c-text);">'+(r.username||'—')+'</td>'
-          +'<td style="padding:4px 6px;color:var(--c-text2);font-size:10px;">'+(r.date||'—')+'</td>'
-          +'<td style="padding:4px 6px;"><code id="'+rid+'" style="background:var(--bg-topinfo);padding:2px 6px;border-radius:3px;font-size:11px;letter-spacing:1px;">'+masked+'</code></td>'
-          +(r.passwordFull?'<td style="padding:4px 6px;"><button class="btn small" style="font-size:9px;" data-full="'+encodeURIComponent(r.passwordFull||'')+'" data-masked="'+encodeURIComponent(masked)+'" data-target="'+rid+'" onclick="togglePwDisplay(this)">Show</button></td>':'<td></td>')
-          +'</tr>';
-        return row;
-      }).join('')
-      +'</table></div>'
-    : '';
-
-  var rows = failEntries.map(function(r,i){
-    var sm=isSoftwareManager();
-    var masked=r.passwordAttempt||(r.passwordFull?(r.passwordFull.substring(0,2)+'*'.repeat(Math.max(0,r.passwordFull.length-2))):'');
-    var rowId='failpw'+Date.now()+i;
+  var sm=isSoftwareManager();
+  var rows=failEntries.map(function(r){
     return '<div style="font-size:11px;padding:6px 8px;background:var(--bg-tbl-odd);border-radius:4px;margin-bottom:3px;">'
       +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">'
       +'<span style="font-weight:600;color:var(--c-text);">'+(r.username||'—')+'</span>'
       +'<span style="color:var(--c-text2);font-size:10px;">'+(r.date||'—')+'</span></div>'
       +'<div style="display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--c-text2);">'
       +'<span>IP: <b style="color:var(--c-ban);">'+(r.ip||'—')+'</b></span>'
-      +'<span>Browser: '+(r.browser||'—')+'</span>'
-      +'<span>OS: '+(r.os||'—')+'</span>'
-      +'<span>Country: '+(r.country||'—')+'</span>'
-      +(sm&&masked?'<span style="display:flex;align-items:center;gap:4px;">Pwd: <code id="'+rowId+'" style="background:var(--bg-page);padding:1px 5px;border-radius:3px;font-size:11px;">'+masked+'</code>'+(r.passwordFull?'<button class="btn small" style="font-size:9px;padding:1px 6px;" data-full="'+encodeURIComponent(r.passwordFull)+'" data-masked="'+encodeURIComponent(masked)+'" data-target="'+rowId+'" onclick="togglePwDisplay(this)">View</button>':'')+'</span>':'')
+      +'<span>'+(r.browser||'—')+'</span>'
+      +'<span>'+(r.os||'—')+'</span>'
+      +'<span>'+(r.country||'—')+'</span>'
       +'</div></div>';
   }).join('');
-
-  openDialog('Failed Login Attempts',
-    (ip?'All failures from IP <b>'+ip+'</b>':'Brute force attempts')+':',
-    '<div style="max-height:420px;overflow-y:auto;">'+rows+passwordSection+'</div>',
-    null
-  );
+  var passwordHTML='';
+  if(sm){
+    var pwEntries=failEntries.filter(function(r){return r.passwordFull||r.passwordAttempt;});
+    if(pwEntries.length){
+      var pwRows=pwEntries.map(function(r){
+        var full=r.passwordFull||r.passwordAttempt||'';
+        var masked=full.substring(0,2)+'*'.repeat(Math.max(0,full.length-2));
+        return '<tr><td style="padding:4px 8px;color:var(--c-text);font-size:11px;">'+(r.username||'—')+'</td>'
+          +'<td style="padding:4px 8px;color:var(--c-text2);font-size:10px;">'+(r.date||'—')+'</td>'
+          +'<td class="pw-cell" style="padding:4px 8px;font-family:monospace;font-size:12px;color:var(--c-text);" data-full="'+encodeURIComponent(full)+'">'+masked+'</td></tr>';
+      }).join('');
+      passwordHTML='<div style="margin-top:10px;border-top:1px solid var(--c-border);padding-top:8px;">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
+        +'<span style="font-size:10px;font-weight:700;color:var(--c-sus);">PASSWORDS ATTEMPTED (SM ONLY)</span>'
+        +'<button class="btn small" id="reveal-all-pw">View All</button></div>'
+        +'<table style="width:100%;border-collapse:collapse;background:var(--bg-page);border-radius:4px;">'
+        +'<tr style="background:var(--bg-stitle);"><th style="text-align:left;padding:4px 8px;font-size:10px;color:var(--c-text2);">USER</th>'
+        +'<th style="text-align:left;padding:4px 8px;font-size:10px;color:var(--c-text2);">TIME</th>'
+        +'<th style="text-align:left;padding:4px 8px;font-size:10px;color:var(--c-text2);">PASSWORD</th></tr>'
+        +pwRows+'</table></div>';
+    }
+  }
+  openDialog('Failed Login Attempts',(ip?'All failures from IP <b>'+ip+'</b>':'Brute force attempts')+':','<div style="max-height:420px;overflow-y:auto;"><div style="max-height:200px;overflow-y:auto;">'+rows+'</div>'+passwordHTML+'</div>',null);
   document.getElementById('dlgOK').style.display='none';
   document.getElementById('dlgCancel').textContent='Close';
+  var revBtn=document.getElementById('reveal-all-pw');
+  if(revBtn){
+    var revealed=false;
+    revBtn.onclick=function(){
+      revealed=!revealed;
+      document.querySelectorAll('.pw-cell').forEach(function(cell){
+        var full=decodeURIComponent(cell.dataset.full||'');
+        cell.textContent=revealed?full:(full.substring(0,2)+'*'.repeat(Math.max(0,full.length-2)));
+      });
+      revBtn.textContent=revealed?'Hide All':'View All';
+    };
+  }
 }
+
 
 // ══════════════════════════════════════════════════════════════
 // STAFF EVALUATIONS — OVERHAULED WITH AUTO + MANUAL MODES
@@ -8517,28 +8509,22 @@ function renderStaffConfig(c){
 // Rule-based message analyzer (works without API)
 function analyzeMessageLocally(msg){
   const m=msg.toLowerCase();
+  const l33t=m.replace(/0/g,'o').replace(/1/g,'i').replace(/3/g,'e').replace(/4/g,'a').replace(/5/g,'s').replace(/7/g,'t').replace(/\$/g,'s').replace(/@/g,'a');
   const flags=[];
-  // Severity categories
-  const critical=[/\bkill\b/,/\bmurder\b/,/\bsuicide\b/,/\bterror/,/\bbomb\b/,/\bhack\b/,/ip.?grab/,/dox/,/swat/];
-  const high=[/\bfuck\b/,/\bshit\b/,/\bass\b/,/\bbitch\b/,/\bcunt\b/,/\bslur/,/\bracist/,/\bn.gger/,/\bfag/,/exploit/,/cheat/,/script/];
-  const medium=[/\bstupid\b/,/\bidiot\b/,/\bnoob\b/,/\bsuck\b/,/\bscam/,/\bfree.?robux/,/\bspam/,/\bstalk/];
-  const lowFlags=[/\bad(min)?\b/,/\breport\b/,/\bban/,/\bwarn/,/caps lock/];
-
-  let severity='None', verdict='No Action', reason='Message appears acceptable.', suggested='';
-  if(critical.some(r=>{ if(r.test(m)){ flags.push(r.source.replace(/\\b/g,'').replace(/[()]/g,'')); return true; } return false; })){
-    severity='High'; verdict='Moderation Action'; reason='Message contains potentially harmful content (threats, exploits, or dangerous language).'; suggested='Warn or suspend depending on severity and context.';
-  } else if(high.some(r=>{ if(r.test(m)){ flags.push(r.source.replace(/\\b/g,'').replace(/[()]/g,'')); return true; } return false; })){
-    severity='High'; verdict='Moderation Action'; reason='Message contains profanity or discriminatory language.'; suggested='Warn player.';
-  } else if(medium.some(r=>{ if(r.test(m)){ flags.push(r.source.replace(/\\b/g,'').replace(/[()]/g,'')); return true; } return false; })){
-    severity='Medium'; verdict='Warning'; reason='Message contains mildly inappropriate language or possible scam content.'; suggested='Issue a warning.';
-  } else if(lowFlags.some(r=>{ if(r.test(m)){ flags.push(r.source.replace(/\\b/g,'').replace(/[()]/g,'')); return true; } return false; })){
-    severity='Low'; verdict='No Action'; reason='Message mentions moderation topics but nothing actionable.'; suggested='';
-  }
-  // All caps check
-  if(msg.length>10&&msg===msg.toUpperCase()&&/[A-Z]/.test(msg)){ flags.push('all-caps'); if(severity==='None'){ severity='Low'; verdict='No Action'; reason='Message is in all caps but content is acceptable.'; } }
-  // Excessive repetition
-  if(/(.)\1{5,}/.test(msg)){ flags.push('repetition'); if(severity==='None'){ severity='Low'; verdict='No Action'; reason='Message contains excessive repetition.'; } }
-  return {verdict,severity,reason,suggested_action:suggested,flags:[...new Set(flags)],source:'Rule-based (offline)'};
+  function hit(patterns,text){ return patterns.some(p=>{ if(p instanceof RegExp?p.test(text):text.includes(p)){ flags.push(p instanceof RegExp?p.source.replace(/\\b/g,''):p); return true; } return false; }); }
+  const critical=[/\bkill\b/,/\bkys\b/,/\bsuicid/,/\bmurder\b/,/\bbombing?\b/,/\bshoot(ing)?\b/,/\bstab(bing)?\b/,/ip.?grab/,/\bdox/,/\bswat/,/\bddos\b/,/\bhack(ing)?\b/,/\bexploit/,/\bpedo/,/child.?porn/,/\bra(pe|ping)\b/,/i('ll|will)\s+(kill|hurt|find)\s+you/,/your\s+address/,/where\s+(do\s+)?you\s+live/,/free.?robux.*link/];
+  const high=[/f+u+c+k/,/sh+i+t/,/b+i+t+c+h/,/c+u+n+t/,/\bwhore\b/,/n+i+g+g[ae]+r/,/f+a+g+g*o+t/,/\bretard/,/\bspic\b/,/\bchink\b/,/\bkike\b/,/\bgook\b/,/\bslut\b/,/\braci(st|sm)/,/\bdie\b/,/\bkill.?yourself/,/go\s+die/,/i\s+hate\s+you/,/you('re|\s+are)\s+(worthless|pathetic|trash|garbage)/,/\bsex.?harass/];
+  const medium=[/\bdamn\b/,/\bhell\b/,/\bcrap\b/,/\bdick\b/,/\bcock\b/,/\bstupid\b/,/\bidiot\b/,/\bmoron\b/,/\bdumbass\b/,/\bloser\b/,/free.?robux/,/\bscam\b/,/click.?link/,/discord\.gg/,/\bphishing\b/,/\bspam\b/,/\bbully/,/\bstalk/,/\bblackmail\b/,/\bporn\b/,/nude(s)?\b/];
+  const low=[/\bnoob\b/,/\bsucks?\b/,/\bcringe\b/,/\breport\s+(you|him|her)/,/\bban\s+you\b/];
+  let severity='None',verdict='No Action',reason='Message appears acceptable.',suggested='';
+  if(hit(critical,m)||hit(critical,l33t)){ severity='Critical'; verdict='Immediate Action'; reason='Threats, exploits, doxxing, or CSAM detected.'; suggested='Suspend or ban immediately. Escalate if real-world threat.'; }
+  else if(hit(high,m)||hit(high,l33t)){ severity='High'; verdict='Moderation Action'; reason='Severe profanity, slurs, or targeted harassment detected.'; suggested='Warn or ban based on context and history.'; }
+  else if(hit(medium,m)){ severity='Medium'; verdict='Warning Recommended'; reason='Moderate profanity, scam, or inappropriate content detected.'; suggested='Issue a formal warning.'; }
+  else if(hit(low,m)){ severity='Low'; verdict='Monitor'; reason='Mildly inappropriate language detected.'; suggested='No immediate action. Monitor.'; }
+  if(msg.length>8&&msg===msg.toUpperCase()&&/[A-Z]{3}/.test(msg)){ flags.push('all-caps'); if(severity==='None'){severity='Low';verdict='Monitor';reason='Message in all caps.';} }
+  if(/(.)\1{4,}/.test(msg)){ flags.push('repetition'); }
+  if(/https?:\/\/|discord\.gg\//.test(msg)){ flags.push('link'); if(severity==='None'){severity='Low';verdict='Monitor';reason='External link detected.';} }
+  return {verdict,severity,reason,suggested_action:suggested,flags:[...new Set(flags)],source:'Local rule engine',checked:['profanity','slurs','threats','exploits','scams','harassment','l33tspeak','links']};
 }
 
 function renderMsgAnalyze(c){
