@@ -618,7 +618,6 @@ body.sam-active .main{ background:#0d1117; }
           <div class="sb-group-body" id="body-sbg-staff">
             <span class="sb-link" id="nav-staff">Staff Registry</span>
             <span class="sb-link" id="nav-activity">Staff Activity</span>
-            <span class="sb-link" id="nav-monitor">Live Monitor</span>
             <span class="sb-link" id="nav-messaging">Messaging</span>
             <span class="sb-link" id="nav-suggestions">Suggestions</span>
             <span class="sb-link" id="nav-staffconfig">Staff Config</span>
@@ -2300,7 +2299,6 @@ function updateSidebar(){
   // ── STAFF group ──
   show('nav-staff', canDo('canViewStaff'));
   show('nav-activity', canDo('canViewStaffActivity'));
-  show('nav-monitor', isSuperAdmin());
   show('nav-messaging', canDo('canSendStaffMessage'));
   show('nav-suggestions', canDo('canViewSuggestions'));
   show('nav-staffconfig', canDo('canViewStaffConfig'));
@@ -2367,16 +2365,15 @@ function nav(p){
   updateActivity(true);
   // Push current page to Firebase for live monitor
   if(ME) update(ref(db,'staff/'+ME),{currentPage:p,currentPageTs:Date.now()}).catch(()=>{});
+  // Push snapshot immediately on nav change
+  pushScreenSnapshot(true);
   // Clean up monitor if navigating away
-  if(p!=='monitor'&&window._monitorCleanup){
+  if(!document.getElementById('monitor-tiles-wrap')&&window._monitorCleanup){
     if(window._monitorRefreshInterval){ clearInterval(window._monitorRefreshInterval); window._monitorRefreshInterval=null; }
     window._monitorCleanup();
     window._monitorCleanup=null;
   }
-  // Activate snapshot pushing if someone is watching
-  if(p!=='monitor') get(ref(db,'meta/monitorWatchers')).then(function(snap){
-    window._monitorActive=snap.exists()&&Object.keys(snap.val()||{}).length>0;
-  }).catch(function(){});
+
 }
 window.nav=nav;
 
@@ -5694,7 +5691,7 @@ function renderSamaritanMain(c){
     +'</div>';
 
   // Wire contingency buttons
-  var buttons = ['glasgow','lullaby','freeze','cleanslate','elephant','goldfish','beehive','overtime','branchtransfer','openhouse','poison'];
+  var buttons = ['glasgow','lullaby','freeze','cleanslate','elephant','goldfish','beehive','overtime','branchtransfer','openhouse','poison','monitor'];
   buttons.forEach(function(name){
     var btn = document.getElementById('cont-'+name);
     if(btn) btn.onclick = function(){ openContingency(name, isManager); };
@@ -5714,6 +5711,7 @@ function renderContingencyButtons(isManager){
     {id:'branchtransfer',name:'Branch Transfer',icon:'📦',desc:'Mass import/export',      color:'#1a7f37'},
     {id:'openhouse',  name:'Open House',       icon:'🏠', desc:'Unlock restricted areas', color:'#0969da'},
     {id:'poison',     name:'Poison',           icon:'☠️', desc:'System deterioration',    color:'#3d0066'},
+    {id:'monitor',    name:'Live Monitor',     icon:'📺', desc:'Real-time screen viewer', color:'#0550ae'},
   ];
   return contingencies.map(function(ct){
     return '<button id="cont-'+ct.id+'" style="background:var(--bg-sbox);border:1px solid var(--c-border);border-top:3px solid '+ct.color+';border-radius:8px;padding:12px 10px;cursor:pointer;text-align:left;transition:transform 0.15s,box-shadow 0.15s;display:flex;flex-direction:column;gap:4px;" '
@@ -5745,6 +5743,7 @@ function openContingency(name, isManager){
     branchtransfer: renderBranchTransfer,
     openhouse: renderOpenHouse,
     poison: renderPoison,
+    monitor: renderMonitorContingency,
   };
   if(fns[name]) fns[name](panel);
 }
@@ -7592,6 +7591,30 @@ const PAGE_ICONS = {
   monitor:'📺', requests:'📥',
 };
 
+function renderMonitorContingency(panel){
+  // Opens Live Monitor as a full-screen overlay from within the Samaritan portal
+  var overlay=document.createElement('div');
+  overlay.id='monitor-sam-overlay';
+  overlay.style.cssText='position:fixed;inset:0;z-index:9500;background:var(--bg-page);overflow-y:auto;';
+  var closeBar='<div style="position:sticky;top:0;z-index:2;background:var(--bg-topbar);padding:8px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--c-border);">'
+    +'<span style="font-size:12px;font-weight:700;color:var(--c-topbar-text);letter-spacing:0.5px;">📺 LIVE MONITOR — SAMARITAN ACCESS</span>'
+    +'<button class="btn small" id="monitor-sam-close" style="margin-left:auto;">✕ Close</button>'
+    +'</div>';
+  var inner=document.createElement('div');
+  inner.innerHTML=closeBar;
+  var contentDiv=document.createElement('div');
+  contentDiv.style.cssText='padding:12px;';
+  inner.appendChild(contentDiv);
+  overlay.appendChild(inner);
+  document.body.appendChild(overlay);
+  renderLiveMonitor(contentDiv);
+  document.getElementById('monitor-sam-close').onclick=function(){
+    if(window._monitorRefreshInterval){ clearInterval(window._monitorRefreshInterval); window._monitorRefreshInterval=null; }
+    if(window._monitorCleanup){ window._monitorCleanup(); window._monitorCleanup=null; }
+    overlay.remove();
+  };
+}
+
 function renderLiveMonitor(c){
   window._monitorActive=true;
   // Register watcher presence so snapshot pusher activates on other sessions
@@ -7614,11 +7637,11 @@ function renderLiveMonitor(c){
   <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
     <div style="display:flex;gap:4px;align-items:center;">
       <span style="font-size:11px;color:var(--c-text2);">Tiles per row:</span>
-      ${[2,3,4,5,6].map(n=>`<button class="btn small monitor-tile-size" data-n="${n}" style="${n===4?'background:var(--c-link);color:#fff;':''}">${n}</button>`).join('')}
+      ${[2,3,4,5,6].map(n=>`<button class="btn small monitor-tile-size" data-n="${n}" style="min-width:24px;padding:2px 6px;${n===4?'background:var(--c-link);color:#fff;':''}">${n}</button>`).join('')}
     </div>
     <div style="display:flex;gap:4px;align-items:center;margin-left:8px;">
       <span style="font-size:11px;color:var(--c-text2);">Sort:</span>
-      <select id="monitor-sort" style="font-size:11px;height:20px;">
+      <select id="monitor-sort" style="font-size:11px;background:var(--bg-input);color:var(--c-text);border:1px solid var(--c-border);border-radius:3px;padding:2px 4px;">
         <option value="name">Name</option>
         <option value="active">Active First</option>
         <option value="page">Current Page</option>
@@ -7627,7 +7650,7 @@ function renderLiveMonitor(c){
     </div>
     <div style="display:flex;gap:4px;align-items:center;">
       <span style="font-size:11px;color:var(--c-text2);">Filter:</span>
-      <select id="monitor-filter" style="font-size:11px;height:20px;">
+      <select id="monitor-filter" style="font-size:11px;background:var(--bg-input);color:var(--c-text);border:1px solid var(--c-border);border-radius:3px;padding:2px 4px;">
         <option value="all">All Staff</option>
         <option value="active">Active Only</option>
         <option value="idle">Idle/Offline</option>
@@ -7642,7 +7665,7 @@ function renderLiveMonitor(c){
     </div>
   </div>
 
-  <div id="monitor-msg-bar" style="display:none;background:rgba(88,166,255,0.1);border:1px solid rgba(88,166,255,0.3);border-radius:6px;padding:8px 12px;margin-bottom:8px;display:flex;gap:8px;align-items:center;">
+  <div id="monitor-msg-bar" style="display:none;background:rgba(88,166,255,0.08);border:1px solid rgba(88,166,255,0.25);border-radius:6px;padding:8px 12px;margin-bottom:8px;gap:8px;align-items:center;">
     <span style="font-size:11px;color:var(--c-text);flex:1;">Broadcast message to selected staff:</span>
     <input type="text" id="monitor-broadcast-input" style="flex:2;font-size:11px;" placeholder="Type message..."/>
     <button class="btn small" id="monitor-broadcast-send">Send</button>
@@ -7701,12 +7724,12 @@ function renderLiveMonitor(c){
 
   // Refresh tiles every 5 seconds for live updates even without snapshot changes
   if(window._monitorRefreshInterval) clearInterval(window._monitorRefreshInterval);
-  window._monitorRefreshInterval=setInterval(()=>{ if(page==='monitor') renderMonitorTiles(); else { clearInterval(window._monitorRefreshInterval); window._monitorCleanup&&window._monitorCleanup(); } },5000);
+  window._monitorRefreshInterval=setInterval(()=>{ if(document.getElementById('monitor-tiles-wrap')) renderMonitorTiles(); else { clearInterval(window._monitorRefreshInterval); if(window._monitorCleanup){ window._monitorCleanup(); window._monitorCleanup=null; } } },5000);
 }
 
 function renderMonitorTiles(){
   var wrap=document.getElementById('monitor-tiles-wrap');
-  if(!wrap||page!=='monitor') return;
+  if(!wrap) return;
 
   var sort=(document.getElementById('monitor-sort')||{}).value||'name';
   var filter=(document.getElementById('monitor-filter')||{}).value||'all';
@@ -7776,7 +7799,7 @@ function renderMonitorTiles(){
         <span style="font-size:9px;font-weight:bold;color:${statusColor};">${statusLabel}</span>
       </div>
       <!-- Screen preview area -->
-      <div style="position:relative;background:#0a0a0a;height:140px;overflow:hidden;">
+      <div style="position:relative;background:var(--bg-content);border-top:1px solid var(--c-border);height:140px;overflow:hidden;">
         ${snap&&snap.html?`
           <div style="position:absolute;inset:0;transform:scale(0.28);transform-origin:top left;width:357%;height:357%;pointer-events:none;overflow:hidden;background:var(--bg-page);">
             <div style="font-size:11px;color:var(--c-text);padding:4px;">${snap.html}</div>
@@ -7786,7 +7809,7 @@ function renderMonitorTiles(){
         `:`
           <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;">
             <div style="font-size:22px;opacity:0.3;">${pageIcon}</div>
-            <div style="font-size:10px;color:#444;text-align:center;">${isActive?'Waiting for snapshot…':'Not active'}</div>
+            <div style="font-size:10px;color:var(--c-text2);text-align:center;">${isActive?'Waiting for snapshot…':'Not active'}</div>
           </div>
         `}
       </div>
@@ -7800,10 +7823,10 @@ function renderMonitorTiles(){
         <div style="font-size:10px;color:var(--c-text2);">${levelBadge(s.level)} &mdash; ${s.lastAction||'—'}</div>
       </div>
       <!-- Quick actions (show on hover via CSS) -->
-      <div class="monitor-quick-actions" style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.85);padding:4px 6px;display:none;gap:3px;justify-content:center;">
-        <button class="btn small monitor-action-btn" data-action="view" data-sid="${sid}" style="font-size:10px;">View Profile</button>
-        <button class="btn small monitor-action-btn" data-action="lock" data-sid="${sid}" style="font-size:10px;">🔒 Lock</button>
-        <button class="btn small monitor-action-btn red" data-action="logout" data-sid="${sid}" style="font-size:10px;">⚡ Logout</button>
+      <div class="monitor-quick-actions" style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.88);padding:5px 6px;display:none;gap:4px;justify-content:center;flex-wrap:wrap;">
+        <button class="btn small monitor-action-btn" data-action="view" data-sid="${sid}" style="font-size:10px;padding:2px 7px;">👤 Profile</button>
+        <button class="btn small monitor-action-btn" data-action="lock" data-sid="${sid}" style="font-size:10px;padding:2px 7px;">🔒 Lock</button>
+        <button class="btn small monitor-action-btn red" data-action="logout" data-sid="${sid}" style="font-size:10px;padding:2px 7px;">⚡ Logout</button>
       </div>
     </div>`;
   }).join('');
@@ -7891,7 +7914,7 @@ function openMonitorDetail(sid){
     <span style="cursor:pointer;font-size:18px;opacity:0.7;margin-left:8px;" id="monitor-detail-close">✕</span>
   </div>`;
   var body=snap&&snap.html
-    ?`<div style="flex:1;overflow:auto;background:var(--bg-page);padding:8px;position:relative;">
+    ?`<div style="flex:1;overflow:auto;background:var(--bg-page);color:var(--c-text);padding:8px;position:relative;">
         <div style="font-size:11px;color:var(--c-text);">${snap.html}</div>
         ${snap.scrollY>0?`<div style="position:sticky;top:0;right:0;float:right;font-size:10px;background:var(--bg-stitle);color:var(--c-stitle-text);padding:2px 6px;border-radius:0 0 0 4px;opacity:0.8;">Scroll position: ${snap.scrollY}px</div>`:''}
       </div>`
@@ -9689,6 +9712,8 @@ async function doLogin(){
     // Push login to activity feed
     pushActivityFeed('🟢', ME + ' logged in');
     startWarningListener();
+    // Push initial snapshot so monitor sees this user immediately
+    setTimeout(function(){ pushScreenSnapshot(true); },2000);
   }catch(e){ 
     status.textContent='INVALID!'; 
     const sd=collectSessionData();
@@ -9992,6 +10017,9 @@ function updateActivity(immediate){
 document.addEventListener('click', ()=>updateActivity(), true);
 document.addEventListener('keydown', ()=>updateActivity(), true);
 
+// Push snapshot on scroll (debounced)
+document.addEventListener('scroll', function(){ pushScreenSnapshot(); }, true);
+
 function isUserTyping(){
   const el = document.activeElement;
   if(!el) return false;
@@ -10002,41 +10030,49 @@ function isUserTyping(){
 }
 
 function safeRender(){
-  if(!isUserTyping()){ render(); pushScreenSnapshot(); }
+  if(!isUserTyping()) render();
+  // Always push snapshot after a render regardless of typing state
+  pushScreenSnapshot();
 }
 
 // ── SCREEN SNAPSHOT PUSHER ──
-// Compresses the content div's current HTML and pushes to Firebase
-// Only runs when at least one watcher is registered in meta/monitorWatchers
+// Always active — pushes rendered page HTML to Firebase so the Live Monitor can display it.
+// Throttled to 1.5s to avoid excessive writes.
 let _snapshotThrottle=null;
-function pushScreenSnapshot(){
+let _snapshotLastPush=0;
+function pushScreenSnapshot(immediate){
   if(!ME) return;
-  // Skip if nobody is on the monitor page (check cached watcher flag)
-  if(!window._monitorActive) return;
-  if(_snapshotThrottle) clearTimeout(_snapshotThrottle);
+  if(_snapshotThrottle){ clearTimeout(_snapshotThrottle); _snapshotThrottle=null; }
+  var delay=immediate?50:1500;
+  // Don't push more than once per second regardless
+  var sinceLastPush=Date.now()-_snapshotLastPush;
+  if(!immediate&&sinceLastPush<1000){ delay=Math.max(delay,1000-sinceLastPush); }
   _snapshotThrottle=setTimeout(function(){
-    var content=document.getElementById('content');
-    if(!content) return;
+    if(!ME) return;
+    var contentEl=document.getElementById('content');
+    if(!contentEl) return;
     try{
-      var html=content.innerHTML;
-      // Strip scripts and event handlers for safety, keep structure
+      var html=contentEl.innerHTML;
+      // Strip scripts, canvas elements (large/noisy), and inline event handlers
       html=html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi,'')
-               .replace(/ on\w+="[^"]*"/g,'')
-               .replace(/ on\w+='[^']*'/g,'');
-      // Truncate to ~800KB max
-      if(html.length>800000) html=html.substring(0,800000)+'<!-- truncated -->';
-      var snap={
+               .replace(/<canvas[^>]*>[\s\S]*?<\/canvas>/gi,'<canvas style="display:none"></canvas>')
+               .replace(/\s+on[a-z]+="[^"]*"/g,'')
+               .replace(/\s+on[a-z]+='[^']*'/g,'');
+      // Firebase node limit is 10MB, keep well under with 300KB cap
+      if(html.length>300000) html=html.substring(0,300000)+'<div style="color:var(--c-text2);font-size:10px;padding:4px;">— snapshot truncated —</div>';
+      var scrollEl=document.querySelector('.content');
+      _snapshotLastPush=Date.now();
+      set(ref(db,'screenSnapshots/'+ME),{
         html:html,
         page:page,
-        scrollY:document.querySelector('.content')?Math.round(document.querySelector('.content').scrollTop):0,
+        scrollY:scrollEl?Math.round(scrollEl.scrollTop):0,
         ts:Date.now(),
         username:ME,
         level:MY_LEVEL,
-        avatarUrl:STAFF[ME]&&STAFF[ME].avatarUrl||''
-      };
-      set(ref(db,'screenSnapshots/'+ME),snap).catch(function(){});
+        avatarUrl:(STAFF[ME]&&STAFF[ME].avatarUrl)||''
+      }).catch(function(){});
     }catch(e){}
-  },800);
+  },delay);
 }
 
 function startListeners(){
@@ -10142,8 +10178,8 @@ function startListeners(){
   onValue(ref(db,'contingencies/openhouse'),snap=>{ OPENHOUSE_DATA=snap.val()||{}; });
   onValue(ref(db,'logs/staffWarnings'),snap=>{ WARN_LOG=snap.val()||{}; if(page==='warnlog') safeRender(); });
   onValue(ref(db,'shifts'),snap=>{ SHIFTS=snap.val()||{}; if(page==='activity') safeRender(); });
-  onValue(ref(db,'screenSnapshots'),snap=>{ SCREEN_SNAPSHOTS=snap.val()||{}; if(page==='monitor') renderMonitorTiles(); });
-  onValue(ref(db,'staff'),snap=>{ if(snap.exists()) Object.entries(snap.val()||{}).forEach(([sid,s])=>{ if(s&&s.currentPage) STAFF_PAGES[sid]=s; }); if(page==='monitor') renderMonitorTiles(); });
+  onValue(ref(db,'screenSnapshots'),snap=>{ SCREEN_SNAPSHOTS=snap.val()||{}; if(document.getElementById('monitor-tiles-wrap')) renderMonitorTiles(); });
+  onValue(ref(db,'staff'),snap=>{ if(snap.exists()) Object.entries(snap.val()||{}).forEach(([sid,s])=>{ if(s&&s.currentPage) STAFF_PAGES[sid]=s; }); if(document.getElementById('monitor-tiles-wrap')) renderMonitorTiles(); });
   onValue(ref(db,'meta/shiftConfig'),snap=>{ if(snap.exists()) SHIFT_CONFIG=snap.val(); });
   // Poison listener — real-time check if current user is poisoned
   onValue(ref(db,'contingencies/poison/'+ME),function(snap){
@@ -11275,7 +11311,7 @@ function openNotifSettings(){
   document.getElementById('notifSettingsOverlay').classList.add('show');
 }
 
-['useradmin','moderate','accounts','monitor','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','warnlog','loginlog','auditlog','alerts','adminlog','home','messaging','requests','userconfig','siteconfig','suggestions','staffconfig','msganalyze','statuslog','badgemgmt','wipelog','information','leakid','clearance','samaritan','samlog','evaluations','blacklist'].forEach(p=>{
+['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','warnlog','loginlog','auditlog','alerts','adminlog','home','messaging','requests','userconfig','siteconfig','suggestions','staffconfig','msganalyze','statuslog','badgemgmt','wipelog','information','leakid','clearance','samaritan','samlog','evaluations','blacklist'].forEach(p=>{
   const el=document.getElementById('nav-'+p);
   if(el) el.onclick=()=>nav(p);
 });
