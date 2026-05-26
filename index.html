@@ -580,6 +580,7 @@ body.sam-active .main{ background:#0d1117; }
             <span class="sb-link" id="nav-revokelog">Revoke</span>
             <span class="sb-link" id="nav-suspendlog">Suspension</span>
             <span class="sb-link" id="nav-terminatelog">Termination</span>
+            <span class="sb-link" id="nav-warnlog">Staff Warnings</span>
           </div>
         </div>
 
@@ -630,25 +631,21 @@ body.sam-active .main{ background:#0d1117; }
 
 <!-- ADVANCED SEARCH OVERLAY -->
 <div class="overlay" id="searchOverlay">
-  <div class="dialog" style="width:480px;">
+  <div class="dialog" style="width:560px;max-width:98vw;">
     <div style="background:var(--bg-stitle);color:var(--c-stitle-text);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
-      <div style="font-size:13px;font-weight:600;">Advanced Search</div>
+      <div style="font-size:13px;font-weight:600;">&#128269; Global Search</div>
       <div id="searchClose" style="cursor:pointer;color:var(--c-stitle-text);opacity:0.7;font-size:16px;line-height:1;">&#10005;</div>
     </div>
     <div style="padding:12px 14px 10px;">
-      <div style="font-size:11px;color:var(--c-text2);margin-bottom:8px;">Search across accessible channels. Separate multiple terms with commas.</div>
-      <div style="display:flex;gap:6px;align-items:flex-end;margin-bottom:6px;flex-wrap:wrap;">
-        <div style="flex:1;min-width:160px;">
-          <label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;font-weight:bold;">Search Query:</label>
-          <input type="text" id="srchQuery" style="width:100%;" placeholder="username, ID, etc."/>
+      <div style="display:flex;gap:6px;align-items:flex-end;margin-bottom:8px;">
+        <div style="flex:1;">
+          <input type="text" id="srchQuery" style="width:100%;font-size:13px;padding:5px 8px;" placeholder="Search users, staff, logs, appeals…"/>
         </div>
-        <button class="btn" id="srchGo" style="height:20px;white-space:nowrap;">Search</button>
+        <button class="btn" id="srchGo" style="white-space:nowrap;font-weight:bold;">Search</button>
       </div>
-      <div style="margin-bottom:6px;" id="srchChannels">
-        <!-- Channels rendered by JS based on permissions -->
-      </div>
+      <div style="margin-bottom:7px;" id="srchChannels"></div>
       <div id="srchStatus" style="font-size:11px;font-weight:bold;color:var(--c-link);min-height:14px;margin-bottom:4px;"></div>
-      <div id="srchResults" style="max-height:300px;overflow-y:auto;font-size:11px;color:var(--c-text);border-top:1px solid var(--c-border);padding-top:6px;min-height:30px;"></div>
+      <div id="srchResults" style="max-height:360px;overflow-y:auto;font-size:11px;color:var(--c-text);border-top:1px solid var(--c-border);padding-top:6px;min-height:30px;"></div>
     </div>
   </div>
 </div>
@@ -917,6 +914,9 @@ let FREEZE_DATA={};
 let LULLABY_DATA={};
 let OPENHOUSE_DATA={};
 let POISON_DATA={};
+let WARN_LOG={};
+let SHIFTS={};
+let SHIFT_CONFIG={mode:'simple',minRankToChange:'SOFTWARE MANAGER'};
 let SITE_STATUS={status:'OK',reason:'',by:'',date:''};
 let STATUS_LOG={};
 let CUSTOM_STATUSES={};
@@ -1061,7 +1061,7 @@ function glasgowPageBlocked(p){
   // Map page names to their blocked keys
   var pageKeyMap={
     modlog:'canViewModLog',revokelog:'canViewRevokeLogs',
-    suspendlog:'canViewSuspendLogs',terminatelog:'canViewTerminateLogs',
+    suspendlog:'canViewSuspendLogs',terminatelog:'canViewTerminateLogs',warnlog:'canViewStaff',
     loginlog:'canViewLoginLog',staff:'canViewStaff',
     activity:'canViewStaffActivity',staffconfig:'canViewStaffConfig',
     userconfig:'canViewUserConfig',accounts:'accounts',
@@ -1076,7 +1076,7 @@ function glasgowPageBlocked(p){
     People:['accounts','useradmin','moderate','requests'],
     Moderation:['reputation','appeals','altdetect','msganalyze'],
     Staff:['staff','activity','messaging','suggestions','staffconfig'],
-    Logs:['modlog','revokelog','suspendlog','terminatelog','loginlog'],
+    Logs:['modlog','revokelog','suspendlog','terminatelog','warnlog','loginlog'],
     Configuration:['userconfig','auditlog','alerts','adminlog'],
   };
   for(var cat in catMap){
@@ -2254,6 +2254,7 @@ function updateSidebar(){
   show('nav-revokelog', canDo('canViewRevokeLogs'));
   show('nav-suspendlog', canDo('canViewSuspendLogs'));
   show('nav-terminatelog', canDo('canViewTerminateLogs'));
+  show('nav-warnlog', canDo('canViewStaff'));
   const canSeeLogs=canDo('canViewModLog')||canDo('canViewRevokeLogs')||canDo('canViewSuspendLogs')||canDo('canViewTerminateLogs');
   showGroup('sbg-logs', canSeeLogs);
 
@@ -2388,6 +2389,7 @@ function render(){
   else if(page==='revokelog'){ canDo('canViewRevokeLogs')?renderRevokeLog(c):c.innerHTML=denied; }
   else if(page==='suspendlog'){ canDo('canViewSuspendLogs')?renderSuspendLog(c):c.innerHTML=denied; }
   else if(page==='terminatelog'){ canDo('canViewTerminateLogs')?renderTerminateLog(c):c.innerHTML=denied; }
+  else if(page==='warnlog'){ canDo('canViewStaff')?renderWarnLog(c):c.innerHTML=denied; }
   else if(page==='loginlog'){ canDo('canViewLoginLog')?renderLoginLog(c):c.innerHTML=denied; }
   else if(page==='auditlog'){ isSuperAdmin()?renderAuditLog(c):c.innerHTML=denied; }
   else if(page==='announcements') renderAlerts(c);
@@ -2466,6 +2468,10 @@ const SITE_CONFIG_DEFAULTS = {
   heartbeatSecs: 30,
   maxLogsPerPage: 200,
   infoContent: '',
+  appealAutoCloseDays: 0,
+  shiftMode: 'simple',
+  shiftMinRank: 'SOFTWARE MANAGER',
+  robloxAutoRefreshHours: 0,
 };
 
 function applySiteConfig(){
@@ -2606,6 +2612,33 @@ function renderSiteConfig(c){
             <div style="display:flex;gap:6px;align-items:center;">
               <input type="number" id="var-maxLogs" value="${cfg.maxLogsPerPage||200}" min="25" max="1000" style="width:90px;"/>
               <span style="font-size:10px;color:var(--c-text2);">Default: 200</span>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:bold;color:var(--c-text);display:block;margin-bottom:2px;">Appeal Auto-Close (days, 0 = disabled)</label>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="number" id="var-appealClose" value="${cfg.appealAutoCloseDays||0}" min="0" max="365" style="width:90px;"/>
+              <span style="font-size:10px;color:var(--c-text2);">Open appeals older than this auto-deny. 0 = off.</span>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:bold;color:var(--c-text);display:block;margin-bottom:2px;">Shift System Mode</label>
+            <select id="var-shiftMode" style="width:200px;">
+              <option value="simple" ${(cfg.shiftMode||'simple')==='simple'?'selected':''}>Simple (staff clock in/out manually)</option>
+              <option value="scheduled" ${(cfg.shiftMode||'simple')==='scheduled'?'selected':''}>Scheduled (managers assign shift slots)</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:bold;color:var(--c-text);display:block;margin-bottom:2px;">Minimum Rank to Change Shift Mode</label>
+            <select id="var-shiftMinRank" style="width:200px;">
+              ${['TRIAL MODERATOR','MODERATOR','ADMINISTRATOR','SUPER ADMINISTRATOR','SENIOR ADMINISTRATOR','SOFTWARE MANAGER'].map(r=>`<option value="${r}" ${(cfg.shiftMinRank||'SOFTWARE MANAGER')===r?'selected':''}>${r}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:bold;color:var(--c-text);display:block;margin-bottom:2px;">Auto Roblox Account Refresh Interval (hours, 0 = disabled)</label>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="number" id="var-robloxRefresh" value="${cfg.robloxAutoRefreshHours||0}" min="0" max="720" style="width:90px;"/>
+              <span style="font-size:10px;color:var(--c-text2);">Automatically syncs all account display names, avatars &amp; Roblox IDs. 0 = off. Recommended: 24.</span>
             </div>
           </div>
         </div>
@@ -2763,6 +2796,10 @@ function renderSiteConfig(c){
       defaultTheme:(document.getElementById('var-defaultTheme')||{value:'dark'}).value||'dark',
       heartbeatSecs:parseInt((document.getElementById('var-heartbeat')||{value:'30'}).value)||30,
       maxLogsPerPage:parseInt((document.getElementById('var-maxLogs')||{value:'200'}).value)||200,
+      appealAutoCloseDays:parseInt((document.getElementById('var-appealClose')||{value:'0'}).value)||0,
+      shiftMode:(document.getElementById('var-shiftMode')||{value:'simple'}).value||'simple',
+      shiftMinRank:(document.getElementById('var-shiftMinRank')||{value:'SOFTWARE MANAGER'}).value||'SOFTWARE MANAGER',
+      robloxAutoRefreshHours:parseInt((document.getElementById('var-robloxRefresh')||{value:'0'}).value)||0,
     };
     await set(ref(db,'meta/siteConfig'),newCfg);
     SITE_CONFIG=newCfg;
@@ -3428,11 +3465,7 @@ function renderMod(c){
       </div></div>
       <div class="sbox"><div class="stitle">Current Target</div>
         <div class="sbody" id="modTargetInfo">
-          ${u?`<div style="display:flex;gap:8px;align-items:center;">
-            <div class="avatar-box" style="width:40px;height:40px;">${avatarHTML(u,40)}</div>
-            <div><div class="row"><label>Username:</label><b>${u.username}</b></div>
-            <div class="row"><label>Status:</label>${statusBadge(u.status)}</div></div>
-          </div>`:'<i style="color:var(--c-text2);">No user.</i>'}
+          ${u?renderModUserPanel(currentUserId):'<i style="color:var(--c-text2);">No user selected.</i>'}
         </div>
       </div>
     </div>
@@ -3461,6 +3494,14 @@ function renderAccounts(c){
   const uArr=Object.entries(USERS).sort((a,b)=>(a[1].playerId||0)-(b[1].playerId||0));
   c.innerHTML=`
   <div class="ptitle">All Accounts</div>
+  <div class="sbox"><div class="stitle">Roblox Data</div><div class="sbody">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <button class="btn" id="btn-mass-refresh-roblox">&#128260; Refresh All Roblox Data</button>
+      <span style="font-size:11px;color:var(--c-text2);">Checks every account's display name, avatar, and Roblox ID against the current Roblox API and updates anything that has changed.</span>
+    </div>
+    <div id="mass-refresh-msg" style="font-size:11px;margin-top:4px;color:var(--c-text2);min-height:14px;"></div>
+    <div id="mass-refresh-laststatus" style="font-size:10px;color:var(--c-text2);margin-top:2px;"></div>
+  </div></div>
   ${canDo('canBulkAction')&&uArr.length>0?`
   <div class="sbox"><div class="stitle">Bulk Actions</div><div class="sbody">
     <div style="display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap;">
@@ -3516,6 +3557,38 @@ function renderAccounts(c){
     btn.onclick=()=>{ openOpDialog(`WARNING: Permanently purge all data for "${btn.dataset.uname}"?`, async()=>{ await wipeUser(btn.dataset.uid,btn.dataset.uname); }); };
   });
   document.getElementById('btn-adduser').onclick=addUser;
+  // Show last auto-refresh time
+  const lastStatusEl=document.getElementById('mass-refresh-laststatus');
+  if(lastStatusEl){
+    get(ref(db,'meta/lastRobloxAutoRefresh')).then(function(snap){
+      var cfg={...SITE_CONFIG_DEFAULTS,...SITE_CONFIG};
+      var hours=parseFloat(cfg.robloxAutoRefreshHours)||0;
+      var autoStr=hours>0?'Auto-refresh every '+hours+'h. ':'Auto-refresh disabled. ';
+      if(snap&&snap.exists()&&snap.val()){
+        var d=new Date(snap.val());
+        lastStatusEl.textContent=autoStr+'Last auto-refresh: '+d.toLocaleString();
+      } else {
+        lastStatusEl.textContent=autoStr+'No auto-refresh has run yet.';
+      }
+    }).catch(function(){});
+  }
+
+  const massRefreshBtn=document.getElementById('btn-mass-refresh-roblox');
+  if(massRefreshBtn) massRefreshBtn.onclick=async()=>{
+    const msgEl=document.getElementById('mass-refresh-msg');
+    if(!msgEl) return;
+    massRefreshBtn.disabled=true;
+    massRefreshBtn.textContent='Refreshing…';
+    msgEl.style.color='var(--c-link)'; msgEl.textContent='Starting mass refresh…';
+    const result=await massRefreshRoblox(function(i,total,username){
+      msgEl.textContent='Processing '+i+'/'+total+': '+username+'…';
+    });
+    massRefreshBtn.disabled=false; massRefreshBtn.textContent='↻ Refresh All Roblox Data';
+    msgEl.style.color='var(--c-ok)';
+    msgEl.textContent='Done — '+result.updated+' updated, '+result.skipped+' unchanged, '+result.failed+' failed ('+result.total+' total).';
+    showToast('Mass Roblox refresh complete: '+result.updated+' updated.','success');
+    auditLog('Mass Roblox Refresh','By '+ME+' — '+result.updated+' updated, '+result.failed+' failed');
+  };
   document.getElementById('nuUser').onkeydown=e=>{ if(e.key==='Enter') addUser(); };
   // Auto-preview Roblox data as user types (debounced)
   let _addPreviewTimer=null;
@@ -3992,26 +4065,138 @@ function renderStaff(c){
 // ── STAFF ACTIVITY ──
 function renderActivity(c){
   const sArr=Object.entries(STAFF).sort((a,b)=>(b[1].lastActive||'')>(a[1].lastActive||'')?-1:1);
+  const now=new Date();
+
+  // ── Metrics ──
+  const totalStaff=sArr.length;
+  const onDutyIds=Object.keys(SHIFTS).filter(sid=>SHIFTS[sid]&&SHIFTS[sid].clockedIn);
+  const onDutyCount=onDutyIds.length;
+  const activeCount=sArr.filter(([,s])=>{
+    if(!s.lastActive||s.lastActive==='Never'||s.lastAction==='Logged out') return false;
+    return (now-new Date(s.lastActive))<300000;
+  }).length;
+  const suspCount=sArr.filter(([,s])=>s.suspended).length;
+
+  // ── Mod action counts per staff ──
+  const modCounts={};
+  Object.values(MOD_LOG||{}).forEach(r=>{if(r&&r.mod) modCounts[r.mod]=(modCounts[r.mod]||0)+1;});
+  const topMods=Object.entries(modCounts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+
+  // ── Actions in last 7 days ──
+  const weekAgo=now-7*86400000;
+  const recentMods=Object.values(MOD_LOG||{}).filter(r=>{
+    if(!r||!r.date) return false;
+    try{ return new Date(r.date).getTime()>weekAgo; }catch(e){ return false; }
+  });
+  const recentByStaff={};
+  recentMods.forEach(r=>{ if(r.mod) recentByStaff[r.mod]=(recentByStaff[r.mod]||0)+1; });
+
+  // ── Warning counts ──
+  const warnCounts={};
+  Object.values(WARN_LOG||{}).forEach(r=>{ if(r&&r.username) warnCounts[r.username]=(warnCounts[r.username]||0)+1; });
+
+  const barMax=topMods.length?topMods[0][1]:1;
+
   c.innerHTML=`
-  <div class="ptitle">Staff Activity Tracker</div>
-  <div class="sbox"><div class="stitle">Current Activity</div><div class="sbody">
+  <div class="ptitle">Staff Activity &amp; Performance</div>
+
+  ${renderShiftSection()}
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;margin-bottom:8px;">
+    ${[
+      {label:'Total Staff',val:totalStaff,color:'#0969da'},
+      {label:'On Duty',val:onDutyCount,color:'#1a7f37'},
+      {label:'Active Now',val:activeCount,color:'#2ea043'},
+      {label:'Suspended',val:suspCount,color:'#cf222e'},
+    ].map(m=>`<div style="background:var(--bg-sbox);border:1px solid var(--c-border);border-top:3px solid ${m.color};border-radius:6px;padding:8px 10px;text-align:center;">
+      <div style="font-size:22px;font-weight:900;color:${m.color};">${m.val}</div>
+      <div style="font-size:10px;color:var(--c-text2);letter-spacing:0.5px;">${m.label}</div>
+    </div>`).join('')}
+  </div>
+
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+    <div class="sbox" style="flex:1;min-width:220px;">
+      <div class="stitle">Top Moderators (All Time)</div>
+      <div class="sbody">
+        ${topMods.length===0?'<i style="color:var(--c-text2);">No moderation data yet.</i>':
+          topMods.map(([mod,cnt])=>`
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+            ${tinyAvatar(mod,avatarUrlFor(mod))}
+            <div style="flex:1;">
+              <div style="height:8px;background:var(--c-border);border-radius:4px;overflow:hidden;">
+                <div style="height:100%;width:${Math.round(cnt/barMax*100)}%;background:#0969da;border-radius:4px;"></div>
+              </div>
+            </div>
+            <span style="font-size:11px;font-weight:bold;color:var(--c-text);min-width:28px;text-align:right;">${cnt}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="sbox" style="flex:1;min-width:220px;">
+      <div class="stitle">Activity (Last 7 Days)</div>
+      <div class="sbody">
+        ${Object.keys(recentByStaff).length===0?'<i style="color:var(--c-text2);">No activity this week.</i>':
+          Object.entries(recentByStaff).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([mod,cnt])=>`
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+            ${tinyAvatar(mod,avatarUrlFor(mod))}
+            <div style="flex:1;">
+              <div style="height:8px;background:var(--c-border);border-radius:4px;overflow:hidden;">
+                <div style="height:100%;width:${Math.min(100,Math.round(cnt/Math.max(...Object.values(recentByStaff))*100))}%;background:#1a7f37;border-radius:4px;"></div>
+              </div>
+            </div>
+            <span style="font-size:11px;font-weight:bold;color:var(--c-text);min-width:28px;text-align:right;">${cnt}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+  </div>
+
+  <div class="sbox"><div class="stitle">All Staff — Current Status</div><div class="sbody">
     <div class="tbl-wrap"><table class="tbl">
-      <tr><th>Username</th><th>Level</th><th>Status</th><th>Last Active</th><th>Last Action</th></tr>
-      ${sArr.map(([,s])=>{
+      <tr><th>Username</th><th>Level</th><th>Status</th><th>Shift</th><th>Warnings</th><th>Total Actions</th><th>7-Day Actions</th><th>Last Active</th><th>Last Action</th></tr>
+      ${sArr.map(([sid,s])=>{
         const lastActive=s.lastActive||'Never';
-        const diffMs=s.lastActive&&s.lastActive!=='Never'?(new Date()-new Date(s.lastActive)):Infinity;
+        const diffMs=s.lastActive&&s.lastActive!=='Never'?(now-new Date(s.lastActive)):Infinity;
         const isLoggedOut=!s.lastActive||s.lastAction==='Logged out'||s.lastActive==='Never';
         const dot=s.suspended?'suspended':isLoggedOut?'offline':diffMs<300000?'active':diffMs<1200000?'idle':'offline';
+        const shift=SHIFTS[sid];
+        const shiftBadge=shift&&shift.clockedIn?'<span style="font-size:10px;background:#1a7f37;color:#fff;padding:1px 4px;border-radius:3px;">ON DUTY</span>':'<span style="font-size:10px;color:var(--c-text2);">—</span>';
+        const warns=s.warnings||0;
+        const warnBadge=warns>0?`<span style="font-size:10px;font-weight:bold;color:${warns>=3?'#cf222e':'#9a6700'};">${warns}</span>`:'<span style="font-size:10px;color:var(--c-text2);">0</span>';
         return `<tr>
           <td><span class="activity-dot ${dot}" style="margin-right:4px;"></span>${tinyAvatar(s.username,s.avatarUrl)}</td>
           <td>${levelBadge(s.level)}</td>
           <td>${s.suspended?'<span class="sus">SUSPENDED</span>':s.secured?'<span class="ban">SECURED</span>':'<span class="ok">OK</span>'}</td>
+          <td>${shiftBadge}</td>
+          <td>${warnBadge}</td>
+          <td style="text-align:center;font-weight:bold;color:var(--c-link);">${modCounts[s.username]||0}</td>
+          <td style="text-align:center;font-weight:bold;color:#1a7f37;">${recentByStaff[s.username]||0}</td>
           <td style="font-size:10px;">${lastActive}</td>
           <td style="font-size:10px;">${s.lastAction||'—'}</td>
         </tr>`;
       }).join('')}
     </table></div>
   </div></div>`;
+
+  // Wire shift buttons
+  const ciBtn=c.querySelector('#btn-clockin');
+  const coBtn=c.querySelector('#btn-clockout');
+  if(ciBtn) ciBtn.onclick=async()=>{ await clockIn(); safeRender(); };
+  if(coBtn) coBtn.onclick=async()=>{ await clockOut(); safeRender(); };
+
+  // Wire scheduled shift assign
+  const assignBtn=c.querySelector('#btn-assign-shift');
+  if(assignBtn) assignBtn.onclick=async()=>{
+    const sid=c.querySelector('#shift-assign-target').value;
+    const start=c.querySelector('#shift-slot-start').value;
+    const end=c.querySelector('#shift-slot-end').value;
+    const msgEl=c.querySelector('#shift-assign-msg');
+    if(!sid||!start||!end){ msgEl.style.color='var(--c-ban)'; msgEl.textContent='Fill all fields.'; return; }
+    const s=STAFF[sid]||{};
+    await push(ref(db,'shiftSlots'),{staffId:sid,username:s.username||sid,start,end,assignedBy:ME,ts:Date.now()});
+    msgEl.style.color='var(--c-ok)'; msgEl.textContent='Shift assigned to '+(s.username||sid)+'.';
+    auditLog('Shift Assigned',(s.username||sid)+' '+start+' → '+end+' by '+ME);
+    showToast('Shift assigned.','success');
+    setTimeout(()=>{ if(msgEl) msgEl.textContent=''; },2000);
+  };
 }
 
 // ── LOGS ──
@@ -6976,6 +7161,315 @@ function showKernelPanic(LINES, CRYPTIC, intensity, cfg, onComplete){
     if(onComplete) setTimeout(onComplete, 200+Math.random()*800);
   }, dur);
 }
+
+// ══════════════════════════════════════════════════════════════
+// RENDERMOD — notes/flags panel injected inline
+// ══════════════════════════════════════════════════════════════
+function renderModUserPanel(uid){
+  var u=USERS[uid];
+  if(!u) return '<div style="font-size:11px;color:var(--c-text2);font-style:italic;">No user selected.</div>';
+  var notes=u.notes||[];
+  var notesArr=Array.isArray(notes)?notes:Object.values(notes);
+  var flags=u.flags||[];
+  var flagsArr=Array.isArray(flags)?flags:Object.values(flags);
+  var badges=userBadges(u);
+  return '<div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;">'
+    +'<div class="avatar-box" style="width:44px;height:44px;flex-shrink:0;">'+avatarHTML(u,44)+'</div>'
+    +'<div style="flex:1;min-width:0;">'
+    +'<div style="font-size:13px;font-weight:700;color:var(--c-text);">'+u.username+(u.displayName&&u.displayName!==u.username?' <span style="font-weight:400;color:var(--c-text2);font-size:11px;">('+u.displayName+')</span>':'')+badges+'</div>'
+    +'<div style="font-size:11px;color:var(--c-text2);margin-bottom:4px;">'+statusBadge(u.status)+(u.robloxId?' &mdash; Roblox ID: '+u.robloxId:'')+'</div>'
+    +(flagsArr.length?'<div style="margin-bottom:4px;display:flex;gap:3px;flex-wrap:wrap;">'
+      +flagsArr.map(function(f){return '<span style="font-size:10px;background:#880000;color:#fff;padding:1px 5px;border-radius:3px;">'+f+'</span>';}).join('')+'</div>':'')
+    +(notesArr.length?'<div style="font-size:11px;color:var(--c-text);font-weight:bold;margin-bottom:2px;">Notes:</div>'
+      +'<div style="max-height:70px;overflow-y:auto;font-size:11px;">'
+      +notesArr.slice(-5).map(function(n){return '<div style="padding:2px 0;border-bottom:1px solid var(--c-border);color:var(--c-text);">'+(n.text||n)+'<span style="color:var(--c-text2);margin-left:6px;">'+(n.by?'— '+n.by+' '+n.date:'')+'</span></div>';}).join('')
+      +'</div>':'<div style="font-size:11px;color:var(--c-text2);font-style:italic;">No notes.</div>')
+    +'</div></div>';
+}
+
+// ══════════════════════════════════════════════════════════════
+// STAFF WARNING SYSTEM
+// ══════════════════════════════════════════════════════════════
+async function issueStaffWarning(sid, reason, severity, issuedBy){
+  var s=STAFF[sid]||{};
+  var entry={username:s.username||sid, by:issuedBy||ME, reason:reason, severity:severity||'WARNING', date:nowStr(), ts:Date.now()};
+  var key=await push(ref(db,'logs/staffWarnings'),entry);
+  // Track warning count on staff record
+  var currentWarnings=parseInt(s.warnings||0)+1;
+  await update(ref(db,'staff/'+sid),{warnings:currentWarnings});
+  auditLog('Staff Warning Issued',(s.username||sid)+' — '+reason+' ('+severity+') by '+issuedBy);
+  return entry;
+}
+
+function renderWarnLog(c){
+  var entries=Object.entries(WARN_LOG).sort(function(a,b){ return (b[1].ts||0)-(a[1].ts||0); });
+  c.innerHTML='<div class="ptitle">Staff Warning Log</div>'
+    +'<div class="sbox"><div class="stitle">Issue Staff Warning</div><div class="sbody">'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;">'
+    +'<div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;font-weight:bold;">Staff Member</label>'
+    +'<select id="warn-target" style="width:160px;">'
+    +Object.entries(STAFF).filter(function(e){ return e[1]&&e[1].username&&e[0]!==ME; }).map(function(e){ return '<option value="'+e[0]+'">'+e[1].username+'</option>'; }).join('')
+    +'</select></div>'
+    +'<div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;font-weight:bold;">Severity</label>'
+    +'<select id="warn-severity" style="width:130px;">'
+    +'<option value="NOTE">Note (informal)</option>'
+    +'<option value="WARNING" selected>Warning (formal)</option>'
+    +'<option value="FINAL WARNING">Final Warning</option>'
+    +'</select></div>'
+    +'<div style="flex:1;min-width:180px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;font-weight:bold;">Reason</label>'
+    +'<input type="text" id="warn-reason" style="width:100%;" placeholder="Reason for warning..."/></div>'
+    +'<button class="btn" id="warn-submit">Issue Warning</button>'
+    +'</div>'
+    +'<div id="warn-msg" style="font-size:11px;margin-top:4px;color:var(--c-ok);min-height:14px;"></div>'
+    +'</div></div>'
+    +'<div class="sbox"><div class="stitle">Warning History</div><div class="sbody">'
+    +(entries.length===0?'<i style="color:var(--c-text2);">No warnings on record.</i>'
+      :'<div class="tbl-wrap"><table class="tbl">'
+      +'<tr><th>Staff</th><th>Severity</th><th>Reason</th><th>Issued By</th><th>Date</th>'+(isSuperAdmin()?'<th>Admin</th>':'')+'</tr>'
+      +entries.map(function(e){
+        var lid=e[0],r=e[1];
+        var sevColor=r.severity==='FINAL WARNING'?'#cf222e':r.severity==='WARNING'?'#9a6700':'#1a7f37';
+        return '<tr>'
+          +'<td>'+tinyAvatar(r.username,avatarUrlFor(r.username))+'</td>'
+          +'<td><span style="font-size:10px;font-weight:bold;color:'+sevColor+';">'+r.severity+'</span></td>'
+          +'<td style="max-width:200px;white-space:normal;">'+r.reason+'</td>'
+          +'<td>'+tinyAvatar(r.by,avatarUrlFor(r.by))+'</td>'
+          +'<td style="font-size:10px;">'+r.date+'</td>'
+          +(isSuperAdmin()?'<td>'+deleteLogBtn('logs/staffWarnings',lid)+'</td>':'')
+          +'</tr>';
+      }).join('')
+      +'</table></div>')
+    +'</div></div>';
+
+  var submitBtn=c.querySelector('#warn-submit');
+  if(submitBtn) submitBtn.onclick=async function(){
+    var sid=c.querySelector('#warn-target').value;
+    var severity=c.querySelector('#warn-severity').value;
+    var reason=(c.querySelector('#warn-reason').value||'').trim();
+    var msgEl=c.querySelector('#warn-msg');
+    if(!reason){ msgEl.style.color='var(--c-ban)'; msgEl.textContent='Reason required.'; return; }
+    if(!sid){ msgEl.style.color='var(--c-ban)'; msgEl.textContent='Select a target.'; return; }
+    await issueStaffWarning(sid, reason, severity, ME);
+    msgEl.style.color='var(--c-ok)'; msgEl.textContent='Warning issued to '+(STAFF[sid]&&STAFF[sid].username||sid)+'.';
+    showToast('Staff warning issued.','warning');
+    c.querySelector('#warn-reason').value='';
+    setTimeout(function(){ if(msgEl) msgEl.textContent=''; }, 2500);
+  };
+  if(isSuperAdmin()) bindDeleteLogBtns(c);
+}
+
+// ══════════════════════════════════════════════════════════════
+// SHIFT SYSTEM
+// ══════════════════════════════════════════════════════════════
+function canManageShifts(){
+  var cfg={...SITE_CONFIG_DEFAULTS,...SITE_CONFIG};
+  var minRank=cfg.shiftMinRank||'SOFTWARE MANAGER';
+  var ranks=['TRIAL MODERATOR','MODERATOR','ADMINISTRATOR','SUPER ADMINISTRATOR','SENIOR ADMINISTRATOR','SOFTWARE MANAGER'];
+  var myIdx=ranks.indexOf(MY_LEVEL);
+  var minIdx=ranks.indexOf(minRank);
+  return myIdx>=minIdx;
+}
+
+function getShiftMode(){
+  var cfg={...SITE_CONFIG_DEFAULTS,...SITE_CONFIG};
+  return cfg.shiftMode||'simple';
+}
+
+async function clockIn(){
+  await set(ref(db,'shifts/'+ME),{username:ME,level:MY_LEVEL,clockedIn:true,start:nowStr(),startTs:Date.now(),avatarUrl:STAFF[ME]&&STAFF[ME].avatarUrl||''});
+  auditLog('Shift Started','Clock-in by '+ME);
+  showToast('You are now clocked in.','success');
+}
+
+async function clockOut(){
+  var myShift=SHIFTS[ME]||{};
+  var durationMs=myShift.startTs?Date.now()-myShift.startTs:0;
+  var hrs=Math.floor(durationMs/3600000), mins=Math.floor((durationMs%3600000)/60000);
+  await update(ref(db,'shifts/'+ME),{clockedIn:false,end:nowStr(),endTs:Date.now(),duration:(hrs?hrs+'h ':'')+(mins+'m')});
+  auditLog('Shift Ended','Clock-out by '+ME+' after '+(hrs?hrs+'h ':'')+mins+'m');
+  showToast('Clocked out. Duration: '+(hrs?hrs+'h ':'')+mins+'m','success');
+}
+
+function renderShiftSection(){
+  var mode=getShiftMode();
+  var myShift=SHIFTS[ME]||{};
+  var onDuty=Object.entries(SHIFTS).filter(function(e){ return e[1]&&e[1].clockedIn; });
+  var html='<div class="sbox"><div class="stitle">Shift System — '+(mode==='scheduled'?'Scheduled':'Simple Clock In/Out')+'</div><div class="sbody">'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">'
+    +(myShift.clockedIn
+      ?'<div style="font-size:12px;font-weight:bold;color:var(--c-ok);">&#9679; You are ON DUTY since '+myShift.start+'</div>'
+       +'<button class="btn" id="btn-clockout" style="background:#cf222e;color:#fff;border-color:#a01828;">Clock Out</button>'
+      :'<div style="font-size:12px;color:var(--c-text2);">&#9675; You are OFF DUTY</div>'
+       +'<button class="btn" id="btn-clockin" style="background:#1a7f37;color:#fff;border-color:#106228;">Clock In</button>')
+    +'</div>'
+    +'<div style="font-size:11px;font-weight:bold;color:var(--c-text);margin-bottom:4px;">Currently On Duty ('+onDuty.length+')</div>'
+    +(onDuty.length===0
+      ?'<div style="font-size:11px;color:var(--c-text2);font-style:italic;">No staff currently on duty.</div>'
+      :'<div style="display:flex;flex-wrap:wrap;gap:6px;">'
+       +onDuty.map(function(e){
+         var s=STAFF[e[0]]||e[1];
+         return '<div style="display:flex;align-items:center;gap:5px;background:var(--bg-tbl-odd);border:1px solid var(--c-border);border-left:3px solid #1a7f37;border-radius:5px;padding:4px 8px;">'
+           +tinyAvatar(s.username||e[0],s.avatarUrl||e[1].avatarUrl)
+           +'<div><div style="font-size:11px;font-weight:bold;color:var(--c-text);">'+(s.username||e[0])+'</div>'
+           +'<div style="font-size:10px;color:var(--c-text2);">Since '+e[1].start+'</div></div></div>';
+       }).join('')
+       +'</div>');
+
+  if(mode==='scheduled'&&canManageShifts()){
+    html+='<div style="margin-top:10px;border-top:1px solid var(--c-border);padding-top:8px;">'
+      +'<div style="font-size:11px;font-weight:bold;color:var(--c-text);margin-bottom:5px;">Assign Shift Slot</div>'
+      +'<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:flex-end;">'
+      +'<div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:1px;">Staff</label>'
+      +'<select id="shift-assign-target" style="width:150px;">'
+      +Object.entries(STAFF).filter(function(e){ return e[1]&&e[1].username; }).map(function(e){ return '<option value="'+e[0]+'">'+e[1].username+'</option>'; }).join('')
+      +'</select></div>'
+      +'<div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:1px;">Start</label><input type="datetime-local" id="shift-slot-start" style="width:160px;"/></div>'
+      +'<div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:1px;">End</label><input type="datetime-local" id="shift-slot-end" style="width:160px;"/></div>'
+      +'<button class="btn" id="btn-assign-shift">Assign</button>'
+      +'</div>'
+      +'<div id="shift-assign-msg" style="font-size:11px;margin-top:3px;color:var(--c-ok);min-height:14px;"></div></div>';
+  }
+
+  html+='</div></div>';
+  return html;
+}
+
+// ══════════════════════════════════════════════════════════════
+// MASS ROBLOX REFRESH — updates all accounts
+// ══════════════════════════════════════════════════════════════
+async function massRefreshRoblox(statusCallback){
+  var uArr=Object.entries(USERS);
+  var updated=0, skipped=0, failed=0;
+  for(var i=0;i<uArr.length;i++){
+    var uid=uArr[i][0], u=uArr[i][1];
+    if(statusCallback) statusCallback(i+1, uArr.length, u.username||'?');
+    try{
+      var info=await fetchRobloxInfo(u.username);
+      if(!info||!info.robloxId){ failed++; continue; }
+      var changes={};
+      if(info.robloxId&&info.robloxId!==u.robloxId) changes.robloxId=info.robloxId;
+      if(info.displayName&&info.displayName!==u.displayName) changes.displayName=info.displayName;
+      if(info.avatarUrl&&info.avatarUrl!==u.avatarUrl) changes.avatarUrl=info.avatarUrl;
+      if(info.accountCreated&&info.accountCreated!==u.accountCreated) changes.accountCreated=info.accountCreated;
+      if(Object.keys(changes).length>0){
+        await update(ref(db,'users/'+uid),changes);
+        updated++;
+      } else { skipped++; }
+    } catch(e){ failed++; }
+    // Small delay to avoid hammering proxy
+    await new Promise(function(r){ setTimeout(r,300); });
+  }
+  return {updated:updated, skipped:skipped, failed:failed, total:uArr.length};
+}
+
+// ══════════════════════════════════════════════════════════════
+// APPEAL AUTO-CLOSE WATCHER
+// ══════════════════════════════════════════════════════════════
+function startAppealAutoCloseWatcher(){
+  if(window._appealCloseWatcherRunning) return;
+  window._appealCloseWatcherRunning=true;
+  async function checkAppeals(){
+    if(!ME) return;
+    var cfg={...SITE_CONFIG_DEFAULTS,...SITE_CONFIG};
+    var days=parseInt(cfg.appealAutoCloseDays)||0;
+    if(days<=0) return;
+    var cutoff=Date.now()-days*86400000;
+    var snap=await get(ref(db,'logs/appeals')).catch(function(){ return null; });
+    if(!snap||!snap.exists()) return;
+    var appeals=snap.val();
+    for(var lid in appeals){
+      var a=appeals[lid];
+      if(!a||a.status!=='pending') continue;
+      var ts=a.ts||0;
+      if(!ts){
+        // parse date string fallback
+        try{ ts=new Date(a.date).getTime()||0; }catch(e){}
+      }
+      if(ts>0&&ts<cutoff){
+        await update(ref(db,'logs/appeals/'+lid),{status:'auto-denied',closedBy:'[SYSTEM]',closedAt:nowStr()});
+        auditLog('Appeal Auto-Closed',a.user+' — exceeded '+days+' day limit');
+      }
+    }
+  }
+  checkAppeals();
+  setInterval(checkAppeals, 600000); // every 10 min
+}
+
+// ══════════════════════════════════════════════════════════════
+// ROBLOX AUTO-REFRESH WATCHER
+// Runs on a configurable interval, syncs all accounts via Roblox ID
+// ══════════════════════════════════════════════════════════════
+function startRobloxAutoRefreshWatcher(){
+  if(window._robloxRefreshWatcherRunning) return;
+  window._robloxRefreshWatcherRunning=true;
+
+  async function doAutoRefresh(){
+    if(!ME) return;
+    var cfg={...SITE_CONFIG_DEFAULTS,...SITE_CONFIG};
+    var hours=parseFloat(cfg.robloxAutoRefreshHours)||0;
+    if(hours<=0) return;
+
+    // Check when we last did an auto-refresh
+    var lastSnap=await get(ref(db,'meta/lastRobloxAutoRefresh')).catch(function(){return null;});
+    var lastTs=lastSnap&&lastSnap.exists()?lastSnap.val():0;
+    var intervalMs=hours*3600000;
+    if(Date.now()-lastTs < intervalMs) return; // not time yet
+
+    // Only let one session run the refresh (first check wins)
+    await set(ref(db,'meta/lastRobloxAutoRefresh'),Date.now());
+
+    auditLog('Roblox Auto-Refresh Started','Triggered by '+ME+' (interval: '+hours+'h)');
+    showToast('Roblox auto-refresh running in background…','info',4000);
+
+    var uArr=Object.entries(USERS||{});
+    var updated=0, skipped=0, failed=0;
+    for(var i=0;i<uArr.length;i++){
+      var uid=uArr[i][0], u=uArr[i][1];
+      if(!u||!u.username) continue;
+      try{
+        // Prefer fetching by roblox ID directly — faster and handles username changes
+        var info=null;
+        if(u.robloxId){
+          // Fetch profile + avatar by stored ID (no POST needed)
+          var d1=await robloxGet('https://users.roblox.com/v1/users/'+u.robloxId);
+          var d2=await robloxGet('https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds='+u.robloxId+'&size=150x150&format=Png&isCircular=false');
+          if(d1&&d1.id){
+            info={
+              robloxId:String(d1.id),
+              displayName:d1.displayName||d1.name||u.displayName||'',
+              avatarUrl:d2&&d2.data&&d2.data[0]?d2.data[0].imageUrl||'':'',
+              // username on Roblox may have changed casing — update if different
+              robloxUsername:d1.name||''
+            };
+          }
+        }
+        // Fallback: use stored username if no robloxId
+        if(!info) info=await fetchRobloxInfo(u.username);
+        if(!info||!info.robloxId){ failed++; continue; }
+        var changes={};
+        if(info.robloxId&&info.robloxId!==u.robloxId) changes.robloxId=info.robloxId;
+        if(info.displayName&&info.displayName!==u.displayName) changes.displayName=info.displayName;
+        if(info.avatarUrl&&info.avatarUrl!==u.avatarUrl) changes.avatarUrl=info.avatarUrl;
+        // If Roblox username changed (rare but happens)
+        if(info.robloxUsername&&info.robloxUsername.toLowerCase()!==u.username.toLowerCase()) changes.robloxUsernameChanged=info.robloxUsername;
+        if(Object.keys(changes).length>0){
+          await update(ref(db,'users/'+uid),changes);
+          updated++;
+        } else { skipped++; }
+      } catch(e){ failed++; }
+      // Stagger requests to avoid hammering proxy
+      await new Promise(function(r){ setTimeout(r,350); });
+    }
+
+    auditLog('Roblox Auto-Refresh Complete','Updated: '+updated+', Skipped: '+skipped+', Failed: '+failed+' / '+uArr.length+' total');
+    if(updated>0) showToast('Roblox auto-refresh: '+updated+' account'+( updated!==1?'s':'')+' updated.','success',5000);
+  }
+
+  // Run once shortly after login, then every 15 minutes (actual refresh only fires when interval elapsed)
+  setTimeout(doAutoRefresh, 12000);
+  setInterval(doAutoRefresh, 900000); // check every 15min whether it's time
+}
+
 // Runs every 60s — checks all users' punishments and lifts expired ones
 // ══════════════════════════════════════════════════════════════
 function startPunishmentExpiryWatcher(){
@@ -8059,14 +8553,10 @@ function checkModUser(val){
     statusEl.innerHTML='<span class="nonexistent">NON-EXISTENT</span>';
     if(infoEl) infoEl.innerHTML='<span class="nonexistent">User not found.</span>';
   }else{
-    const[,u]=entry;
+    const[uid,u]=entry;
+    currentUserId=uid; // keep currentUserId in sync for notes panel
     statusEl.innerHTML='<span class="ok">&#10003; Found</span>';
-    if(infoEl) infoEl.innerHTML=`
-      <div style="display:flex;gap:8px;align-items:center;">
-        <div class="avatar-box" style="width:40px;height:40px;">${avatarHTML(u,40)}</div>
-        <div><div class="row"><label>Username:</label><b>${u.username}</b></div>
-        <div class="row"><label>Status:</label>${statusBadge(u.status)}</div></div>
-      </div>`;
+    if(infoEl) infoEl.innerHTML=renderModUserPanel(uid);
   }
 }
 
@@ -8663,6 +9153,8 @@ async function doLogin(){
     startExpiryCountdowns();
     // Start auto-expiry system
     startPunishmentExpiryWatcher();
+    startAppealAutoCloseWatcher();
+    startRobloxAutoRefreshWatcher();
     // Start scheduled alerts watcher (SM only)
     if(isSoftwareManager()) startScheduledAlertWatcher();
     // Push login to activity feed
@@ -8942,6 +9434,9 @@ function startListeners(){
   });
   onValue(ref(db,'contingencies/overtime'),snap=>{ OVERTIME_DATA=snap.val()||{}; });
   onValue(ref(db,'contingencies/openhouse'),snap=>{ OPENHOUSE_DATA=snap.val()||{}; });
+  onValue(ref(db,'logs/staffWarnings'),snap=>{ WARN_LOG=snap.val()||{}; if(page==='warnlog') safeRender(); });
+  onValue(ref(db,'shifts'),snap=>{ SHIFTS=snap.val()||{}; if(page==='activity') safeRender(); });
+  onValue(ref(db,'meta/shiftConfig'),snap=>{ if(snap.exists()) SHIFT_CONFIG=snap.val(); });
   // Poison listener — real-time check if current user is poisoned
   onValue(ref(db,'contingencies/poison/'+ME),function(snap){
     POISON_DATA[ME]=snap.val()||{};
@@ -9730,100 +10225,156 @@ function renderBadgeMgmt(c){
 function buildSearchChannels(){
   const wrap=document.getElementById('srchChannels');
   if(!wrap) return;
-  // Build channel list based on permissions
-  const channels=[
-    {id:'srch-players', label:'Players', always:true},
-    {id:'srch-staff', label:'Staff', perm:'canViewStaff'},
-    {id:'srch-modlog', label:'Mod Log', perm:'canViewModLog'},
-    {id:'srch-loginlog', label:'Login Log', perm:'canViewLoginLog'},
-    {id:'srch-appeals', label:'Appeals', perm:'canViewAppealLog'},
+  const CHANNEL_DEFS=[
+    {id:'srch-players',  label:'Players',       icon:'👤', cat:'People',      always:true},
+    {id:'srch-staff',    label:'Staff',          icon:'🛡️', cat:'People',      perm:'canViewStaff'},
+    {id:'srch-modlog',   label:'Mod Log',        icon:'📋', cat:'Logs',        perm:'canViewModLog'},
+    {id:'srch-susplog',  label:'Suspend Log',    icon:'⏸️', cat:'Logs',        perm:'canViewSuspendLogs'},
+    {id:'srch-termlog',  label:'Terminate Log',  icon:'🚫', cat:'Logs',        perm:'canViewTerminateLogs'},
+    {id:'srch-loginlog', label:'Login Log',      icon:'🔑', cat:'Logs',        perm:'canViewLoginLog'},
+    {id:'srch-warnlog',  label:'Staff Warnings', icon:'⚠️', cat:'Logs',        perm:'canViewStaff'},
+    {id:'srch-appeals',  label:'Appeals',        icon:'📬', cat:'Moderation',  perm:'canViewAppealLog'},
+    {id:'srch-messages', label:'Staff Messages', icon:'💬', cat:'Staff',       perm:'canViewStaff'},
+    {id:'srch-auditlog', label:'Audit Log',      icon:'📝', cat:'Config',      sm:true},
   ];
-  const accessible=channels.filter(ch=>ch.always||canDo(ch.perm));
-  const allOption=isSoftwareManager()?`<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-weight:bold;color:var(--c-link);"><input type="checkbox" id="srch-all"/> ALL (every channel)</label>`:'';
-  wrap.innerHTML=`<div style="font-size:11px;font-weight:bold;color:var(--c-text);margin-bottom:3px;">Channels:</div>
-    <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:11px;">
-      ${accessible.map(ch=>`<label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="${ch.id}" checked/> ${ch.label}</label>`).join('')}
-      ${allOption}
-    </div>`;
-  if(isSoftwareManager()){
-    const allCb=document.getElementById('srch-all');
-    if(allCb) allCb.onchange=()=>{
-      accessible.forEach(ch=>{ const el=document.getElementById(ch.id); if(el) el.checked=allCb.checked; });
+  const accessible=CHANNEL_DEFS.filter(ch=>ch.always||(ch.sm&&isSoftwareManager())||(!ch.sm&&(!ch.perm||canDo(ch.perm))));
+  const cats=[...new Set(accessible.map(ch=>ch.cat))];
+
+  let html='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px;">'
+    +'<span style="font-size:11px;font-weight:bold;color:var(--c-text);">Categories:</span>'
+    +'<button class="btn small" id="srch-cat-all" style="font-size:10px;">All</button>'
+    +'<button class="btn small" id="srch-cat-none" style="font-size:10px;">None</button>'
+    +cats.map(cat=>`<button class="btn small srch-cat-btn" data-cat="${cat}" style="font-size:10px;">${cat}</button>`).join('')
+    +'</div>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:5px 12px;font-size:11px;">'
+    +accessible.map(ch=>`<label style="display:flex;align-items:center;gap:3px;cursor:pointer;" data-chcat="${ch.cat}"><input type="checkbox" class="srch-ch-cb" id="${ch.id}" checked/><span>${ch.icon} ${ch.label}</span></label>`).join('')
+    +'</div>';
+  wrap.innerHTML=html;
+
+  document.getElementById('srch-cat-all').onclick=()=>{ wrap.querySelectorAll('.srch-ch-cb').forEach(cb=>cb.checked=true); };
+  document.getElementById('srch-cat-none').onclick=()=>{ wrap.querySelectorAll('.srch-ch-cb').forEach(cb=>cb.checked=false); };
+  wrap.querySelectorAll('.srch-cat-btn').forEach(btn=>{
+    btn.onclick=()=>{
+      const cat=btn.dataset.cat;
+      wrap.querySelectorAll('.srch-ch-cb').forEach(cb=>cb.checked=false);
+      wrap.querySelectorAll(`label[data-chcat="${cat}"] .srch-ch-cb`).forEach(cb=>cb.checked=true);
     };
-  }
+  });
 }
 
 function runAdvancedSearch(){
   const raw=document.getElementById('srchQuery').value.trim();
   const statusEl=document.getElementById('srchStatus');
   const el=document.getElementById('srchResults');
-  if(!raw){
-    statusEl.textContent='INVALID — enter a search query.';
-    statusEl.style.color='var(--c-ban)';
-    el.innerHTML='';
-    return;
-  }
-  statusEl.textContent='PROCESSING...';
-  statusEl.style.color='#000080';
-  el.innerHTML='';
+  if(!raw){ statusEl.style.color='var(--c-ban)'; statusEl.textContent='Enter a search query.'; el.innerHTML=''; return; }
+  statusEl.style.color='var(--c-link)'; statusEl.textContent='Searching…'; el.innerHTML='';
+  const COLORS={Player:'#0969da',Staff:'#8250df','Mod Log':'#1a7f37','Suspend Log':'#9a6700','Terminate Log':'#cf222e','Login Log':'#0550ae','Staff Warnings':'#d29922',Appeal:'#1a7f37','Staff Message':'#8250df','Audit Log':'#656d76'};
 
-  // Small timeout so PROCESSING renders before heavy sync search
   setTimeout(()=>{
-    const queries=raw.split(',').map(q=>q.trim().toLowerCase()).filter(q=>q);
-    const chPlayers=document.getElementById('srch-players')?.checked;
-    const chStaff=document.getElementById('srch-staff')?.checked&&canDo('canViewStaff');
-    const chModlog=document.getElementById('srch-modlog')?.checked&&canDo('canViewModLog');
-    const chLogin=document.getElementById('srch-loginlog')?.checked&&canDo('canViewLoginLog');
-    const chAppeals=document.getElementById('srch-appeals')?.checked&&canDo('canViewAppealLog');
+    const q=raw.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
+    const ch=id=>document.getElementById(id)?.checked;
     const results=[];
 
-    if(chPlayers){
-      const matches=Object.entries(USERS).filter(([,u])=>u&&queries.some(q=>(u.username||'').toLowerCase().includes(q)||(u.displayName||'').toLowerCase().includes(q)||String(u.playerId||'').includes(q)));
-      matches.forEach(([uid,u])=>results.push({type:'Player',label:`<b>${u.username}</b>${u.displayName&&u.displayName!==u.username?` (${u.displayName})`:''}`,sub:`ID: ${u.playerId||'?'} &mdash; ${statusBadge(u.status)}`,action:`<button class="btn small srch-goto" data-type="player" data-uid="${uid}">View</button>`}));
-    }
-    if(chStaff){
-      const matches=Object.entries(STAFF).filter(([,s])=>s&&queries.some(q=>(s.username||'').toLowerCase().includes(q)));
-      matches.forEach(([sid,s])=>results.push({type:'Staff',label:`<b>${s.username}</b>`,sub:`${levelBadge(s.level)} &mdash; ${s.suspended?'<span class="sus">SUSPENDED</span>':s.secured?'<span class="ban">SECURED</span>':'<span class="ok">OK</span>'}`,action:`<button class="btn small srch-goto" data-type="staff" data-sid="${sid}">View</button>`}));
-    }
-    if(chModlog){
-      const matches=Object.entries(MOD_LOG).filter(([,r])=>r&&queries.some(q=>(r.user||'').toLowerCase().includes(q)||(r.mod||'').toLowerCase().includes(q)));
-      matches.slice(0,20).forEach(([,r])=>{
-        const uid=Object.entries(USERS).find(([,u])=>u.username===r.user)?.[0];
-        results.push({type:'Mod Log',label:`${r.user||'—'} &mdash; ${r.action||'—'}`,sub:`By ${r.mod||'—'} on ${r.date||'—'}`,action:uid?`<button class="btn small srch-goto" data-type="player" data-uid="${uid}">View</button>`:'<span style="font-size:10px;color:var(--c-text2);">[wiped]</span>'});
+    function hit(type,label,sub,action,score){results.push({type,label,sub,action:action||'',score:score||0});}
+    function qMatch(str){ return str&&q.some(s=>str.toLowerCase().includes(s)); }
+
+    // Players
+    if(ch('srch-players')){
+      Object.entries(USERS).filter(([,u])=>u&&(qMatch(u.username)||qMatch(u.displayName)||qMatch(String(u.playerId||''))||qMatch(u.robloxId||'')))
+      .forEach(([uid,u])=>{
+        const notesArr=Array.isArray(u.notes)?u.notes:Object.values(u.notes||{});
+        const noteHit=notesArr.some(n=>qMatch(n.text||n));
+        hit('Player',`<b>${u.username}</b>${u.displayName&&u.displayName!==u.username?` <span style="color:var(--c-text2);">(${u.displayName})</span>`:''}`
+          ,`ID: ${u.playerId||'?'} &mdash; Roblox: ${u.robloxId||'?'} &mdash; ${statusBadge(u.status)}`+(noteHit?' <b style="color:#9a6700;">⚠ note match</b>':'')
+          ,`<button class="btn small srch-goto" data-type="player" data-uid="${uid}">View</button>`,2);
       });
     }
-    if(chLogin){
-      const matches=Object.entries(LOGIN_LOG).filter(([,r])=>r&&queries.some(q=>(r.username||'').toLowerCase().includes(q)));
-      matches.slice(0,10).forEach(([,r])=>{
+    // Staff
+    if(ch('srch-staff')&&canDo('canViewStaff')){
+      Object.entries(STAFF).filter(([,s])=>s&&(qMatch(s.username)||qMatch(s.level)))
+      .forEach(([sid,s])=>hit('Staff',`<b>${s.username}</b>`,`${levelBadge(s.level)} &mdash; ${s.suspended?'<span class="sus">SUSPENDED</span>':s.secured?'<span class="ban">SECURED</span>':'<span class="ok">OK</span>'}`
+        ,`<button class="btn small srch-goto" data-type="staff" data-sid="${sid}">View</button>`,2));
+    }
+    // Mod Log
+    if(ch('srch-modlog')&&canDo('canViewModLog')){
+      Object.entries(MOD_LOG).filter(([,r])=>r&&(qMatch(r.user)||qMatch(r.mod)||qMatch(r.reason)||qMatch(r.note)||qMatch(r.action)))
+      .slice(0,25).forEach(([,r])=>{
+        const uid=Object.entries(USERS).find(([,u])=>u.username===r.user)?.[0];
+        hit('Mod Log',`${r.user||'—'} &mdash; <b>${r.action||'—'}</b>`,`By ${r.mod||'—'} on ${r.date||'—'}${r.reason?' &mdash; '+r.reason:''}`
+          ,uid?`<button class="btn small srch-goto" data-type="player" data-uid="${uid}">View</button>`:'',1);
+      });
+    }
+    // Suspend Log
+    if(ch('srch-susplog')&&canDo('canViewSuspendLogs')){
+      Object.entries(SUSPEND_LOG||{}).filter(([,r])=>r&&(qMatch(r.username)||qMatch(r.by)||qMatch(r.reason)))
+      .slice(0,15).forEach(([,r])=>{
+        const sid=Object.entries(STAFF).find(([,s])=>s.username===r.username)?.[0];
+        hit('Suspend Log',`<b>${r.username||'—'}</b> &mdash; ${r.action||'—'}`,`By ${r.by||'—'} on ${r.date||'—'}${r.reason?' &mdash; '+r.reason:''}`
+          ,sid?`<button class="btn small srch-goto" data-type="staff" data-sid="${sid}">View</button>`:'',1);
+      });
+    }
+    // Terminate Log
+    if(ch('srch-termlog')&&canDo('canViewTerminateLogs')){
+      Object.entries(TERMINATE_LOG||{}).filter(([,r])=>r&&(qMatch(r.username)||qMatch(r.by)||qMatch(r.reason)))
+      .slice(0,15).forEach(([,r])=>hit('Terminate Log',`<b>${r.username||'—'}</b>`,`By ${r.by||'—'} on ${r.date||'—'}${r.reason?' &mdash; '+r.reason:''}`,'',1));
+    }
+    // Login Log
+    if(ch('srch-loginlog')&&canDo('canViewLoginLog')){
+      Object.entries(LOGIN_LOG||{}).filter(([,r])=>r&&(qMatch(r.username)||qMatch(r.ip)||qMatch(r.result)))
+      .slice(0,15).forEach(([,r])=>{
         const uid=Object.entries(USERS).find(([,u])=>u.username===r.username)?.[0];
         const sid=Object.entries(STAFF).find(([,s])=>s.username===r.username)?.[0];
-        const action=uid?`<button class="btn small srch-goto" data-type="player" data-uid="${uid}">View</button>`:sid?`<button class="btn small srch-goto" data-type="staff" data-sid="${sid}">View</button>`:'';
-        results.push({type:'Login',label:`<b>${r.username||'—'}</b>`,sub:`${r.result||'—'} &mdash; ${r.date||'—'}`,action});
+        hit('Login Log',`<b>${r.username||'—'}</b>`,`${r.result||'—'} &mdash; ${r.date||'—'}${r.ip?' &mdash; IP: '+r.ip:''}`
+          ,uid?`<button class="btn small srch-goto" data-type="player" data-uid="${uid}">View</button>`:sid?`<button class="btn small srch-goto" data-type="staff" data-sid="${sid}">View</button>`:'',1);
       });
     }
-    if(chAppeals){
-      const matches=Object.entries(APPEAL_LOG).filter(([,r])=>r&&queries.some(q=>(r.user||'').toLowerCase().includes(q)));
-      matches.slice(0,10).forEach(([,r])=>{
-        const uid=r.uid||Object.entries(USERS).find(([,u])=>u.username===r.user)?.[0];
-        results.push({type:'Appeal',label:`<b>${r.user||'—'}</b>`,sub:`${r.presetReason||'—'} &mdash; ${r.status||'—'}`,action:uid?`<button class="btn small srch-goto" data-type="player" data-uid="${uid}">View</button>`:''});
+    // Staff Warnings
+    if(ch('srch-warnlog')&&canDo('canViewStaff')){
+      Object.entries(WARN_LOG||{}).filter(([,r])=>r&&(qMatch(r.username)||qMatch(r.reason)||qMatch(r.by)))
+      .slice(0,15).forEach(([,r])=>{
+        const sid=Object.entries(STAFF).find(([,s])=>s.username===r.username)?.[0];
+        hit('Staff Warnings',`<b>${r.username||'—'}</b> &mdash; ${r.severity||'WARNING'}`,`By ${r.by||'—'} on ${r.date||'—'}: ${r.reason||'—'}`
+          ,sid?`<button class="btn small srch-goto" data-type="staff" data-sid="${sid}">View</button>`:'',1);
       });
+    }
+    // Appeals
+    if(ch('srch-appeals')&&canDo('canViewAppealLog')){
+      Object.entries(APPEAL_LOG||{}).filter(([,r])=>r&&(qMatch(r.user)||qMatch(r.presetReason)||qMatch(r.body)))
+      .slice(0,15).forEach(([,r])=>{
+        const uid=r.uid||Object.entries(USERS).find(([,u])=>u.username===r.user)?.[0];
+        hit('Appeal',`<b>${r.user||'—'}</b>`,`${r.presetReason||'—'} &mdash; ${r.status||'—'}`
+          ,uid?`<button class="btn small srch-goto" data-type="player" data-uid="${uid}">View</button>`:'',1);
+      });
+    }
+    // Staff Messages
+    if(ch('srch-messages')&&canDo('canViewStaff')){
+      Object.entries(STAFF_MESSAGES||{}).filter(([,r])=>r&&(qMatch(r.from)||qMatch(r.subject)||qMatch(r.body)))
+      .slice(0,10).forEach(([,r])=>hit('Staff Message',`<b>${r.from||'—'}</b>: ${r.subject||'—'}`,`${r.date||'—'}: ${(r.body||'').slice(0,60)}…`,'',0));
+    }
+    // Audit Log (SM only)
+    if(ch('srch-auditlog')&&isSoftwareManager()){
+      Object.entries(AUDIT_LOG||{}).filter(([,r])=>r&&(qMatch(r.action)||qMatch(r.detail)||qMatch(r.by)))
+      .slice(0,10).forEach(([,r])=>hit('Audit Log',`${r.action||'—'}`,`By ${r.by||'—'} on ${r.date||'—'}: ${r.detail||'—'}`,'',0));
     }
 
     if(!results.length){
-      statusEl.textContent='INVALID — no results found.';
-      statusEl.style.color='var(--c-ban)';
-      el.innerHTML='<i style="color:var(--c-text2);">No results found.</i>';
+      statusEl.style.color='var(--c-ban)'; statusEl.textContent='No results found.';
+      el.innerHTML='<div style="padding:10px 0;text-align:center;color:var(--c-text2);font-size:11px;">No results found for "'+raw+'".</div>';
       return;
     }
-    statusEl.textContent=`${results.length} result${results.length!==1?'s':''} found.`;
-    statusEl.style.color='#006600';
-    el.innerHTML=results.map(r=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--c-border);gap:6px;">
-      <div style="min-width:0;flex:1;">
-        <span style="font-size:10px;color:#fff;background:var(--c-link);padding:1px 4px;border-radius:2px;margin-right:4px;">${r.type}</span>
-        ${r.label}<div style="font-size:10px;color:var(--c-text2);">${r.sub}</div>
-      </div>
-      <div style="flex-shrink:0;">${r.action}</div>
-    </div>`).join('');
+    results.sort((a,b)=>b.score-a.score);
+    statusEl.style.color='var(--c-ok)'; statusEl.textContent=`${results.length} result${results.length!==1?'s':''} found across all channels.`;
+    el.innerHTML=results.map(r=>{
+      const col=COLORS[r.type]||'#656d76';
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 4px;border-bottom:1px solid var(--c-border);gap:6px;">
+        <div style="min-width:0;flex:1;">
+          <span style="font-size:10px;font-weight:bold;color:#fff;background:${col};padding:1px 5px;border-radius:3px;margin-right:5px;">${r.type}</span>
+          <span style="font-size:11px;">${r.label}</span>
+          <div style="font-size:10px;color:var(--c-text2);margin-top:1px;padding-left:2px;">${r.sub}</div>
+        </div>
+        <div style="flex-shrink:0;">${r.action}</div>
+      </div>`;
+    }).join('');
     el.querySelectorAll('.srch-goto').forEach(btn=>{
       btn.onclick=()=>{
         if(btn.dataset.type==='player'){ currentUserId=btn.dataset.uid; document.getElementById('searchOverlay').classList.remove('show'); nav('useradmin'); }
@@ -10016,7 +10567,7 @@ function openNotifSettings(){
   document.getElementById('notifSettingsOverlay').classList.add('show');
 }
 
-['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','loginlog','auditlog','alerts','adminlog','home','messaging','requests','userconfig','siteconfig','suggestions','staffconfig','msganalyze','statuslog','badgemgmt','wipelog','information','leakid','clearance','samaritan','samlog','evaluations','blacklist'].forEach(p=>{
+['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','warnlog','loginlog','auditlog','alerts','adminlog','home','messaging','requests','userconfig','siteconfig','suggestions','staffconfig','msganalyze','statuslog','badgemgmt','wipelog','information','leakid','clearance','samaritan','samlog','evaluations','blacklist'].forEach(p=>{
   const el=document.getElementById('nav-'+p);
   if(el) el.onclick=()=>nav(p);
 });
