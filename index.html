@@ -594,7 +594,6 @@ body.sam-active .main{ background:#0d1117; }
             <span class="sb-link" id="nav-alerts">Site Alerts</span>
             <span class="sb-link" id="nav-adminlog">Administrator</span>
             <span class="sb-link" id="nav-cflog">Custom Fields Log</span>
-            <span class="sb-link" id="nav-customfieldlog">Custom Field Log</span>
           </div>
         </div>
 
@@ -1776,6 +1775,15 @@ function loadNotifPrefs(){
   }
 }
 
+function evalAvatarOnly(username){
+  var sz=32;
+  var av=avatarUrlFor(username||'');
+  if(av) return '<img src="'+av+'" width="'+sz+'" height="'+sz+'" style="border-radius:50%;object-fit:cover;flex-shrink:0;">';
+  var letter=(username||'?').charAt(0).toUpperCase();
+  var colors=['#1158a8','#0969da','#1a7f37','#9a6700','#8250df','#cf222e','#0550ae'];
+  var bg=colors[(username||'?').charCodeAt(0)%colors.length];
+  return '<span style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:'+bg+';display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;">'+letter+'</span>';
+}
 function avatarHTML(u, size){
   const sz=size||60;
   const fs=Math.max(8,Math.floor(sz/4));
@@ -3909,7 +3917,7 @@ function renderStaff(c){
 
 // ── STAFF ACTIVITY ──
 function renderActivity(c){
-  const sArr=Object.entries(STAFF).sort((a,b)=>(b[1].lastActive||'')>(a[1].lastActive||'')?1:-1);
+  const sArr=Object.entries(STAFF).sort((a,b)=>(b[1].lastActive||'')>(a[1].lastActive||'')?-1:1);
   c.innerHTML=`
   <div class="ptitle">Staff Activity Tracker</div>
   <div class="sbox"><div class="stitle">Current Activity</div><div class="sbody">
@@ -5253,15 +5261,14 @@ function renderSamaritanPortal(c){
 }
 
 function renderSamaritanLogin(c){
-  c.style.padding='0'; c.style.background='#0d1117';
-  c.innerHTML = '<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;padding:60px 20px;">'
+  c.innerHTML = '<div style="min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;padding:60px 20px;">'
     // Creepy ambient elements
-    +'<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 50% 50%,rgba(1,4,9,0.0) 0%,rgba(1,4,9,0.85) 100%);pointer-events:none;z-index:0;"></div>'
+    +'<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 50% 50%,transparent 0%,rgba(1,4,9,0.6) 100%);pointer-events:none;z-index:0;"></div>'
     +'<div style="position:relative;z-index:1;text-align:center;max-width:380px;width:100%;padding:0 20px;">'
     +'<div style="font-size:9px;font-weight:600;color:var(--c-text2);letter-spacing:4px;text-transform:uppercase;margin-bottom:24px;opacity:0.6;">RESTRICTED ACCESS</div>'
     +'<div style="font-size:42px;font-weight:900;letter-spacing:-2px;background:linear-gradient(135deg,#58a6ff,#0550ae);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px;">SAMARITAN</div>'
     +'<div style="font-size:11px;color:var(--c-text2);letter-spacing:2px;margin-bottom:32px;opacity:0.7;">SPECIAL PROJECTS</div>'
-    +'<div style="background:rgba(22,27,34,0.9);border:1px solid rgba(88,166,255,0.2);border-radius:12px;padding:24px;backdrop-filter:blur(10px);">'
+    +'<div style="background:var(--bg-dialog);border:1px solid var(--c-border);border-radius:12px;padding:24px;backdrop-filter:blur(10px);">'
     +'<div style="font-size:11px;color:var(--c-text2);margin-bottom:16px;line-height:1.6;">This system is for authorized personnel only.<br>Unauthorized access is monitored and logged.</div>'
     +'<div style="margin-bottom:12px;text-align:left;">'
     +'<label style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--c-text2);display:block;margin-bottom:4px;">Authorization Code</label>'
@@ -5871,6 +5878,8 @@ function renderBeehive(panel){
     +'<button class="btn" id="beehive-enable" style="background:#d29922;color:#fff;border-color:#d29922;">Broadcast Beehive</button>'
     +'<button class="btn" id="beehive-disable">Cancel Beehive</button>'
     +'<button class="btn small" id="bee-clear-site" style="opacity:0.7;">Clear All Site Alerts</button>'
+    +'</div>'
+    +'<div id="bee-sched-container" style="margin-top:10px;border-top:1px solid var(--c-border);padding-top:8px;"></div>'
     +'</div><div id="beehive-output" style="font-size:11px;margin-top:5px;color:var(--c-ok);"></div>'
   );
 
@@ -5901,6 +5910,61 @@ function renderBeehive(panel){
     // Show the animated overlay on the broadcaster's screen immediately
     showBeehiveOverlay({message:msg, beehiveLevel:type, beehiveIcon:typeInfo.icon});
   };
+  // Render beehive scheduling section
+  (function(){
+    var beehiveSchedTypes=[
+      {val:'beehive-warning',label:'Warning'},
+      {val:'beehive-critical',label:'Critical'},
+      {val:'beehive-emergency',label:'Emergency'},
+      {val:'beehive-lockdown',label:'Lockdown'},
+      {val:'beehive-standby',label:'Stand By'},
+      {val:'beehive-allclear',label:'All Clear'},
+    ];
+    // Build beehive scheduled alerts section
+    var beehiveSchedArr=Object.entries(SCHEDULED_ALERTS).filter(function(e){return e[1].type&&e[1].type.indexOf('beehive-')===0;}).sort(function(a,b){return (a[1].nextRun||0)-(b[1].nextRun||0);});
+    var bschedContainer=document.getElementById('bee-sched-container');
+    if(bschedContainer){
+      bschedContainer.innerHTML='<div style="font-size:11px;font-weight:600;color:var(--c-text);margin-bottom:6px;">Scheduled Beehive Alerts</div>'
+        +(beehiveSchedArr.length===0?'<div style="font-size:11px;color:var(--c-text2);">No scheduled beehive alerts.</div>'
+        :beehiveSchedArr.map(function(e){
+          var sid=e[0],s=e[1];
+          return '<div style="background:var(--bg-tbl-odd);border:1px solid var(--c-border);border-radius:5px;padding:5px 10px;margin-bottom:3px;display:flex;align-items:center;gap:8px;">'
+            +'<div style="flex:1;font-size:11px;color:var(--c-text);">'+s.message+' <span style="color:var(--c-text2);font-size:10px;">— '+s.schedule+'</span></div>'
+            +'<button class="btn small bee-sched-del" data-sid="'+sid+'" style="color:var(--c-ban);">Remove</button>'
+            +'</div>';
+        }).join(''))
+        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px;">'
+        +'<div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Message</label><input type="text" id="bee-sched-msg" style="width:100%;" placeholder="Beehive alert text…"/></div>'
+        +'<div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Level</label><select id="bee-sched-level" style="width:100%;">'+beehiveSchedTypes.map(function(t){return '<option value="'+t.val+'">'+t.label+'</option>';}).join('')+'</select></div>'
+        +'<div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Frequency</label><select id="bee-sched-freq" style="width:100%;"><option value="once">Once</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></div>'
+        +'<div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Time</label><input type="time" id="bee-sched-time" style="width:100%;" value="09:00"/></div>'
+        +'</div>'
+        +'<button class="btn" id="bee-sched-add" style="margin-top:5px;background:#d29922;color:#fff;border-color:#d29922;width:100%;">Schedule Beehive Alert</button>';
+
+      bschedContainer.querySelectorAll('.bee-sched-del').forEach(function(btn){
+        btn.onclick=async function(){
+          await remove(ref(db,'scheduledAlerts/'+btn.dataset.sid));
+          delete SCHEDULED_ALERTS[btn.dataset.sid];
+          nav('samaritan');
+        };
+      });
+      var bAddBtn=document.getElementById('bee-sched-add');
+      if(bAddBtn) bAddBtn.onclick=async function(){
+        var msg=(document.getElementById('bee-sched-msg')||{value:''}).value.trim();
+        var level=(document.getElementById('bee-sched-level')||{value:'beehive-warning'}).value;
+        var freq=(document.getElementById('bee-sched-freq')||{value:'once'}).value;
+        var time=(document.getElementById('bee-sched-time')||{value:'09:00'}).value||'09:00';
+        if(!msg){showToast('Enter a message.','error');return;}
+        var nextRun=calcNextRun(freq,time,1);
+        var entry={message:msg,type:level,schedule:schedLabel(freq,time,1),freq,time,day:1,duration:0,nextRun,createdBy:ME,createdAt:nowStr()};
+        await push(ref(db,'scheduledAlerts'),entry);
+        SCHEDULED_ALERTS[Object.keys(SCHEDULED_ALERTS).length]=entry;
+        showToast('Beehive alert scheduled.','success');
+        nav('samaritan');
+      };
+    }
+  })();
+
   document.getElementById('beehive-disable').onclick = async function(){
     await update(ref(db,'contingencies/beehive'),{active:false});
     // Reset the announce bar styling
@@ -6196,7 +6260,7 @@ function renderScheduledAlerts(container){
     +'<div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:5px;">'
     +'<div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Alert Text</label><input type="text" id="sched-msg" style="width:100%;" placeholder="Alert message…"/></div>'
     +'<div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Type</label>'
-    +'<select id="sched-type" style="width:100%;"><option value="warning">Warning</option><option value="critical">Critical</option><option value="info">Info</option><optgroup label="Beehive Alerts"><option value="beehive-warning">Beehive — Warning</option><option value="beehive-critical">Beehive — Critical</option><option value="beehive-emergency">Beehive — Emergency</option><option value="beehive-lockdown">Beehive — Lockdown</option><option value="beehive-standby">Beehive — Stand By</option><option value="beehive-allclear">Beehive — All Clear</option></optgroup></select></div>'
+    +'<select id="sched-type" style="width:100%;"><option value="warning">Warning</option><option value="critical">Critical</option><option value="info">Info</option></select></div>'
     +'<div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Schedule</label>'
     +'<select id="sched-freq" style="width:100%;" onchange="document.getElementById(\'sched-day-row\').style.display=this.value===\'weekly\'?\'block\':\'none\'">'
     +'<option value="once">Once (specific time)</option>'
@@ -6374,16 +6438,20 @@ function showFailedAttempts(ip, failEntries){
       +'</table></div>'
     : '';
 
-  var rows = failEntries.map(function(r){
-    return '<div style="font-size:11px;padding:5px 8px;background:var(--bg-tbl-odd);border-radius:4px;margin-bottom:3px;">'
-      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">'
+  var rows = failEntries.map(function(r,i){
+    var sm=isSoftwareManager();
+    var masked=r.passwordAttempt||(r.passwordFull?(r.passwordFull.substring(0,2)+'*'.repeat(Math.max(0,r.passwordFull.length-2))):'');
+    var rowId='failpw'+Date.now()+i;
+    return '<div style="font-size:11px;padding:6px 8px;background:var(--bg-tbl-odd);border-radius:4px;margin-bottom:3px;">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">'
       +'<span style="font-weight:600;color:var(--c-text);">'+(r.username||'—')+'</span>'
-      +'<span style="color:var(--c-text2);">'+(r.date||'—')+'</span></div>'
-      +'<div style="display:flex;gap:12px;flex-wrap:wrap;font-size:10px;color:var(--c-text2);">'
+      +'<span style="color:var(--c-text2);font-size:10px;">'+(r.date||'—')+'</span></div>'
+      +'<div style="display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--c-text2);">'
       +'<span>IP: <b style="color:var(--c-ban);">'+(r.ip||'—')+'</b></span>'
       +'<span>Browser: '+(r.browser||'—')+'</span>'
       +'<span>OS: '+(r.os||'—')+'</span>'
       +'<span>Country: '+(r.country||'—')+'</span>'
+      +(sm&&masked?'<span style="display:flex;align-items:center;gap:4px;">Pwd: <code id="'+rowId+'" style="background:var(--bg-page);padding:1px 5px;border-radius:3px;font-size:11px;">'+masked+'</code>'+(r.passwordFull?'<button class="btn small" style="font-size:9px;padding:1px 6px;" data-full="'+encodeURIComponent(r.passwordFull)+'" data-masked="'+encodeURIComponent(masked)+'" data-target="'+rowId+'" onclick="togglePwDisplay(this)">View</button>':'')+'</span>':'')
       +'</div></div>';
   }).join('');
 
@@ -6470,7 +6538,7 @@ function renderStaffEvaluations(c){
       var rid=e[0],r=e[1];
       var modeTag=r.mode==='auto'?'<span class="badge moderator" style="font-size:9px;">AUTO</span>':'<span class="badge intern" style="font-size:9px;">MANUAL</span>';
       return '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg-tbl-odd);border:1px solid var(--c-border);border-radius:5px;margin-bottom:4px;">'
-        +tinyAvatar(r.targetStaff,avatarUrlFor(r.targetStaff))
+        +evalAvatarOnly(r.targetStaff)
         +'<div style="flex:1;"><b style="font-size:12px;color:var(--c-text);">'+r.targetStaff+'</b>'
         +'<div style="font-size:10px;color:var(--c-text2);">'+r.period+' &bull; '+r.assignedAt+(r.dueDate?' &bull; Due: '+r.dueDate:'')+'</div></div>'
         +modeTag
@@ -6481,7 +6549,7 @@ function renderStaffEvaluations(c){
     }).join('')
     +'</div></div>':'')
     // Completed reviews
-    +(completed.length?'<div class="sbox"><div class="stitle">Completed Reviews</div><div class="sbody"><div class="tbl-wrap"><table class="tbl"><tr><th>Staff</th><th>Period</th><th>Mode</th><th>Score</th><th>Recommendation</th><th>Reviewed By</th><th>Date</th><th>View</th></tr>'
+    +(completed.length?'<div class="sbox"><div class="stitle">Completed Reviews</div><div class="sbody"><div class="tbl-wrap"><table class="tbl"><tr><th>Staff</th><th>Period</th><th>Mode</th><th>Score</th><th>Recommendation</th><th>Reviewed By</th><th>Date</th><th>View</th><th></th></tr>'
     +completed.map(function(e){
       var rid=e[0],r=e[1];
       var scores=r.scores||{};
@@ -6498,6 +6566,7 @@ function renderStaffEvaluations(c){
         +'<td>'+tinyAvatar(r.reviewedBy||'[AUTO]',avatarUrlFor(r.reviewedBy||''))+'</td>'
         +'<td style="font-size:10px;">'+r.reviewedAt+'</td>'
         +'<td><button class="btn small eval-view-btn" data-rid="'+rid+'">View</button></td>'
+        +(isSuperAdmin()?'<td><button class="btn small" style="color:var(--c-ban);" onclick="if(confirm(\'Delete?\')) remove(ref(db,\'staffReviews/'+rid+'\'))">✕</button></td>':'<td></td>')
         +'</tr>';
     }).join('')
     +'</table></div></div></div>':'');
@@ -6533,6 +6602,7 @@ function renderStaffEvaluations(c){
     });
   }
   c.querySelectorAll('.eval-view-btn').forEach(function(btn){ btn.onclick=function(){ viewEvaluationResult(btn.dataset.rid); }; });
+  c.querySelectorAll('.eval-del-btn').forEach(function(btn){ btn.onclick=async function(){ if(!confirm('Delete this evaluation?')) return; await remove(ref(db,'staffReviews/'+btn.dataset.rid)); showToast('Evaluation deleted.','success'); nav('evaluations'); }; });
 }
 
 async function runAutoEvaluation(rid){
@@ -9150,7 +9220,7 @@ function openNotifSettings(){
   document.getElementById('notifSettingsOverlay').classList.add('show');
 }
 
-['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','loginlog','auditlog','alerts','adminlog','home','messaging','requests','userconfig','siteconfig','suggestions','staffconfig','msganalyze','statuslog','badgemgmt','wipelog','information','leakid','clearance','samaritan','samlog','evaluations','blacklist','customfieldlog'].forEach(p=>{
+['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','loginlog','auditlog','alerts','adminlog','home','messaging','requests','userconfig','siteconfig','suggestions','staffconfig','msganalyze','statuslog','badgemgmt','wipelog','information','leakid','clearance','samaritan','samlog','evaluations','blacklist'].forEach(p=>{
   const el=document.getElementById('nav-'+p);
   if(el) el.onclick=()=>nav(p);
 });
