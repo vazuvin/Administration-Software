@@ -10076,7 +10076,7 @@ function renderGameIntegration(c){
   +'</div><div style="font-size:10px;color:var(--c-text2);margin-top:2px;">Used to verify requests. Keep secret.</div></div>'
   +'<div><label style="font-size:11px;font-weight:700;color:var(--c-text);display:block;margin-bottom:2px;">Open Cloud API Key <span style="color:var(--c-ok);font-weight:400;">(for permanent bans)</span></label>'
   +'<input type="password" id="gi-opencloud" value="'+(cfg.openCloudKey||'')+'" style="width:100%;font-size:11px;" placeholder="Paste from Roblox Creator Hub → Open Cloud → API Keys"/>'
-  +'<div style="font-size:10px;color:var(--c-text2);margin-top:2px;">Requires <b>user-restrictions:write</b> + <b>user-restrictions:read</b> permissions, restricted to your Universe. Without this, bans only kick — they won't be permanent via Roblox.</div></div>'
+  +'<div style="font-size:10px;color:var(--c-text2);margin-top:2px;">Requires <b>user-restrictions:write</b> + <b>user-restrictions:read</b> permissions, restricted to your Universe. Without this, bans only kick — they will not be permanent via Roblox.</div></div>'
   +'<div><label style="font-size:11px;font-weight:700;color:var(--c-text);display:block;margin-bottom:2px;">Roblox Universe ID</label>'
   +'<input type="text" id="gi-universeid" value="'+(cfg.universeId||'')+'" style="width:100%;font-size:11px;" placeholder="From Roblox Creator Hub — different from Place ID"/>'
   +'<div style="font-size:10px;color:var(--c-text2);margin-top:2px;">Creator Hub → Dashboard → your game → copy the Universe ID from the URL.</div></div>'
@@ -10541,14 +10541,12 @@ local function pollCommands()
 
     for id, cmd in pairs(cmds) do
         table.insert(toDelete, id)
-        if processed[id] then continue end
+        if not processed[id] and type(cmd) == "table" then
         processed[id] = true
-
-        if type(cmd) ~= "table" then continue end
 
         -- Skip stale commands (>60s old)
         local age = (os.time() * 1000) - (cmd.ts or 0)
-        if age > 60000 then continue end
+        if age <= 60000 then
 
         local cmdType = cmd.type or ""
         local target  = cmd.target or "ALL"
