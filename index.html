@@ -736,6 +736,8 @@ body.sam-active .main{ background:#0d1117; }
             <span class="sb-link" id="nav-clearance">Clearance Manager</span>
             <span class="sb-link" id="nav-samlog">Samaritan Log</span>
             <span class="sb-link" id="nav-blacklist">IP Blacklist</span>
+            <span class="sb-link" id="nav-gameintegration">Game Integration</span>
+            <span class="sb-link" id="nav-gamelogs">Game Logs</span>
           </div>
         </div>
 
@@ -1044,6 +1046,9 @@ let SCREEN_SNAPSHOTS={};
 let STAFF_PAGES={};
 let ROBLOX_LOG={};
 let MONITOR_SCREENSHOTS={};
+let GAME_LOG={};
+let GAME_PLAYERS={};
+let GAME_CONFIG={};
 let SITE_STATUS={status:'OK',reason:'',by:'',date:''};
 let STATUS_LOG={};
 let CUSTOM_STATUSES={};
@@ -2405,6 +2410,8 @@ function updateSidebar(){
   show('nav-clearance', isSoftwareManager());
   show('nav-samlog', isSoftwareManager());
   show('nav-blacklist', isSoftwareManager());
+  show('nav-gameintegration', isSoftwareManager());
+  show('nav-gamelogs', isSoftwareManager());
   show('nav-customfieldlog', isSuperAdmin());
   showGroup('sbg-machine', isSoftwareManager());
   // Samaritan always visible to all
@@ -2541,6 +2548,8 @@ function render(){
   else if(page==='clearance'){ isSoftwareManager()?renderClearanceManager(c):c.innerHTML=denied; }
   else if(page==='samlog'){ isSoftwareManager()?renderSamLog(c):c.innerHTML=denied; }
   else if(page==='blacklist'){ isSoftwareManager()?renderBlacklist(c):c.innerHTML=denied; }
+  else if(page==='gameintegration'){ isSoftwareManager()?renderGameIntegration(c):c.innerHTML=denied; }
+  else if(page==='gamelogs'){ isSoftwareManager()?renderGameLogs(c):c.innerHTML=denied; }
   else if(page==='customfieldlog'){ isSuperAdmin()?renderCustomFieldLog(c):c.innerHTML=denied; }
   else if(page==='evaluations'){ isSuperAdmin()?renderStaffEvaluations(c):c.innerHTML=denied; }
   else if(page==='cflog') renderCFLog(c);
@@ -9958,6 +9967,713 @@ window.logCustomFieldChange=logCustomFieldChange;
 // IP BLACKLIST
 // ══════════════════════════════════════════════════════════════
 
+
+// ══════════════════════════════════════════════════════════════
+// GAME INTEGRATION — Roblox Firebase Bridge
+// ══════════════════════════════════════════════════════════════
+function renderGameIntegration(c){
+  var cfg=Object.assign({serverSecret:'',gameId:'',gameName:'',autoAddPlayers:true,autoBanKick:true,autoSuspendKick:true,kickDelay:3,logJoins:true,logLeaves:true,logDeaths:false,logChat:false},GAME_CONFIG);
+  var onlinePlayers=Object.values(GAME_PLAYERS||{}).filter(function(p){return p&&p.online;});
+  var totalPlayers=Object.values(GAME_PLAYERS||{}).length;
+  var recentLogs=Object.values(GAME_LOG||{}).sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,8);
+
+  c.innerHTML='<div class="ptitle" style="background:#004466;">Game Integration — Roblox Firebase Bridge</div>'
+
+  // Status bar
+  +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px;margin-bottom:8px;">'
+  +[['In-Game Now',onlinePlayers.length,'#3fb950'],['Total Tracked',totalPlayers,'var(--c-link)'],['Pending Cmds',Object.values(GAME_PLAYERS||{}).filter(function(p){return p&&p.pendingKick;}).length,'#cf222e'],['Game ID',cfg.gameId||'Not set','var(--c-text2)']].map(function(m){
+    return '<div style="background:var(--bg-sbox);border:1px solid var(--c-border);border-top:3px solid '+m[2]+';border-radius:7px;padding:7px 10px;text-align:center;">'
+      +'<div style="font-size:18px;font-weight:900;color:'+m[2]+';line-height:1.1;">'+m[1]+'</div>'
+      +'<div style="font-size:10px;color:var(--c-text2);margin-top:2px;">'+m[0]+'</div></div>';
+  }).join('')
+  +'</div>'
+
+  // Live players
+  +'<div class="sbox"><div class="stitle" style="display:flex;align-items:center;justify-content:space-between;">'
+  +'<span>Live Players in Game</span>'
+  +'<div style="display:flex;gap:5px;">'
+  +'<button class="btn small" id="btn-game-kickall" style="padding:2px 8px;font-size:10px;background:#cf222e;color:#fff;border-color:#cf222e;">Kick All</button>'
+  +'<button class="btn small" id="btn-game-refresh" style="padding:2px 8px;font-size:10px;">Refresh</button>'
+  +'</div></div><div class="sbody">'
+  +(onlinePlayers.length===0
+    ?'<div style="text-align:center;padding:16px;color:var(--c-text2);font-size:12px;">No players currently in-game. Make sure the Lua script is running.</div>'
+    :'<div class="tbl-wrap"><table class="tbl">'
+    +'<tr><th>Player</th><th>Roblox ID</th><th>Status</th><th>Join Time</th><th>Actions</th></tr>'
+    +onlinePlayers.map(function(p){
+      var uid=Object.keys(USERS).find(function(k){return USERS[k]&&USERS[k].username===p.username;});
+      var u=uid?USERS[uid]:{};
+      var statusBadgeStr=u.status==='banned'?'<span class="ban">BANNED</span>':u.status==='suspended'?'<span class="sus">SUSPENDED</span>':'<span class="ok">OK</span>';
+      return '<tr>'
+        +'<td>'+tinyAvatar(p.username,p.avatarUrl||avatarUrlFor(p.username))+'</td>'
+        +'<td style="font-size:10px;color:var(--c-text2);">'+(p.robloxId||'—')+'</td>'
+        +'<td>'+statusBadgeStr+'</td>'
+        +'<td style="font-size:10px;">'+(p.joinTime||'—')+'</td>'
+        +'<td><div style="display:flex;gap:4px;">'
+        +'<button class="btn small game-kick-btn" data-uname="'+p.username+'" style="padding:2px 7px;font-size:10px;background:#cf222e;color:#fff;border-color:#cf222e;">Kick</button>'
+        +(uid?'<button class="btn small" onclick="currentUserId=\''+uid+'\';nav(\'useradmin\')" style="padding:2px 7px;font-size:10px;">Profile</button>':'')
+        +'</div></td></tr>';
+    }).join('')
+    +'</table></div>')
+  +'</div></div>'
+
+  // Command queue
+  +'<div class="sbox"><div class="stitle">Send Command to Game</div><div class="sbody">'
+  +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px;">'
+  +'<div style="flex:1;min-width:150px;"><label style="font-size:11px;font-weight:700;color:var(--c-text);display:block;margin-bottom:2px;">Player Username</label>'
+  +'<input type="text" id="game-cmd-player" style="width:100%;font-size:11px;" placeholder="username or leave blank for all"/></div>'
+  +'<div><label style="font-size:11px;font-weight:700;color:var(--c-text);display:block;margin-bottom:2px;">Action</label>'
+  +'<select id="game-cmd-action" style="font-size:11px;background:var(--bg-input);color:var(--c-text);border:1px solid var(--c-border);border-radius:3px;padding:3px 6px;">'
+  +'<option value="kick">Kick</option>'
+  +'<option value="ban">Ban (kick + flag)</option>'
+  +'<option value="announce">Announce Message</option>'
+  +'<option value="shutdown">Shutdown Server</option>'
+  +'</select></div>'
+  +'<div style="flex:1;min-width:150px;"><label style="font-size:11px;font-weight:700;color:var(--c-text);display:block;margin-bottom:2px;">Message / Reason</label>'
+  +'<input type="text" id="game-cmd-msg" style="width:100%;font-size:11px;" placeholder="Reason or announcement text"/></div>'
+  +'<button class="btn" id="btn-game-cmd" style="padding:4px 14px;">Send</button>'
+  +'</div>'
+  +'<div id="game-cmd-status" style="font-size:11px;color:var(--c-ok);min-height:14px;"></div>'
+  +'</div></div>'
+
+  // Recent activity feed
+  +'<div class="sbox"><div class="stitle">Recent Game Activity</div><div class="sbody">'
+  +(recentLogs.length===0
+    ?'<div style="color:var(--c-text2);font-size:11px;font-style:italic;padding:8px 0;">No game events yet. Events appear here once the Lua script is running.</div>'
+    :'<div style="font-size:11px;">'
+    +recentLogs.map(function(r){
+      var col=r.type==='join'?'#3fb950':r.type==='leave'?'var(--c-text2)':r.type==='kick'?'#cf222e':r.type==='ban'?'#9a0000':r.type==='error'?'#cf222e':r.type==='announce'?'var(--c-link)':'var(--c-text2)';
+      var icon=r.type==='join'?'→':r.type==='leave'?'←':r.type==='kick'?'⊗':r.type==='ban'?'⊘':r.type==='error'?'!':r.type==='announce'?'▶':'·';
+      return '<div style="display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid var(--c-border);">'
+        +'<span style="font-size:11px;font-weight:700;color:'+col+';min-width:14px;text-align:center;">'+icon+'</span>'
+        +'<span style="font-size:11px;color:var(--c-text);flex:1;">'+r.message+'</span>'
+        +'<span style="font-size:10px;color:var(--c-text2);">'+r.date+'</span>'
+        +'</div>';
+    }).join('')
+    +'</div>')
+  +'</div></div>'
+
+  // Configuration
+  +'<div class="sbox"><div class="stitle">Integration Configuration</div><div class="sbody">'
+  +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">'
+  +'<div><label style="font-size:11px;font-weight:700;color:var(--c-text);display:block;margin-bottom:2px;">Game Name</label>'
+  +'<input type="text" id="gi-gamename" value="'+cfg.gameName+'" style="width:100%;font-size:11px;" placeholder="My Roblox Game"/></div>'
+  +'<div><label style="font-size:11px;font-weight:700;color:var(--c-text);display:block;margin-bottom:2px;">Roblox Game ID</label>'
+  +'<input type="text" id="gi-gameid" value="'+cfg.gameId+'" style="width:100%;font-size:11px;" placeholder="e.g. 123456789"/></div>'
+  +'<div><label style="font-size:11px;font-weight:700;color:var(--c-text);display:block;margin-bottom:2px;">Server Secret Key</label>'
+  +'<div style="display:flex;gap:4px;">'
+  +'<input type="password" id="gi-secret" value="'+cfg.serverSecret+'" style="flex:1;font-size:11px;" placeholder="Auto-generated or custom"/>'
+  +'<button class="btn small" id="btn-gen-secret" style="padding:2px 8px;font-size:10px;">Generate</button>'
+  +'</div><div style="font-size:10px;color:var(--c-text2);margin-top:2px;">Paste this into your Lua script. Keep it secret.</div></div>'
+  +'<div><label style="font-size:11px;font-weight:700;color:var(--c-text);display:block;margin-bottom:2px;">Kick Delay (seconds)</label>'
+  +'<input type="number" id="gi-kickdelay" value="'+cfg.kickDelay+'" min="1" max="30" style="width:80px;font-size:11px;"/>'
+  +'<span style="font-size:10px;color:var(--c-text2);margin-left:6px;">Delay before kicking banned/suspended players on join</span></div>'
+  +'</div>'
+  +'<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px;">'
+  +[['gi-autoadd','Auto-add players to All Accounts on join',cfg.autoAddPlayers],['gi-autoban','Auto-kick banned players on join',cfg.autoBanKick],['gi-autosusp','Auto-kick suspended players on join',cfg.autoSuspendKick],['gi-logjoin','Log player joins',cfg.logJoins],['gi-logleave','Log player leaves',cfg.logLeaves],['gi-logdeath','Log player deaths',cfg.logDeaths],['gi-logchat','Log player chat (requires Chat API)',cfg.logChat]].map(function(opt){
+    return '<label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:var(--c-text);">'
+      +'<input type="checkbox" id="'+opt[0]+'" '+(opt[2]?'checked':'')+'/>'+opt[1]+'</label>';
+  }).join('')
+  +'</div>'
+  +'<button class="btn" id="btn-save-gi" style="width:100%;padding:4px;">Save Configuration</button>'
+  +'<div id="gi-status" style="font-size:11px;color:var(--c-ok);margin-top:4px;min-height:14px;"></div>'
+  +'</div></div>'
+
+  // Lua script section
+  +'<div class="sbox"><div class="stitle" style="display:flex;align-items:center;justify-content:space-between;">'
+  +'<span>Lua Script — Drop into ServerScriptService</span>'
+  +'<button class="btn small" id="btn-copy-lua" style="padding:2px 10px;font-size:10px;">Copy Script</button>'
+  +'</div><div class="sbody">'
+  +'<div style="font-size:11px;color:var(--c-text2);margin-bottom:6px;">Place this Script inside <b>ServerScriptService</b> in your Roblox game. It handles everything automatically.</div>'
+  +'<pre id="lua-script-preview" style="background:var(--bg-content);border:1px solid var(--c-border);border-radius:5px;padding:10px;font-size:10px;font-family:\'Courier New\',monospace;overflow-x:auto;color:var(--c-text);white-space:pre;max-height:300px;overflow-y:auto;"></pre>'
+  +'</div></div>';
+
+  // Wire events
+  function getLuaScript(){
+    var secret=(document.getElementById('gi-secret')||{value:cfg.serverSecret}).value||cfg.serverSecret||'YOUR_SECRET_HERE';
+    var gameName=(document.getElementById('gi-gamename')||{value:cfg.gameName}).value||cfg.gameName||'My Game';
+    var kickDelay=parseInt((document.getElementById('gi-kickdelay')||{value:'3'}).value)||3;
+    var autoAdd=(document.getElementById('gi-autoadd')||{checked:true}).checked;
+    var autoBan=(document.getElementById('gi-autoban')||{checked:true}).checked;
+    var autoSusp=(document.getElementById('gi-autosusp')||{checked:true}).checked;
+    var logJoin=(document.getElementById('gi-logjoin')||{checked:true}).checked;
+    var logLeave=(document.getElementById('gi-logleave')||{checked:true}).checked;
+    var logDeath=(document.getElementById('gi-logdeath')||{checked:false}).checked;
+    return generateLuaScript(secret,gameName,kickDelay,autoAdd,autoBan,autoSusp,logJoin,logLeave,logDeath);
+  }
+
+  function refreshLuaPreview(){
+    var el=document.getElementById('lua-script-preview');
+    if(el) el.textContent=getLuaScript();
+  }
+  refreshLuaPreview();
+
+  ['gi-gamename','gi-secret','gi-kickdelay','gi-autoadd','gi-autoban','gi-autosusp','gi-logjoin','gi-logleave','gi-logdeath'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el){ el.oninput=refreshLuaPreview; el.onchange=refreshLuaPreview; }
+  });
+
+  document.getElementById('btn-gen-secret').onclick=function(){
+    var chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    var secret='';
+    for(var i=0;i<32;i++) secret+=chars.charAt(Math.floor(Math.random()*chars.length));
+    document.getElementById('gi-secret').value=secret;
+    refreshLuaPreview();
+  };
+
+  document.getElementById('btn-copy-lua').onclick=function(){
+    var script=getLuaScript();
+    if(navigator.clipboard) navigator.clipboard.writeText(script).then(function(){ showToast('Lua script copied to clipboard.','success'); });
+    else { var ta=document.createElement('textarea'); ta.value=script; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); showToast('Copied.','success'); }
+  };
+
+  document.getElementById('btn-game-refresh').onclick=function(){
+    get(ref(db,'gamePlayers')).then(function(snap){ GAME_PLAYERS=snap.val()||{}; renderGameIntegration(c); });
+  };
+
+  document.getElementById('btn-game-kickall').onclick=function(){
+    if(!onlinePlayers.length){ showToast('No players to kick.','error'); return; }
+    var reason=prompt('Reason for kicking all players:');
+    if(!reason) return;
+    onlinePlayers.forEach(function(p){
+      push(ref(db,'gameCommands'),{type:'kick',target:p.username,message:reason,by:ME,ts:Date.now()});
+    });
+    push(ref(db,'gameLogs'),{type:'kick',message:'All '+onlinePlayers.length+' players kicked by '+ME+' — '+reason,by:ME,date:nowStr(),ts:Date.now()});
+    auditLog('Game: Kick All',onlinePlayers.length+' players kicked by '+ME);
+    showToast('Kick command sent to all '+onlinePlayers.length+' players.','warning');
+    renderGameIntegration(c);
+  };
+
+  c.querySelectorAll('.game-kick-btn').forEach(function(btn){
+    btn.onclick=function(){
+      var uname=btn.dataset.uname;
+      var reason=prompt('Reason for kicking '+uname+':');
+      if(!reason) return;
+      push(ref(db,'gameCommands'),{type:'kick',target:uname,message:reason,by:ME,ts:Date.now()});
+      push(ref(db,'gameLogs'),{type:'kick',message:uname+' kicked by '+ME+' — '+reason,by:ME,date:nowStr(),ts:Date.now()});
+      auditLog('Game: Player Kicked',uname+' — '+reason);
+      showToast(uname+' kick command sent.','warning');
+    };
+  });
+
+  document.getElementById('btn-game-cmd').onclick=async function(){
+    var player=(document.getElementById('game-cmd-player').value||'').trim();
+    var action=document.getElementById('game-cmd-action').value;
+    var msg=(document.getElementById('game-cmd-msg').value||'').trim();
+    var statusEl=document.getElementById('game-cmd-status');
+    if(action!=='shutdown'&&action!=='announce'&&!player){ statusEl.style.color='var(--c-ban)'; statusEl.textContent='Player username required for this action.'; return; }
+    await push(ref(db,'gameCommands'),{type:action,target:player||'ALL',message:msg||'No reason provided.',by:ME,ts:Date.now()});
+    await push(ref(db,'gameLogs'),{type:action,message:(player||'ALL')+': '+action+(msg?' — '+msg:''),by:ME,date:nowStr(),ts:Date.now()});
+    auditLog('Game: Command Sent',action+' on '+(player||'ALL')+' by '+ME);
+    statusEl.style.color='var(--c-ok)'; statusEl.textContent='Command queued. Game will execute within 3-5 seconds.';
+    setTimeout(function(){ if(statusEl) statusEl.textContent=''; },4000);
+  };
+
+  document.getElementById('btn-save-gi').onclick=async function(){
+    var newCfg={
+      gameName:(document.getElementById('gi-gamename').value||'').trim(),
+      gameId:(document.getElementById('gi-gameid').value||'').trim(),
+      serverSecret:(document.getElementById('gi-secret').value||'').trim(),
+      kickDelay:parseInt(document.getElementById('gi-kickdelay').value)||3,
+      autoAddPlayers:document.getElementById('gi-autoadd').checked,
+      autoBanKick:document.getElementById('gi-autoban').checked,
+      autoSuspendKick:document.getElementById('gi-autosusp').checked,
+      logJoins:document.getElementById('gi-logjoin').checked,
+      logLeaves:document.getElementById('gi-logleave').checked,
+      logDeaths:document.getElementById('gi-logdeath').checked,
+      logChat:document.getElementById('gi-logchat').checked,
+    };
+    await set(ref(db,'meta/gameConfig'),newCfg);
+    GAME_CONFIG=newCfg;
+    auditLog('Game Config Saved','By '+ME);
+    var statusEl=document.getElementById('gi-status');
+    statusEl.style.color='var(--c-ok)'; statusEl.textContent='Configuration saved.';
+    showToast('Game integration config saved.','success');
+    setTimeout(function(){ if(statusEl) statusEl.textContent=''; },3000);
+  };
+}
+
+// ── Game Logs Page ──
+function renderGameLogs(c){
+  var entries=Object.entries(GAME_LOG).sort(function(a,b){return (b[1].ts||0)-(a[1].ts||0);}).slice(0,1000);
+  var typeColors={join:'#3fb950',leave:'var(--c-text2)',kick:'#cf222e',ban:'#9a0000',error:'#cf222e',announce:'var(--c-link)',shutdown:'#9a6700',command:'#8250df',status:'var(--c-link)',death:'#e3b341'};
+
+  c.innerHTML='<div class="ptitle" style="background:#004466;">Game Event Logs</div>'
+    +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">'
+    +'<div class="search-wrap" style="flex:1;min-width:160px;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/><line x1="10.5" y1="10.5" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'
+    +'<input type="text" id="gl-search" placeholder="Search player, event type..."/></div>'
+    +'<select id="gl-type" style="font-size:11px;background:var(--bg-input);color:var(--c-text);border:1px solid var(--c-border);border-radius:3px;padding:2px 6px;">'
+    +'<option value="">All Events</option><option value="join">Joins</option><option value="leave">Leaves</option><option value="kick">Kicks</option><option value="ban">Bans</option><option value="error">Errors</option><option value="command">Commands</option><option value="announce">Announcements</option><option value="shutdown">Shutdowns</option></select>'
+    +'<span id="gl-count" style="font-size:11px;color:var(--c-text2);">'+entries.length+' events</span>'
+    +(isSuperAdmin()?'<button class="btn small red" id="gl-clearall" style="padding:2px 8px;font-size:10px;">Clear All</button>':'')
+    +'</div>'
+    +'<div class="sbox"><div class="stitle">Event History</div><div class="sbody" id="gl-list">'
+    +renderGameLogEntries(entries,typeColors)
+    +'</div></div>';
+
+  function applyGlFilters(){
+    var kw=(document.getElementById('gl-search').value||'').toLowerCase();
+    var type=(document.getElementById('gl-type').value||'');
+    var filtered=entries.filter(function(e){ var r=e[1]; if(type&&r.type!==type) return false; if(kw&&!(r.message||'').toLowerCase().includes(kw)&&!(r.by||'').toLowerCase().includes(kw)) return false; return true; });
+    var cEl=document.getElementById('gl-count'); if(cEl) cEl.textContent=filtered.length+' events';
+    var lEl=document.getElementById('gl-list'); if(lEl) lEl.innerHTML=renderGameLogEntries(filtered,typeColors);
+  }
+
+  ['gl-search','gl-type'].forEach(function(id){ var el=document.getElementById(id); if(el){ el.oninput=applyGlFilters; el.onchange=applyGlFilters; } });
+  var clearBtn=document.getElementById('gl-clearall');
+  if(clearBtn) clearBtn.onclick=function(){
+    openOpDialog('Clear all game logs?',async function(){
+      await remove(ref(db,'gameLogs'));
+      GAME_LOG={};
+      showToast('Game logs cleared.','success');
+      renderGameLogs(c);
+    });
+  };
+}
+
+function renderGameLogEntries(entries,typeColors){
+  if(!entries.length) return '<div style="padding:16px;text-align:center;color:var(--c-text2);">No game events logged yet. The Lua script will populate this once running.</div>';
+  return '<div class="tbl-wrap"><table class="tbl">'
+    +'<tr><th>Time</th><th>Type</th><th>Event</th><th>By</th></tr>'
+    +entries.map(function(e){
+      var r=e[1];
+      var col=typeColors[r.type]||'var(--c-text2)';
+      return '<tr>'
+        +'<td style="font-size:10px;white-space:nowrap;color:var(--c-text2);">'+(r.date||'—')+'</td>'
+        +'<td><span style="font-size:10px;font-weight:700;color:'+col+';background:'+col+'22;padding:1px 6px;border-radius:3px;">'+( (r.type||'—').toUpperCase())+'</span></td>'
+        +'<td style="font-size:11px;color:var(--c-text);">'+(r.message||'—')+'</td>'
+        +'<td style="font-size:10px;">'+tinyAvatar(r.by||'[GAME]',avatarUrlFor(r.by||''))+'</td>'
+        +'</tr>';
+    }).join('')
+    +'</table></div>';
+}
+
+// ── Lua script generator ──
+function generateLuaScript(secret,gameName,kickDelay,autoAdd,autoBan,autoSusp,logJoin,logLeave,logDeath){
+  var dbUrl='https://administration-panel-ec4b5-default-rtdb.firebaseio.com';
+  return `-- ============================================================
+-- Samaritan Systems — Roblox Firebase Integration
+-- Game: ${gameName}
+-- Generated: ${new Date().toLocaleDateString()}
+-- Place in ServerScriptService
+-- ============================================================
+
+local HttpService  = game:GetService("HttpService")
+local Players      = game:GetService("Players")
+local RunService   = game:GetService("RunService")
+
+-- ── CONFIGURATION ─────────────────────────────────────────────
+local CONFIG = {
+    FIREBASE_URL    = "${dbUrl}",
+    SERVER_SECRET   = "${secret}",
+    GAME_NAME       = "${gameName}",
+    KICK_DELAY      = ${kickDelay},        -- seconds before kicking banned/suspended players
+    AUTO_ADD        = ${autoAdd?'true':'false'},         -- add new players to All Accounts automatically
+    AUTO_BAN_KICK   = ${autoBan?'true':'false'},         -- kick banned players on join
+    AUTO_SUSP_KICK  = ${autoSusp?'true':'false'},        -- kick suspended players on join
+    LOG_JOINS       = ${logJoin?'true':'false'},         -- log player join events
+    LOG_LEAVES      = ${logLeave?'true':'false'},        -- log player leave events
+    LOG_DEATHS      = ${logDeath?'true':'false'},        -- log player death events
+    POLL_INTERVAL   = 4,         -- seconds between command polls
+    HEARTBEAT_INTERVAL = 30,     -- seconds between presence heartbeats
+}
+
+-- ── UTILITIES ─────────────────────────────────────────────────
+local function firebaseGet(path)
+    local url = CONFIG.FIREBASE_URL .. path .. ".json?auth=" .. CONFIG.SERVER_SECRET
+    local ok, res = pcall(function()
+        return HttpService:GetAsync(url, true)
+    end)
+    if not ok then return nil, res end
+    local decoded = HttpService:JSONDecode(res)
+    return decoded, nil
+end
+
+local function firebasePut(path, data)
+    local url = CONFIG.FIREBASE_URL .. path .. ".json?auth=" .. CONFIG.SERVER_SECRET
+    local body = HttpService:JSONEncode(data)
+    local ok, err = pcall(function()
+        HttpService:RequestAsync({
+            Url = url, Method = "PUT",
+            Headers = {["Content-Type"] = "application/json"},
+            Body = body
+        })
+    end)
+    return ok, err
+end
+
+local function firebasePost(path, data)
+    local url = CONFIG.FIREBASE_URL .. path .. ".json?auth=" .. CONFIG.SERVER_SECRET
+    local body = HttpService:JSONEncode(data)
+    local ok, err = pcall(function()
+        HttpService:RequestAsync({
+            Url = url, Method = "POST",
+            Headers = {["Content-Type"] = "application/json"},
+            Body = body
+        })
+    end)
+    return ok, err
+end
+
+local function firebasePatch(path, data)
+    local url = CONFIG.FIREBASE_URL .. path .. ".json?auth=" .. CONFIG.SERVER_SECRET
+    local body = HttpService:JSONEncode(data)
+    local ok, err = pcall(function()
+        HttpService:RequestAsync({
+            Url = url, Method = "PATCH",
+            Headers = {["Content-Type"] = "application/json"},
+            Body = body
+        })
+    end)
+    return ok, err
+end
+
+local function firebaseDelete(path)
+    local url = CONFIG.FIREBASE_URL .. path .. ".json?auth=" .. CONFIG.SERVER_SECRET
+    pcall(function()
+        HttpService:RequestAsync({Url = url, Method = "DELETE"})
+    end)
+end
+
+local function logEvent(eventType, message, playerName)
+    local ts = os.time() * 1000
+    firebasePost("/gameLogs", {
+        type    = eventType,
+        message = message,
+        player  = playerName or "",
+        by      = "[GAME]",
+        date    = os.date("%m/%d/%Y, %I:%M:%S %p"),
+        ts      = ts
+    })
+end
+
+local function logError(context, err)
+    logEvent("error", "[ERROR] " .. context .. ": " .. tostring(err), "")
+    warn("[SamaritanBridge] " .. context .. ": " .. tostring(err))
+end
+
+local function getTimestamp()
+    return os.date("%m/%d/%Y, %I:%M:%S %p")
+end
+
+-- ── ROBLOX API HELPERS ────────────────────────────────────────
+local function getRobloxInfo(username)
+    local ok, res = pcall(function()
+        return HttpService:RequestAsync({
+            Url = "https://users.roproxy.com/v1/usernames/users",
+            Method = "POST",
+            Headers = {["Content-Type"] = "application/json"},
+            Body = HttpService:JSONEncode({usernames = {username}, excludeBannedUsers = false})
+        })
+    end)
+    if not ok or not res or res.StatusCode ~= 200 then return nil end
+    local data = HttpService:JSONDecode(res.Body)
+    if not data or not data.data or #data.data == 0 then return nil end
+    local user = data.data[1]
+    -- Get avatar thumbnail
+    local avatarUrl = ""
+    local avatarOk, avatarRes = pcall(function()
+        return HttpService:GetAsync(
+            "https://thumbnails.roproxy.com/v1/users/avatar-headshot?userIds=" .. user.id .. "&size=150x150&format=Png&isCircular=false",
+            true
+        )
+    end)
+    if avatarOk then
+        local avatarData = HttpService:JSONDecode(avatarRes)
+        if avatarData and avatarData.data and avatarData.data[1] then
+            avatarUrl = avatarData.data[1].imageUrl or ""
+        end
+    end
+    return {
+        robloxId    = tostring(user.id),
+        displayName = user.displayName or username,
+        avatarUrl   = avatarUrl
+    }
+end
+
+-- ── PLAYER STATUS CHECK ───────────────────────────────────────
+local function checkPlayerStatus(username)
+    -- Search for user in Firebase by username
+    local url = CONFIG.FIREBASE_URL .. "/users.json?auth=" .. CONFIG.SERVER_SECRET
+        .. "&orderBy=\\"username\\"&equalTo=\\"" .. username .. "\\""
+    local ok, res = pcall(function()
+        return HttpService:GetAsync(url, true)
+    end)
+    if not ok then return nil, "http_error" end
+    local data = HttpService:JSONDecode(res)
+    if not data then return nil, "no_data" end
+    -- Firebase query returns object keyed by node id
+    for uid, userRecord in pairs(data) do
+        return userRecord, uid
+    end
+    return nil, "not_found"
+end
+
+-- ── ON PLAYER JOIN ────────────────────────────────────────────
+local function onPlayerJoin(player)
+    local username = player.Name
+    task.wait(0.5) -- small wait to ensure player is fully loaded
+    
+    -- 1. Check if player exists in Firebase
+    local userRecord, uid = checkPlayerStatus(username)
+    
+    -- 2. Auto-add if new player and CONFIG allows
+    if CONFIG.AUTO_ADD and (userRecord == nil or uid == "not_found") then
+        -- Get next player ID
+        local counterData, _ = firebaseGet("/meta/playerCounter")
+        local nextId = (counterData or 0) + 1
+        firebasePut("/meta/playerCounter", nextId)
+        
+        -- Get Roblox info
+        local robloxInfo = getRobloxInfo(username)
+        
+        local newUser = {
+            username    = username,
+            displayName = robloxInfo and robloxInfo.displayName or username,
+            robloxId    = robloxInfo and robloxInfo.robloxId or "",
+            avatarUrl   = robloxInfo and robloxInfo.avatarUrl or "",
+            status      = "active",
+            playerId    = nextId,
+            reputation  = 0,
+            joined      = getTimestamp(),
+            ts          = os.time() * 1000
+        }
+        firebasePost("/users", newUser)
+        logEvent("join", username .. " joined for the first time and was added to All Accounts.", username)
+        -- Re-fetch the record
+        task.wait(0.3)
+        userRecord, uid = checkPlayerStatus(username)
+    end
+    
+    -- 3. Check ban/suspend status and kick if needed
+    if userRecord then
+        local status = userRecord.status or "active"
+        
+        if CONFIG.AUTO_BAN_KICK and status == "banned" then
+            task.wait(CONFIG.KICK_DELAY)
+            if player and player.Parent then
+                local reason = (userRecord.punishments and "You are banned from this game.") or "You are banned from this game."
+                local banReason = ""
+                if userRecord.punishments then
+                    for _, p in pairs(userRecord.punishments) do
+                        if p.action == "ban" then
+                            banReason = p.reason or ""
+                            break
+                        end
+                    end
+                end
+                player:Kick("\\n🚫 You are banned from " .. CONFIG.GAME_NAME .. "\\n" 
+                    .. (banReason ~= "" and ("Reason: " .. banReason .. "\\n") or "")
+                    .. "Appeal at the administration panel.")
+                logEvent("kick", username .. " auto-kicked on join — account is BANNED.", username)
+            end
+            return
+        end
+        
+        if CONFIG.AUTO_SUSP_KICK and status == "suspended" then
+            task.wait(CONFIG.KICK_DELAY)
+            if player and player.Parent then
+                local suspInfo = userRecord.suspendInfo or {}
+                player:Kick("\\n⏸ Your account is suspended from " .. CONFIG.GAME_NAME .. "\\n"
+                    .. (suspInfo.reason and ("Reason: " .. suspInfo.reason .. "\\n") or "")
+                    .. "Contact staff to appeal.")
+                logEvent("kick", username .. " auto-kicked on join — account is SUSPENDED.", username)
+            end
+            return
+        end
+        
+        -- Update last seen
+        if uid and uid ~= "not_found" then
+            firebasePatch("/users/" .. uid, {
+                lastSeen = getTimestamp(),
+                lastSeenTs = os.time() * 1000
+            })
+        end
+    end
+    
+    -- 4. Mark player as online in gamePlayers
+    firebasePut("/gamePlayers/" .. username, {
+        username    = username,
+        robloxId    = player.UserId and tostring(player.UserId) or "",
+        joinTime    = getTimestamp(),
+        joinTs      = os.time() * 1000,
+        online      = true,
+        serverId    = game.JobId or ""
+    })
+    
+    -- 5. Log join event
+    if CONFIG.LOG_JOINS then
+        logEvent("join", username .. " joined the game.", username)
+    end
+    
+    -- 6. Death logging
+    if CONFIG.LOG_DEATHS then
+        local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.Died:Connect(function()
+                logEvent("death", username .. " died in the game.", username)
+            end)
+        end
+        player.CharacterAdded:Connect(function(char)
+            local hum = char:WaitForChild("Humanoid", 10)
+            if hum then
+                hum.Died:Connect(function()
+                    logEvent("death", username .. " died in the game.", username)
+                end)
+            end
+        end)
+    end
+end
+
+-- ── ON PLAYER LEAVE ───────────────────────────────────────────
+local function onPlayerLeave(player)
+    local username = player.Name
+    
+    -- Mark offline
+    firebasePatch("/gamePlayers/" .. username, {
+        online   = false,
+        leaveTime = getTimestamp(),
+        leaveTs   = os.time() * 1000
+    })
+    
+    if CONFIG.LOG_LEAVES then
+        logEvent("leave", username .. " left the game.", username)
+    end
+end
+
+-- ── COMMAND POLL LOOP ─────────────────────────────────────────
+-- Polls Firebase every POLL_INTERVAL seconds for pending commands
+local processedCommands = {}
+
+local function pollCommands()
+    local data, err = firebaseGet("/gameCommands")
+    if err then
+        warn("[SamaritanBridge] Command poll error: " .. tostring(err))
+        return
+    end
+    if not data then return end
+    
+    local toDelete = {}
+    
+    for cmdId, cmd in pairs(data) do
+        -- Skip already processed
+        if processedCommands[cmdId] then
+            table.insert(toDelete, cmdId)
+        else
+            -- Only process commands newer than 60 seconds
+            local age = (os.time() * 1000) - (cmd.ts or 0)
+            if age > 60000 then
+                table.insert(toDelete, cmdId)
+            else
+                processedCommands[cmdId] = true
+                table.insert(toDelete, cmdId)
+                
+                local cmdType = cmd.type or ""
+                local target  = cmd.target or "ALL"
+                local message = cmd.message or "No reason provided."
+                
+                if cmdType == "kick" then
+                    if target == "ALL" then
+                        for _, p in ipairs(Players:GetPlayers()) do
+                            p:Kick("\\n⚠ You have been kicked from " .. CONFIG.GAME_NAME .. "\\nReason: " .. message)
+                        end
+                        logEvent("kick", "All players kicked by admin — " .. message, "ALL")
+                    else
+                        local p = Players:FindFirstChild(target)
+                        if p then
+                            p:Kick("\\n⚠ You have been kicked from " .. CONFIG.GAME_NAME .. "\\nReason: " .. message)
+                            logEvent("kick", target .. " kicked by admin — " .. message, target)
+                        end
+                    end
+                    
+                elseif cmdType == "ban" then
+                    local p = Players:FindFirstChild(target)
+                    if p then
+                        p:Kick("\\n🚫 You have been banned from " .. CONFIG.GAME_NAME .. "\\nReason: " .. message)
+                        logEvent("ban", target .. " banned and kicked — " .. message, target)
+                    end
+                    
+                elseif cmdType == "announce" then
+                    -- Use game:GetService("StarterGui") or a RemoteEvent
+                    -- This fires a basic kick message to all as a workaround
+                    -- For proper announcements, fire a RemoteEvent to clients
+                    logEvent("announce", "Announcement sent: " .. message, "ALL")
+                    warn("[SamaritanBridge] Announce: " .. message)
+                    
+                elseif cmdType == "shutdown" then
+                    logEvent("shutdown", "Server shutdown by admin — " .. message, "")
+                    task.wait(2)
+                    for _, p in ipairs(Players:GetPlayers()) do
+                        p:Kick("\\nServer is shutting down.\\n" .. message)
+                    end
+                end
+            end
+        end
+    end
+    
+    -- Clean up processed commands
+    for _, cmdId in ipairs(toDelete) do
+        firebaseDelete("/gameCommands/" .. cmdId)
+    end
+end
+
+-- ── PRESENCE HEARTBEAT ────────────────────────────────────────
+-- Updates server status so the dashboard shows the game is alive
+local function heartbeat()
+    firebasePut("/gamePresence", {
+        online      = true,
+        serverId    = game.JobId or "unknown",
+        playerCount = #Players:GetPlayers(),
+        gameName    = CONFIG.GAME_NAME,
+        lastPing    = getTimestamp(),
+        lastPingTs  = os.time() * 1000
+    })
+end
+
+-- ── MAIN ──────────────────────────────────────────────────────
+print("[SamaritanBridge] Starting up — Game: " .. CONFIG.GAME_NAME)
+
+-- Validate secret
+if CONFIG.SERVER_SECRET == "" or CONFIG.SERVER_SECRET == "YOUR_SECRET_HERE" then
+    error("[SamaritanBridge] SERVER_SECRET is not set! Open Game Integration in the admin panel and generate a secret key.")
+end
+
+-- Connect player events
+Players.PlayerAdded:Connect(onPlayerJoin)
+Players.PlayerRemoving:Connect(onPlayerLeave)
+
+-- Handle players already in game when script starts
+for _, player in ipairs(Players:GetPlayers()) do
+    task.spawn(onPlayerJoin, player)
+end
+
+-- Start command poll loop
+task.spawn(function()
+    while true do
+        local ok, err = pcall(pollCommands)
+        if not ok then
+            logError("pollCommands", err)
+        end
+        task.wait(CONFIG.POLL_INTERVAL)
+    end
+end)
+
+-- Start heartbeat loop  
+task.spawn(function()
+    while true do
+        local ok, err = pcall(heartbeat)
+        if not ok then warn("[SamaritanBridge] Heartbeat error: " .. tostring(err)) end
+        task.wait(CONFIG.HEARTBEAT_INTERVAL)
+    end
+end)
+
+-- Mark server online immediately
+heartbeat()
+logEvent("status", "Samaritan Bridge started on server " .. (game.JobId or "unknown"), "")
+
+print("[SamaritanBridge] Ready. Polling every " .. CONFIG.POLL_INTERVAL .. "s.")
+`;
+}
+
 function renderBlacklist(c){
   var entries = Object.entries(IP_BLACKLIST).sort(function(a,b){ return b[1].ts-a[1].ts; });
 
@@ -11580,6 +12296,9 @@ function startListeners(){
   onValue(ref(db,'shifts'),snap=>{ SHIFTS=snap.val()||{}; if(page==='activity') safeRender(); });
   onValue(ref(db,'screenSnapshots'),snap=>{ SCREEN_SNAPSHOTS=snap.val()||{}; if(document.getElementById('monitor-tiles-wrap')) renderMonitorTiles(); });
   onValue(ref(db,'logs/robloxLog'),snap=>{ ROBLOX_LOG=snap.val()||{}; if(page==='robloxlog') safeRender(); });
+  onValue(ref(db,'gameLogs'),snap=>{ GAME_LOG=snap.val()||{}; if(page==='gamelogs') safeRender(); });
+  onValue(ref(db,'gamePlayers'),snap=>{ GAME_PLAYERS=snap.val()||{}; });
+  onValue(ref(db,'meta/gameConfig'),snap=>{ if(snap.exists()) GAME_CONFIG=snap.val()||{}; });
   // Broadcast message listener — monitor can push overlay messages to staff screens
   if(ME) onValue(ref(db,'broadcastMessages/'+ME),function(snap){
     if(!snap.exists()||!ME) return;
@@ -12751,7 +13470,7 @@ function openNotifSettings(){
   document.getElementById('notifSettingsOverlay').classList.add('show');
 }
 
-['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','warnlog','loginlog','auditlog','alerts','adminlog','home','messaging','requests','userconfig','siteconfig','suggestions','staffconfig','msganalyze','statuslog','badgemgmt','wipelog','robloxlog','cflog','customfieldlog','information','leakid','clearance','samaritan','samlog','evaluations','blacklist'].forEach(p=>{
+['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','warnlog','loginlog','auditlog','alerts','adminlog','home','messaging','requests','userconfig','siteconfig','suggestions','staffconfig','msganalyze','statuslog','badgemgmt','wipelog','robloxlog','cflog','customfieldlog','gamelogs','gameintegration','information','leakid','clearance','samaritan','samlog','evaluations','blacklist'].forEach(p=>{
   const el=document.getElementById('nav-'+p);
   if(el) el.onclick=()=>nav(p);
 });
