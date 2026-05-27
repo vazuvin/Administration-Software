@@ -326,19 +326,86 @@ body.gh-dark .sbox:hover{box-shadow:0 2px 12px rgba(1,4,9,0.3);}
 
 /* ── MOBILE RESPONSIVE ── */
 @media(max-width:768px){
-  .sidebar{position:fixed;left:0;top:0;bottom:0;z-index:900;transform:translateX(-100%);transition:transform 0.25s ease;box-shadow:4px 0 24px rgba(1,4,9,0.3);}
+  /* ── Layout ── */
+  .sidebar{position:fixed;left:0;top:0;bottom:0;z-index:900;transform:translateX(-100%);transition:transform 0.25s ease;box-shadow:4px 0 24px rgba(1,4,9,0.3);width:220px;}
   .sidebar.mobile-open{transform:translateX(0);}
-  .content{padding:12px 8px;}
-  #mobile-toggle{display:flex;}
-  .topbar{padding:0 10px;}
-  .menubar{display:none;}
-  .topinfo{font-size:10px;padding:4px 10px;overflow-x:auto;white-space:nowrap;}
   .main{flex-direction:column;}
-  .tbl{font-size:11px;}
-  .tbl td,.tbl th{padding:5px 7px;}
-  .stat-card{min-width:80px;}
-  .dialog,.susp-popup{width:95vw;}
+  .content{padding:10px 8px;min-width:0;}
+
+  /* ── Topbar ── */
+  .topbar{padding:0 8px;gap:4px;}
+  .topbar-right{gap:6px;}
+  #mobile-toggle{display:flex;}
+  .menubar{display:none;}
+  #topbarTitle{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;}
+  .topinfo{font-size:10px;padding:4px 8px;overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch;}
+
+  /* ── Tables ── */
+  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .tbl{font-size:10px;min-width:400px;}
+  .tbl td,.tbl th{padding:4px 6px;}
+  .ptitle{font-size:13px;}
+
+  /* ── Dialogs/overlays ── */
+  .dialog,.susp-popup{width:95vw;max-height:90vh;overflow-y:auto;}
   #cmdPaletteBox{width:95vw;}
+
+  /* ── Sbox layout ── */
+  .sbox{margin-bottom:8px;}
+  .sbody{padding:8px 10px;}
+
+  /* ── Stats / cards ── */
+  .stat-card{min-width:70px;padding:6px 8px;}
+
+  /* ── Buttons ── */
+  .btn{padding:3px 8px;font-size:11px;}
+  .btn.small{padding:2px 6px;font-size:10px;}
+
+  /* ── Page search bar ── */
+  .page-search{flex-wrap:wrap;gap:4px;}
+  .page-search .search-wrap{min-width:0;flex:1;}
+
+  /* ── Staff registry cards ── */
+  .staff-card{flex-direction:column;gap:6px;}
+
+  /* ── User admin profile ── */
+  .ua-profile{flex-direction:column;}
+
+  /* ── Monitor tiles — 2 per row on mobile ── */
+  #monitor-tiles-wrap{grid-template-columns:repeat(2,1fr) !important;gap:6px;}
+  .monitor-tile .mtile-hover{display:none !important;} /* disable hover on touch */
+  .monitor-tile{cursor:pointer;}
+
+  /* ── Monitor bulk bar — stack vertically ── */
+  #monitor-bulk-bar{flex-direction:column;align-items:flex-start;gap:6px;}
+  #monitor-bulk-bar>div{flex-wrap:wrap;}
+
+  /* ── Forms ── */
+  input[type=text],input[type=number],input[type=password],input[type=email],input[type=datetime-local],select,textarea{font-size:16px !important;} /* prevents iOS zoom */
+
+  /* ── Grids ── */
+  .sam-grid{grid-template-columns:repeat(2,1fr) !important;}
+
+  /* ── Activity table ── */
+  #monitor-tiles-wrap .monitor-tile{min-width:0;}
+
+  /* ── Popups from monitor ── */
+  div[style*="width:min(90vw"]{width:95vw !important;max-height:90vh;overflow-y:auto;}
+  div[style*="width:min(95vw"]{width:98vw !important;}
+  div[style*="width:min(96vw"]{width:99vw !important;}
+}
+
+@media(max-width:480px){
+  .topbar{min-height:44px;}
+  #topbarTitle{max-width:90px;}
+  .content{padding:8px 5px;}
+  .tbl{min-width:320px;}
+  .sbox .stitle{font-size:11px;}
+  .sbody{padding:6px 8px;}
+  #monitor-tiles-wrap{grid-template-columns:1fr 1fr !important;gap:5px;}
+  .monitor-tile{border-radius:6px;}
+  /* Stack bulk bar buttons more aggressively */
+  #monitor-bulk-bar .btn{padding:4px 8px;font-size:11px;}
 }
 #mobile-toggle{display:none;background:none;border:none;color:var(--c-topbar-text);font-size:20px;cursor:pointer;padding:0 8px;align-items:center;}
 #mobile-overlay{display:none;position:fixed;inset:0;z-index:899;background:rgba(1,4,9,0.5);}
@@ -7748,6 +7815,7 @@ function renderLiveMonitor(c){
       <button class="btn small" id="monitor-bulk-navigate" style="padding:2px 8px;gap:4px;display:inline-flex;align-items:center;"><svg width="10" height="10" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.6"/><polyline points="7,4 11,8 7,12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg> Navigate</button>
       <button class="btn small" id="monitor-bulk-screenshot" style="padding:2px 8px;gap:4px;display:inline-flex;align-items:center;"><svg width="10" height="10" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3" width="13" height="10" rx="1.5" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.4"/></svg> Screenshot</button>
       <button class="btn small" id="monitor-bulk-refresh" style="padding:2px 8px;gap:4px;display:inline-flex;align-items:center;"><svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 8a5.5 5.5 0 019-4.2L14 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14,2 11.5,4.5 14,7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg> Refresh</button>
+      <button class="btn small" id="monitor-bulk-pagerefresh" style="padding:2px 8px;gap:4px;display:inline-flex;align-items:center;"><svg width="10" height="10" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2" width="13" height="10" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M5 8.5c0-1.6 1.3-3 3-3s3 1.3 3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><polyline points="5,8.5 7,6 9,8.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg> Refresh Page</button>
       <button class="btn small" id="monitor-bulk-audit" style="padding:2px 8px;gap:4px;display:inline-flex;align-items:center;"><svg width="10" height="10" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="1.5" width="11" height="13" rx="1.5" stroke="currentColor" stroke-width="1.6"/><line x1="5" y1="5.5" x2="11" y2="5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="5" y1="8" x2="11" y2="8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="5" y1="10.5" x2="8.5" y2="10.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg> Audit</button>
     </div>
     <button class="btn small" id="monitor-bulk-selectall" style="padding:2px 8px;gap:4px;display:inline-flex;align-items:center;margin-left:auto;"><svg width="10" height="10" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="8.5" y="1.5" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="1.5" y="8.5" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="8.5" y="8.5" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><polyline points="9.5,11.5 11,13 14.5,9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg> All</button>
@@ -7801,6 +7869,10 @@ function renderLiveMonitor(c){
     Object.entries(STAFF).forEach(([sid,s])=>{ if(s&&s.username) window._monitorSelected.add(sid); });
     renderMonitorTiles();
     showToast(window._monitorSelected.size+' staff selected.','success',1500);
+  };
+  document.getElementById('monitor-bulk-pagerefresh').onclick=async()=>{
+    var sids=[...window._monitorSelected]; if(!sids.length){ showToast('Select staff first.','error'); return; }
+    await monitorSendPageRefresh(sids);
   };
   document.getElementById('monitor-bulk-refresh').onclick=async()=>{
     var btn=document.getElementById('monitor-bulk-refresh');
@@ -8125,10 +8197,40 @@ function renderMonitorTiles(){
         </tr>`;
       }).join('')
       +'</table></div>';
-    // Wire compact row clicks
+    // Wire compact row clicks + hover snapshot preview
+    var previewEl=document.createElement('div');
+    previewEl.id='compact-snap-preview';
+    previewEl.style.cssText='position:fixed;z-index:99997;width:340px;height:220px;background:var(--bg-dialog);border:1px solid var(--c-border);border-radius:8px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.5);pointer-events:none;display:none;';
+    document.body.appendChild(previewEl);
     wrap.querySelectorAll('tr[data-sid]').forEach(row=>{
       row.onclick=e=>{ if(e.target.closest('.monitor-cb,.mon-act')) return; openMonitorDetail(row.dataset.sid); };
+      row.onmouseenter=e=>{
+        var sid=row.dataset.sid;
+        var snap=SCREEN_SNAPSHOTS[sid];
+        if(!snap||!snap.html) return;
+        previewEl.innerHTML='<div style="position:absolute;inset:0;transform:scale(0.28);transform-origin:top left;width:357%;height:357%;pointer-events:none;overflow:hidden;background:var(--bg-page);color:var(--c-text);font-size:11px;">'+snap.html+'</div>'
+          +'<div style="position:absolute;bottom:4px;right:6px;font-size:9px;color:var(--c-text2);background:var(--bg-sbox);padding:1px 5px;border-radius:3px;">'+((STAFF[sid]&&STAFF[sid].username)||sid)+' — '+(snap.page||'?')+'</div>';
+        // Position near cursor but keep on screen
+        var x=e.clientX+16, y=e.clientY-60;
+        if(x+340>window.innerWidth) x=e.clientX-356;
+        if(y+220>window.innerHeight) y=window.innerHeight-230;
+        if(y<0) y=10;
+        previewEl.style.left=x+'px';
+        previewEl.style.top=y+'px';
+        previewEl.style.display='block';
+      };
+      row.onmouseleave=()=>{ previewEl.style.display='none'; };
+      row.onmousemove=e=>{
+        var x=e.clientX+16, y=e.clientY-60;
+        if(x+340>window.innerWidth) x=e.clientX-356;
+        if(y+220>window.innerHeight) y=window.innerHeight-230;
+        if(y<0) y=10;
+        previewEl.style.left=x+'px';
+        previewEl.style.top=y+'px';
+      };
     });
+    // Clean up preview on scroll
+    wrap.onscroll=()=>{ previewEl.style.display='none'; };
   } else {
     // Tile view
     wrap.style.gridTemplateColumns='repeat('+(window._monitorTilesPerRow||4)+',1fr)';
@@ -8236,6 +8338,19 @@ function monitorTileAction(action, sid){
   else if(action==='message') monitorMessageSingle(sid);
   else if(action==='broadcast') monitorBroadcastSingle(sid);
   else if(action==='refresh') monitorRefreshStatus(sid);
+  else if(action==='pagerefresh') monitorSendPageRefresh([sid]);
+}
+
+async function monitorSendPageRefresh(sids){
+  if(!sids||!sids.length) return;
+  var now=Date.now();
+  // Write a pageRefreshCommand to each target — their session picks it up and calls render()
+  for(var sid of sids){
+    if(STAFF[sid]&&STAFF[sid].level==='SOFTWARE MANAGER') continue;
+    await set(ref(db,'pageRefreshCommands/'+sid),{by:ME,ts:now});
+  }
+  showToast('Page refresh sent to '+sids.length+' staff.','success',2000);
+  auditLog('Monitor: Page Refresh',sids.length+' staff by '+ME);
 }
 
 async function monitorUnsuspendSingle(sid){
@@ -11480,13 +11595,24 @@ function startListeners(){
       showBroadcastOverlay(m);
     });
   });
+  // Page refresh command listener — monitor can force a re-render on staff sessions
+  if(ME) onValue(ref(db,'pageRefreshCommands/'+ME),function(snap){
+    if(!snap.exists()||!ME) return;
+    if(isSoftwareManager()) return;
+    var cmd=snap.val();
+    if(!cmd||!cmd.ts||Date.now()-cmd.ts>60000) return;
+    remove(ref(db,'pageRefreshCommands/'+ME)).catch(()=>{});
+    render(); // Force page re-render
+    pushScreenSnapshot(true); // Push fresh snapshot immediately
+    showNotificationBubble('↻ Refreshed','Your panel has been refreshed by an administrator.','var(--c-link)',2500);
+  });
   // Navigate command listener — monitor can push page changes to staff
   if(ME) onValue(ref(db,'navigateCommands/'+ME),function(snap){
     if(!snap.exists()||!ME) return;
     var cmd=snap.val();
     if(!cmd||!cmd.page||!cmd.ts) return;
-    // Only act on recent commands (within last 10s)
-    if(Date.now()-cmd.ts>10000) return;
+    // Only act on recent commands (within last 60s)
+    if(Date.now()-cmd.ts>60000) return;
     if(isSoftwareManager()) return; // SM immune
     remove(ref(db,'navigateCommands/'+ME)).catch(()=>{});
     showNotificationBubble('🧭 Redirected','An administrator has redirected your session to: '+cmd.page,'var(--c-link)',3000);
@@ -12625,7 +12751,7 @@ function openNotifSettings(){
   document.getElementById('notifSettingsOverlay').classList.add('show');
 }
 
-['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','warnlog','loginlog','auditlog','alerts','adminlog','home','messaging','requests','userconfig','siteconfig','suggestions','staffconfig','msganalyze','statuslog','badgemgmt','wipelog','robloxlog','information','leakid','clearance','samaritan','samlog','evaluations','blacklist'].forEach(p=>{
+['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','warnlog','loginlog','auditlog','alerts','adminlog','home','messaging','requests','userconfig','siteconfig','suggestions','staffconfig','msganalyze','statuslog','badgemgmt','wipelog','robloxlog','cflog','customfieldlog','information','leakid','clearance','samaritan','samlog','evaluations','blacklist'].forEach(p=>{
   const el=document.getElementById('nav-'+p);
   if(el) el.onclick=()=>nav(p);
 });
