@@ -2642,6 +2642,8 @@ const SITE_CONFIG_DEFAULTS = {
   shiftMode: 'simple',
   shiftMinRank: 'SOFTWARE MANAGER',
   robloxAutoRefreshHours: 0,
+  databaseSecret: '',
+  openCloudKey: '',
 };
 
 function applySiteConfig(){
@@ -2782,6 +2784,13 @@ function renderSiteConfig(c){
             <div style="display:flex;gap:6px;align-items:center;">
               <input type="number" id="var-maxLogs" value="${cfg.maxLogsPerPage||200}" min="25" max="1000" style="width:90px;"/>
               <span style="font-size:10px;color:var(--c-text2);">Default: 200</span>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:bold;color:var(--c-text);display:block;margin-bottom:2px;">Firebase Database Secret (for Game Integration)</label>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="password" id="var-dbsecret" value="${cfg.databaseSecret||''}" style="width:260px;" placeholder="Paste from Firebase Console → Project Settings → Service Accounts"/>
+              <span style="font-size:10px;color:var(--c-text2);">Required for the Roblox Lua script to authenticate. Keep absolutely secret.</span>
             </div>
           </div>
           <div>
@@ -2970,6 +2979,7 @@ function renderSiteConfig(c){
       shiftMode:(document.getElementById('var-shiftMode')||{value:'simple'}).value||'simple',
       shiftMinRank:(document.getElementById('var-shiftMinRank')||{value:'SOFTWARE MANAGER'}).value||'SOFTWARE MANAGER',
       robloxAutoRefreshHours:parseInt((document.getElementById('var-robloxRefresh')||{value:'0'}).value)||0,
+      databaseSecret:(document.getElementById('var-dbsecret')||{value:''}).value||'',
     };
     await set(ref(db,'meta/siteConfig'),newCfg);
     SITE_CONFIG=newCfg;
@@ -10063,7 +10073,13 @@ function renderGameIntegration(c){
   +'<div style="display:flex;gap:4px;">'
   +'<input type="password" id="gi-secret" value="'+cfg.serverSecret+'" style="flex:1;font-size:11px;" placeholder="Auto-generated or custom"/>'
   +'<button class="btn small" id="btn-gen-secret" style="padding:2px 8px;font-size:10px;">Generate</button>'
-  +'</div><div style="font-size:10px;color:var(--c-text2);margin-top:2px;">Paste this into your Lua script. Keep it secret.</div></div>'
+  +'</div><div style="font-size:10px;color:var(--c-text2);margin-top:2px;">Used to verify requests. Keep secret.</div></div>'
+  +'<div><label style="font-size:11px;font-weight:700;color:var(--c-text);display:block;margin-bottom:2px;">Open Cloud API Key <span style="color:var(--c-ok);font-weight:400;">(for permanent bans)</span></label>'
+  +'<input type="password" id="gi-opencloud" value="'+(cfg.openCloudKey||'')+'" style="width:100%;font-size:11px;" placeholder="Paste from Roblox Creator Hub → Open Cloud → API Keys"/>'
+  +'<div style="font-size:10px;color:var(--c-text2);margin-top:2px;">Requires <b>user-restrictions:write</b> + <b>user-restrictions:read</b> permissions, restricted to your Universe. Without this, bans only kick — they won't be permanent via Roblox.</div></div>'
+  +'<div><label style="font-size:11px;font-weight:700;color:var(--c-text);display:block;margin-bottom:2px;">Roblox Universe ID</label>'
+  +'<input type="text" id="gi-universeid" value="'+(cfg.universeId||'')+'" style="width:100%;font-size:11px;" placeholder="From Roblox Creator Hub — different from Place ID"/>'
+  +'<div style="font-size:10px;color:var(--c-text2);margin-top:2px;">Creator Hub → Dashboard → your game → copy the Universe ID from the URL.</div></div>'
   +'<div><label style="font-size:11px;font-weight:700;color:var(--c-text);display:block;margin-bottom:2px;">Kick Delay (seconds)</label>'
   +'<input type="number" id="gi-kickdelay" value="'+cfg.kickDelay+'" min="1" max="30" style="width:80px;font-size:11px;"/>'
   +'<span style="font-size:10px;color:var(--c-text2);margin-left:6px;">Delay before kicking banned/suspended players on join</span></div>'
@@ -10098,7 +10114,10 @@ function renderGameIntegration(c){
     var logJoin=(document.getElementById('gi-logjoin')||{checked:true}).checked;
     var logLeave=(document.getElementById('gi-logleave')||{checked:true}).checked;
     var logDeath=(document.getElementById('gi-logdeath')||{checked:false}).checked;
-    return generateLuaScript(secret,gameName,kickDelay,autoAdd,autoBan,autoSusp,logJoin,logLeave,logDeath);
+    var dbSecret=(SITE_CONFIG&&SITE_CONFIG.databaseSecret)||'';
+    var openCloudKey=(document.getElementById('gi-opencloud')||{value:cfg.openCloudKey||''}).value||(cfg.openCloudKey||'');
+    var universeId=(document.getElementById('gi-universeid')||{value:cfg.universeId||''}).value||(cfg.universeId||'');
+    return generateLuaScript(secret,gameName,kickDelay,autoAdd,autoBan,autoSusp,logJoin,logLeave,logDeath,dbSecret,openCloudKey,universeId);
   }
 
   function refreshLuaPreview(){
@@ -10107,7 +10126,7 @@ function renderGameIntegration(c){
   }
   refreshLuaPreview();
 
-  ['gi-gamename','gi-secret','gi-kickdelay','gi-autoadd','gi-autoban','gi-autosusp','gi-logjoin','gi-logleave','gi-logdeath'].forEach(function(id){
+  ['gi-gamename','gi-secret','gi-opencloud','gi-universeid','gi-kickdelay','gi-autoadd','gi-autoban','gi-autosusp','gi-logjoin','gi-logleave','gi-logdeath'].forEach(function(id){
     var el=document.getElementById(id);
     if(el){ el.oninput=refreshLuaPreview; el.onchange=refreshLuaPreview; }
   });
@@ -10173,6 +10192,8 @@ function renderGameIntegration(c){
       gameName:(document.getElementById('gi-gamename').value||'').trim(),
       gameId:(document.getElementById('gi-gameid').value||'').trim(),
       serverSecret:(document.getElementById('gi-secret').value||'').trim(),
+      openCloudKey:(document.getElementById('gi-opencloud').value||'').trim(),
+      universeId:(document.getElementById('gi-universeid').value||'').trim(),
       kickDelay:parseInt(document.getElementById('gi-kickdelay').value)||3,
       autoAddPlayers:document.getElementById('gi-autoadd').checked,
       autoBanKick:document.getElementById('gi-autoban').checked,
@@ -10248,432 +10269,424 @@ function renderGameLogEntries(entries,typeColors){
 }
 
 // ── Lua script generator ──
-function generateLuaScript(secret,gameName,kickDelay,autoAdd,autoBan,autoSusp,logJoin,logLeave,logDeath){
+function generateLuaScript(secret,gameName,kickDelay,autoAdd,autoBan,autoSusp,logJoin,logLeave,logDeath,dbSecret,openCloudKey,universeId){
   var dbUrl='https://administration-panel-ec4b5-default-rtdb.firebaseio.com';
+  var authToken=dbSecret||secret||'PASTE_DATABASE_SECRET_HERE';
   return `-- ============================================================
--- Samaritan Systems — Roblox Firebase Integration
+-- Samaritan Systems — Roblox Firebase Integration v2
 -- Game: ${gameName}
--- Generated: ${new Date().toLocaleDateString()}
 -- Place in ServerScriptService
+-- IMPORTANT: Enable HTTP Requests in Game Settings → Security
 -- ============================================================
 
-local HttpService  = game:GetService("HttpService")
-local Players      = game:GetService("Players")
-local RunService   = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
+local Players     = game:GetService("Players")
 
--- ── CONFIGURATION ─────────────────────────────────────────────
-local CONFIG = {
-    FIREBASE_URL    = "${dbUrl}",
-    SERVER_SECRET   = "${secret}",
-    GAME_NAME       = "${gameName}",
-    KICK_DELAY      = ${kickDelay},        -- seconds before kicking banned/suspended players
-    AUTO_ADD        = ${autoAdd?'true':'false'},         -- add new players to All Accounts automatically
-    AUTO_BAN_KICK   = ${autoBan?'true':'false'},         -- kick banned players on join
-    AUTO_SUSP_KICK  = ${autoSusp?'true':'false'},        -- kick suspended players on join
-    LOG_JOINS       = ${logJoin?'true':'false'},         -- log player join events
-    LOG_LEAVES      = ${logLeave?'true':'false'},        -- log player leave events
-    LOG_DEATHS      = ${logDeath?'true':'false'},        -- log player death events
-    POLL_INTERVAL   = 4,         -- seconds between command polls
-    HEARTBEAT_INTERVAL = 30,     -- seconds between presence heartbeats
-}
+-- ── CONFIG ────────────────────────────────────────────────────
+local FIREBASE_URL    = "${dbUrl}"
+local AUTH_TOKEN      = "${authToken}"   -- Firebase Database Secret (from Firebase Console → Project Settings → Service Accounts → Database Secrets)
+local OPEN_CLOUD_KEY  = "${openCloudKey||''}"  -- Roblox Open Cloud API Key (from Creator Hub → Open Cloud → API Keys)
+local UNIVERSE_ID     = "${universeId||''}"    -- Roblox Universe ID (from Creator Hub URL)
+local GAME_NAME       = "${gameName}"
+local KICK_DELAY      = ${kickDelay}
+local AUTO_ADD        = ${autoAdd?'true':'false'}
+local AUTO_BAN_KICK   = ${autoBan?'true':'false'}
+local AUTO_SUSP_KICK  = ${autoSusp?'true':'false'}
+local LOG_JOINS       = ${logJoin?'true':'false'}
+local LOG_LEAVES      = ${logLeave?'true':'false'}
+local LOG_DEATHS      = ${logDeath?'true':'false'}
+local POLL_INTERVAL   = 4    -- seconds
+local HEARTBEAT_INT   = 30   -- seconds
 
--- ── UTILITIES ─────────────────────────────────────────────────
-local function firebaseGet(path)
-    local url = CONFIG.FIREBASE_URL .. path .. ".json?auth=" .. CONFIG.SERVER_SECRET
-    local ok, res = pcall(function()
-        return HttpService:GetAsync(url, true)
-    end)
-    if not ok then return nil, res end
-    local decoded = HttpService:JSONDecode(res)
-    return decoded, nil
+-- ── HTTP HELPERS ──────────────────────────────────────────────
+local function fbUrl(path)
+    return FIREBASE_URL .. path .. ".json?auth=" .. AUTH_TOKEN
 end
 
-local function firebasePut(path, data)
-    local url = CONFIG.FIREBASE_URL .. path .. ".json?auth=" .. CONFIG.SERVER_SECRET
-    local body = HttpService:JSONEncode(data)
-    local ok, err = pcall(function()
-        HttpService:RequestAsync({
-            Url = url, Method = "PUT",
-            Headers = {["Content-Type"] = "application/json"},
-            Body = body
-        })
-    end)
-    return ok, err
+local function fbGet(path)
+    local ok, res = pcall(HttpService.GetAsync, HttpService, fbUrl(path), true)
+    if not ok then warn("[Bridge] GET error "..path..": "..tostring(res)) return nil end
+    if res == "null" or res == nil then return nil end
+    local ok2, decoded = pcall(HttpService.JSONDecode, HttpService, res)
+    if not ok2 then return nil end
+    return decoded
 end
 
-local function firebasePost(path, data)
-    local url = CONFIG.FIREBASE_URL .. path .. ".json?auth=" .. CONFIG.SERVER_SECRET
-    local body = HttpService:JSONEncode(data)
-    local ok, err = pcall(function()
-        HttpService:RequestAsync({
-            Url = url, Method = "POST",
-            Headers = {["Content-Type"] = "application/json"},
-            Body = body
-        })
-    end)
-    return ok, err
+local function fbSet(path, data)
+    local ok, err = pcall(HttpService.RequestAsync, HttpService, {
+        Url = fbUrl(path), Method = "PUT",
+        Headers = {["Content-Type"]="application/json"},
+        Body = HttpService:JSONEncode(data)
+    })
+    if not ok then warn("[Bridge] SET error "..path..": "..tostring(err)) end
+    return ok
 end
 
-local function firebasePatch(path, data)
-    local url = CONFIG.FIREBASE_URL .. path .. ".json?auth=" .. CONFIG.SERVER_SECRET
-    local body = HttpService:JSONEncode(data)
-    local ok, err = pcall(function()
-        HttpService:RequestAsync({
-            Url = url, Method = "PATCH",
-            Headers = {["Content-Type"] = "application/json"},
-            Body = body
-        })
-    end)
-    return ok, err
+local function fbPush(path, data)
+    local ok, err = pcall(HttpService.RequestAsync, HttpService, {
+        Url = fbUrl(path), Method = "POST",
+        Headers = {["Content-Type"]="application/json"},
+        Body = HttpService:JSONEncode(data)
+    })
+    if not ok then warn("[Bridge] PUSH error "..path..": "..tostring(err)) end
+    return ok
 end
 
-local function firebaseDelete(path)
-    local url = CONFIG.FIREBASE_URL .. path .. ".json?auth=" .. CONFIG.SERVER_SECRET
-    pcall(function()
-        HttpService:RequestAsync({Url = url, Method = "DELETE"})
-    end)
+local function fbPatch(path, data)
+    local ok, err = pcall(HttpService.RequestAsync, HttpService, {
+        Url = fbUrl(path), Method = "PATCH",
+        Headers = {["Content-Type"]="application/json"},
+        Body = HttpService:JSONEncode(data)
+    })
+    if not ok then warn("[Bridge] PATCH error "..path..": "..tostring(err)) end
+    return ok
+end
+
+local function fbDelete(path)
+    pcall(HttpService.RequestAsync, HttpService, {
+        Url = fbUrl(path), Method = "DELETE"
+    })
 end
 
 local function logEvent(eventType, message, playerName)
-    local ts = os.time() * 1000
-    firebasePost("/gameLogs", {
+    fbPush("/gameLogs", {
         type    = eventType,
         message = message,
         player  = playerName or "",
         by      = "[GAME]",
         date    = os.date("%m/%d/%Y, %I:%M:%S %p"),
-        ts      = ts
+        ts      = os.time() * 1000
     })
 end
 
-local function logError(context, err)
-    logEvent("error", "[ERROR] " .. context .. ": " .. tostring(err), "")
-    warn("[SamaritanBridge] " .. context .. ": " .. tostring(err))
-end
-
-local function getTimestamp()
-    return os.date("%m/%d/%Y, %I:%M:%S %p")
-end
-
--- ── ROBLOX API HELPERS ────────────────────────────────────────
-local function getRobloxInfo(username)
-    local ok, res = pcall(function()
-        return HttpService:RequestAsync({
-            Url = "https://users.roproxy.com/v1/usernames/users",
-            Method = "POST",
-            Headers = {["Content-Type"] = "application/json"},
-            Body = HttpService:JSONEncode({usernames = {username}, excludeBannedUsers = false})
-        })
-    end)
-    if not ok or not res or res.StatusCode ~= 200 then return nil end
-    local data = HttpService:JSONDecode(res.Body)
-    if not data or not data.data or #data.data == 0 then return nil end
-    local user = data.data[1]
-    -- Get avatar thumbnail
-    local avatarUrl = ""
-    local avatarOk, avatarRes = pcall(function()
-        return HttpService:GetAsync(
-            "https://thumbnails.roproxy.com/v1/users/avatar-headshot?userIds=" .. user.id .. "&size=150x150&format=Png&isCircular=false",
-            true
-        )
-    end)
-    if avatarOk then
-        local avatarData = HttpService:JSONDecode(avatarRes)
-        if avatarData and avatarData.data and avatarData.data[1] then
-            avatarUrl = avatarData.data[1].imageUrl or ""
+-- ── PLAYER LOOKUP ─────────────────────────────────────────────
+-- Scans all users to find by username (case-insensitive)
+-- Returns: userRecord (table), firebaseKey (string) or nil, nil
+local function findUserByName(username)
+    local users = fbGet("/users")
+    if not users or type(users) ~= "table" then return nil, nil end
+    local lower = username:lower()
+    for key, rec in pairs(users) do
+        if type(rec) == "table" and rec.username and rec.username:lower() == lower then
+            return rec, key
         end
     end
-    return {
-        robloxId    = tostring(user.id),
-        displayName = user.displayName or username,
-        avatarUrl   = avatarUrl
-    }
+    return nil, nil
 end
 
--- ── PLAYER STATUS CHECK ───────────────────────────────────────
-local function checkPlayerStatus(username)
-    -- Search for user in Firebase by username
-    local url = CONFIG.FIREBASE_URL .. "/users.json?auth=" .. CONFIG.SERVER_SECRET
-        .. "&orderBy=\\"username\\"&equalTo=\\"" .. username .. "\\""
-    local ok, res = pcall(function()
-        return HttpService:GetAsync(url, true)
-    end)
-    if not ok then return nil, "http_error" end
-    local data = HttpService:JSONDecode(res)
-    if not data then return nil, "no_data" end
-    -- Firebase query returns object keyed by node id
-    for uid, userRecord in pairs(data) do
-        return userRecord, uid
+-- ── ROBLOX INFO ───────────────────────────────────────────────
+local function getRobloxInfo(userId)
+    -- Fetch display name + avatar by UserId (no POST needed — fast)
+    local ok1, r1 = pcall(HttpService.GetAsync, HttpService,
+        "https://users.roproxy.com/v1/users/" .. userId, true)
+    local displayName = username
+    if ok1 and r1 then
+        local ok2, d = pcall(HttpService.JSONDecode, HttpService, r1)
+        if ok2 and d then displayName = d.displayName or d.name or displayName end
     end
-    return nil, "not_found"
+    local avatarUrl = ""
+    local ok3, r3 = pcall(HttpService.GetAsync, HttpService,
+        "https://thumbnails.roproxy.com/v1/users/avatar-headshot?userIds="..userId.."&size=150x150&format=Png&isCircular=false", true)
+    if ok3 and r3 then
+        local ok4, d2 = pcall(HttpService.JSONDecode, HttpService, r3)
+        if ok4 and d2 and d2.data and d2.data[1] then
+            avatarUrl = d2.data[1].imageUrl or ""
+        end
+    end
+    return displayName, avatarUrl
 end
 
--- ── ON PLAYER JOIN ────────────────────────────────────────────
+-- ── ON JOIN ───────────────────────────────────────────────────
 local function onPlayerJoin(player)
     local username = player.Name
-    task.wait(0.5) -- small wait to ensure player is fully loaded
-    
-    -- 1. Check if player exists in Firebase
-    local userRecord, uid = checkPlayerStatus(username)
-    
-    -- 2. Auto-add if new player and CONFIG allows
-    if CONFIG.AUTO_ADD and (userRecord == nil or uid == "not_found") then
-        -- Get next player ID
-        local counterData, _ = firebaseGet("/meta/playerCounter")
-        local nextId = (counterData or 0) + 1
-        firebasePut("/meta/playerCounter", nextId)
-        
-        -- Get Roblox info
-        local robloxInfo = getRobloxInfo(username)
-        
+    local userId   = tostring(player.UserId)
+    task.wait(0.5)
+
+    local rec, key = findUserByName(username)
+
+    -- AUTO-ADD new players
+    if AUTO_ADD and rec == nil then
+        local counter = fbGet("/meta/playerCounter") or 0
+        local nextId  = (type(counter) == "number" and counter or 0) + 1
+        fbSet("/meta/playerCounter", nextId)
+
+        local displayName, avatarUrl = getRobloxInfo(userId)
         local newUser = {
             username    = username,
-            displayName = robloxInfo and robloxInfo.displayName or username,
-            robloxId    = robloxInfo and robloxInfo.robloxId or "",
-            avatarUrl   = robloxInfo and robloxInfo.avatarUrl or "",
+            displayName = displayName,
+            robloxId    = userId,
+            avatarUrl   = avatarUrl,
             status      = "active",
             playerId    = nextId,
             reputation  = 0,
-            joined      = getTimestamp(),
+            joined      = os.date("%m/%d/%Y, %I:%M:%S %p"),
             ts          = os.time() * 1000
         }
-        firebasePost("/users", newUser)
-        logEvent("join", username .. " joined for the first time and was added to All Accounts.", username)
-        -- Re-fetch the record
-        task.wait(0.3)
-        userRecord, uid = checkPlayerStatus(username)
+        fbPush("/users", newUser)
+        logEvent("join", username .. " joined for the first time — added to All Accounts.", username)
+
+        -- Re-fetch to get the new key
+        task.wait(0.5)
+        rec, key = findUserByName(username)
     end
-    
-    -- 3. Check ban/suspend status and kick if needed
-    if userRecord then
-        local status = userRecord.status or "active"
-        
-        if CONFIG.AUTO_BAN_KICK and status == "banned" then
-            task.wait(CONFIG.KICK_DELAY)
+
+    -- CHECK STATUS
+    if rec then
+        local status = rec.status or "active"
+
+        if AUTO_BAN_KICK and status == "banned" then
+            task.wait(KICK_DELAY)
             if player and player.Parent then
-                local reason = (userRecord.punishments and "You are banned from this game.") or "You are banned from this game."
-                local banReason = ""
-                if userRecord.punishments then
-                    for _, p in pairs(userRecord.punishments) do
-                        if p.action == "ban" then
-                            banReason = p.reason or ""
+                -- Build kick message from most recent ban punishment
+                local banReason = "Violation of community guidelines."
+                local banExpiry = "Permanent"
+                if rec.punishments then
+                    for _, p in pairs(rec.punishments) do
+                        if type(p) == "table" and p.action and p.action:find("Ban") then
+                            banReason = p.note or p.action or banReason
+                            banExpiry = p.expiry or banExpiry
                             break
                         end
                     end
                 end
-                player:Kick("\\n🚫 You are banned from " .. CONFIG.GAME_NAME .. "\\n" 
-                    .. (banReason ~= "" and ("Reason: " .. banReason .. "\\n") or "")
-                    .. "Appeal at the administration panel.")
-                logEvent("kick", username .. " auto-kicked on join — account is BANNED.", username)
+                local timeStr = os.date("%a %b %d %H:%M:%S %Y")
+                player:Kick(
+                    "\n\n🚫 You have been BANNED from " .. GAME_NAME ..
+                    "\nThis lasts: " .. banExpiry ..
+                    "\nModerator note: " .. banReason ..
+                    "\n\nTime || " .. timeStr
+                )
+                logEvent("kick", username .. " kicked on join — BANNED ("..banExpiry..")", username)
             end
             return
         end
-        
-        if CONFIG.AUTO_SUSP_KICK and status == "suspended" then
-            task.wait(CONFIG.KICK_DELAY)
+
+        if AUTO_SUSP_KICK and status == "suspended" then
+            task.wait(KICK_DELAY)
             if player and player.Parent then
-                local suspInfo = userRecord.suspendInfo or {}
-                player:Kick("\\n⏸ Your account is suspended from " .. CONFIG.GAME_NAME .. "\\n"
-                    .. (suspInfo.reason and ("Reason: " .. suspInfo.reason .. "\\n") or "")
-                    .. "Contact staff to appeal.")
-                logEvent("kick", username .. " auto-kicked on join — account is SUSPENDED.", username)
+                local suspInfo = rec.suspendInfo or {}
+                local suspReason = suspInfo.reason or "Suspended by moderator."
+                local timeStr = os.date("%a %b %d %H:%M:%S %Y")
+                player:Kick(
+                    "\n\n⏸ You have been SUSPENDED from " .. GAME_NAME ..
+                    "\nModerator note: " .. suspReason ..
+                    "\n\nTime || " .. timeStr
+                )
+                logEvent("kick", username .. " kicked on join — SUSPENDED", username)
             end
             return
         end
-        
-        -- Update last seen
-        if uid and uid ~= "not_found" then
-            firebasePatch("/users/" .. uid, {
-                lastSeen = getTimestamp(),
-                lastSeenTs = os.time() * 1000
+
+        -- Update lastSeen
+        if key then
+            fbPatch("/users/" .. key, {
+                lastSeen   = os.date("%m/%d/%Y, %I:%M:%S %p"),
+                lastSeenTs = os.time() * 1000,
+                robloxId   = userId -- keep in sync
             })
         end
     end
-    
-    -- 4. Mark player as online in gamePlayers
-    firebasePut("/gamePlayers/" .. username, {
-        username    = username,
-        robloxId    = player.UserId and tostring(player.UserId) or "",
-        joinTime    = getTimestamp(),
-        joinTs      = os.time() * 1000,
-        online      = true,
-        serverId    = game.JobId or ""
+
+    -- Mark online
+    fbSet("/gamePlayers/" .. username, {
+        username  = username,
+        robloxId  = userId,
+        joinTime  = os.date("%m/%d/%Y, %I:%M:%S %p"),
+        joinTs    = os.time() * 1000,
+        online    = true,
+        serverId  = tostring(game.JobId or "")
     })
-    
-    -- 5. Log join event
-    if CONFIG.LOG_JOINS then
+
+    if LOG_JOINS then
         logEvent("join", username .. " joined the game.", username)
     end
-    
-    -- 6. Death logging
-    if CONFIG.LOG_DEATHS then
-        local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            humanoid.Died:Connect(function()
-                logEvent("death", username .. " died in the game.", username)
-            end)
-        end
-        player.CharacterAdded:Connect(function(char)
-            local hum = char:WaitForChild("Humanoid", 10)
+
+    -- Death logging
+    if LOG_DEATHS then
+        local function hookDeath(char)
+            local hum = char:FindFirstChildOfClass("Humanoid")
+                or char:WaitForChild("Humanoid", 10)
             if hum then
                 hum.Died:Connect(function()
-                    logEvent("death", username .. " died in the game.", username)
+                    logEvent("death", username .. " died.", username)
                 end)
             end
-        end)
+        end
+        if player.Character then hookDeath(player.Character) end
+        player.CharacterAdded:Connect(hookDeath)
     end
 end
 
--- ── ON PLAYER LEAVE ───────────────────────────────────────────
+-- ── ON LEAVE ──────────────────────────────────────────────────
 local function onPlayerLeave(player)
     local username = player.Name
-    
-    -- Mark offline
-    firebasePatch("/gamePlayers/" .. username, {
-        online   = false,
-        leaveTime = getTimestamp(),
+    fbPatch("/gamePlayers/" .. username, {
+        online    = false,
+        leaveTime = os.date("%m/%d/%Y, %I:%M:%S %p"),
         leaveTs   = os.time() * 1000
     })
-    
-    if CONFIG.LOG_LEAVES then
+    if LOG_LEAVES then
         logEvent("leave", username .. " left the game.", username)
     end
 end
 
--- ── COMMAND POLL LOOP ─────────────────────────────────────────
--- Polls Firebase every POLL_INTERVAL seconds for pending commands
-local processedCommands = {}
+-- ── COMMAND POLL ──────────────────────────────────────────────
+local processed = {}
 
 local function pollCommands()
-    local data, err = firebaseGet("/gameCommands")
-    if err then
-        warn("[SamaritanBridge] Command poll error: " .. tostring(err))
-        return
-    end
-    if not data then return end
-    
+    local cmds = fbGet("/gameCommands")
+    if not cmds or type(cmds) ~= "table" then return end
+
     local toDelete = {}
-    
-    for cmdId, cmd in pairs(data) do
-        -- Skip already processed
-        if processedCommands[cmdId] then
-            table.insert(toDelete, cmdId)
-        else
-            -- Only process commands newer than 60 seconds
-            local age = (os.time() * 1000) - (cmd.ts or 0)
-            if age > 60000 then
-                table.insert(toDelete, cmdId)
-            else
-                processedCommands[cmdId] = true
-                table.insert(toDelete, cmdId)
-                
-                local cmdType = cmd.type or ""
-                local target  = cmd.target or "ALL"
-                local message = cmd.message or "No reason provided."
-                
-                if cmdType == "kick" then
-                    if target == "ALL" then
-                        for _, p in ipairs(Players:GetPlayers()) do
-                            p:Kick("\\n⚠ You have been kicked from " .. CONFIG.GAME_NAME .. "\\nReason: " .. message)
+
+    for id, cmd in pairs(cmds) do
+        table.insert(toDelete, id)
+        if processed[id] then continue end
+        processed[id] = true
+
+        if type(cmd) ~= "table" then continue end
+
+        -- Skip stale commands (>60s old)
+        local age = (os.time() * 1000) - (cmd.ts or 0)
+        if age > 60000 then continue end
+
+        local cmdType = cmd.type or ""
+        local target  = cmd.target or "ALL"
+        local message = cmd.message or ""
+        local p = Players:FindFirstChild(target)
+
+        if cmdType == "kick" or cmdType == "ban" or cmdType == "notify_kick" then
+            if p then
+                p:Kick(message)
+                logEvent(cmdType=="ban" and "ban" or "kick",
+                    target.." "..cmdType.." by admin", target)
+
+                -- Attempt Roblox Ban API for permanent bans
+                if cmdType == "ban" and (cmd.expiryTs or 0) == 0 then
+                    -- Roblox Open Cloud Ban API
+                    if OPEN_CLOUD_KEY ~= "" and UNIVERSE_ID ~= "" then
+                        local banOk, banRes = pcall(HttpService.RequestAsync, HttpService, {
+                            Url    = "https://apis.roblox.com/cloud/v2/universes/" .. UNIVERSE_ID .. "/user-restrictions/" .. tostring(p.UserId),
+                            Method = "PATCH",
+                            Headers = {
+                                ["x-api-key"]    = OPEN_CLOUD_KEY,
+                                ["Content-Type"] = "application/json"
+                            },
+                            Body = HttpService:JSONEncode({
+                                gameJoinRestriction = {
+                                    active        = true,
+                                    duration      = (cmd.expiryTs or 0) > 0
+                                        and math.floor(((cmd.expiryTs - os.time()*1000) / 1000)) .. "s"
+                                        or nil,  -- nil = permanent
+                                    privateReason = "Banned via Samaritan Systems admin panel",
+                                    displayReason = message:match("Moderator note: (.-)%
+") or "Violation of rules.",
+                                    excludeAltAccounts = false
+                                }
+                            })
+                        })
+                        if banOk and banRes and (banRes.StatusCode == 200 or banRes.StatusCode == 201) then
+                            logEvent("ban", target .. " permanently banned via Roblox Open Cloud API", target)
+                        else
+                            local statusCode = banRes and banRes.StatusCode or "unknown"
+                            local body = banRes and banRes.Body or ""
+                            warn("[Bridge] Roblox Ban API error "..tostring(statusCode)..": "..tostring(body):sub(1,200))
+                            logEvent("error", "Roblox Ban API returned "..tostring(statusCode).." for "..target.." — player was kicked. Check Universe ID and API key permissions.", target)
                         end
-                        logEvent("kick", "All players kicked by admin — " .. message, "ALL")
                     else
-                        local p = Players:FindFirstChild(target)
-                        if p then
-                            p:Kick("\\n⚠ You have been kicked from " .. CONFIG.GAME_NAME .. "\\nReason: " .. message)
-                            logEvent("kick", target .. " kicked by admin — " .. message, target)
-                        end
-                    end
-                    
-                elseif cmdType == "ban" then
-                    local p = Players:FindFirstChild(target)
-                    if p then
-                        p:Kick("\\n🚫 You have been banned from " .. CONFIG.GAME_NAME .. "\\nReason: " .. message)
-                        logEvent("ban", target .. " banned and kicked — " .. message, target)
-                    end
-                    
-                elseif cmdType == "announce" then
-                    -- Use game:GetService("StarterGui") or a RemoteEvent
-                    -- This fires a basic kick message to all as a workaround
-                    -- For proper announcements, fire a RemoteEvent to clients
-                    logEvent("announce", "Announcement sent: " .. message, "ALL")
-                    warn("[SamaritanBridge] Announce: " .. message)
-                    
-                elseif cmdType == "shutdown" then
-                    logEvent("shutdown", "Server shutdown by admin — " .. message, "")
-                    task.wait(2)
-                    for _, p in ipairs(Players:GetPlayers()) do
-                        p:Kick("\\nServer is shutting down.\\n" .. message)
+                        -- No Open Cloud key configured — kick only, log advisory
+                        logEvent("error", "Open Cloud key not set — "..target.." was kicked but NOT permanently banned via Roblox. Add key in Game Integration config.", target)
+                        warn("[Bridge] Set OPEN_CLOUD_KEY + UNIVERSE_ID in Game Integration config for permanent Roblox bans.")
                     end
                 end
             end
+
+        elseif cmdType == "announce" then
+            -- Fire to all clients via a global RemoteEvent if you have one set up
+            -- Otherwise log it
+            logEvent("announce", "Announcement: "..message, "ALL")
+            for _, pl in ipairs(Players:GetPlayers()) do
+                -- Uncomment and set your RemoteEvent path if available:
+                -- game.ReplicatedStorage.SamaritanAnnounce:FireClient(pl, message)
+                _ = pl -- suppress unused warning
+            end
+            warn("[Bridge] Announce: "..message.." (wire SamaritanAnnounce RemoteEvent to show in-game UI)")
+
+        elseif cmdType == "shutdown" then
+            logEvent("shutdown", "Server shutdown: "..message, "")
+            task.delay(2, function()
+                for _, pl in ipairs(Players:GetPlayers()) do
+                    pl:Kick("\n🔴 Server is shutting down.\n"..message)
+                end
+            end)
         end
     end
-    
-    -- Clean up processed commands
-    for _, cmdId in ipairs(toDelete) do
-        firebaseDelete("/gameCommands/" .. cmdId)
+
+    -- Clean up processed
+    for _, id in ipairs(toDelete) do
+        fbDelete("/gameCommands/" .. id)
     end
 end
 
--- ── PRESENCE HEARTBEAT ────────────────────────────────────────
--- Updates server status so the dashboard shows the game is alive
+-- ── HEARTBEAT ─────────────────────────────────────────────────
 local function heartbeat()
-    firebasePut("/gamePresence", {
+    fbSet("/gamePresence", {
         online      = true,
-        serverId    = game.JobId or "unknown",
+        serverId    = tostring(game.JobId or "unknown"),
         playerCount = #Players:GetPlayers(),
-        gameName    = CONFIG.GAME_NAME,
-        lastPing    = getTimestamp(),
+        gameName    = GAME_NAME,
+        lastPing    = os.date("%m/%d/%Y, %I:%M:%S %p"),
         lastPingTs  = os.time() * 1000
     })
 end
 
--- ── MAIN ──────────────────────────────────────────────────────
-print("[SamaritanBridge] Starting up — Game: " .. CONFIG.GAME_NAME)
-
--- Validate secret
-if CONFIG.SERVER_SECRET == "" or CONFIG.SERVER_SECRET == "YOUR_SECRET_HERE" then
-    error("[SamaritanBridge] SERVER_SECRET is not set! Open Game Integration in the admin panel and generate a secret key.")
+-- ── INIT ──────────────────────────────────────────────────────
+if AUTH_TOKEN == "" or AUTH_TOKEN == "PASTE_DATABASE_SECRET_HERE" then
+    error("[Bridge] AUTH_TOKEN not set. Go to Machine Mgmt → Variable Config on the admin panel, enter your Firebase Database Secret and save.", 2)
 end
 
--- Connect player events
+if OPEN_CLOUD_KEY == "" then
+    warn("[Bridge] OPEN_CLOUD_KEY not set — bans will KICK players but will NOT be enforced by Roblox permanently. Add your Open Cloud API key in Game Integration config for full ban enforcement.")
+end
+
+if UNIVERSE_ID == "" then
+    warn("[Bridge] UNIVERSE_ID not set — Open Cloud ban API disabled. Find your Universe ID in Roblox Creator Hub URL.")
+end
+
+print("[Bridge] Starting — "..GAME_NAME)
+
 Players.PlayerAdded:Connect(onPlayerJoin)
 Players.PlayerRemoving:Connect(onPlayerLeave)
 
--- Handle players already in game when script starts
-for _, player in ipairs(Players:GetPlayers()) do
-    task.spawn(onPlayerJoin, player)
+-- Handle players already in server
+for _, pl in ipairs(Players:GetPlayers()) do
+    task.spawn(onPlayerJoin, pl)
 end
 
--- Start command poll loop
+-- Poll loop
 task.spawn(function()
     while true do
         local ok, err = pcall(pollCommands)
         if not ok then
-            logError("pollCommands", err)
+            warn("[Bridge] Poll error: "..tostring(err))
+            logEvent("error", "Poll error: "..tostring(err), "")
         end
-        task.wait(CONFIG.POLL_INTERVAL)
+        task.wait(POLL_INTERVAL)
     end
 end)
 
--- Start heartbeat loop  
+-- Heartbeat loop
 task.spawn(function()
     while true do
-        local ok, err = pcall(heartbeat)
-        if not ok then warn("[SamaritanBridge] Heartbeat error: " .. tostring(err)) end
-        task.wait(CONFIG.HEARTBEAT_INTERVAL)
+        pcall(heartbeat)
+        task.wait(HEARTBEAT_INT)
     end
 end)
 
--- Mark server online immediately
 heartbeat()
-logEvent("status", "Samaritan Bridge started on server " .. (game.JobId or "unknown"), "")
-
-print("[SamaritanBridge] Ready. Polling every " .. CONFIG.POLL_INTERVAL .. "s.")
-`;
-}
-
+logEvent("status", "Bridge started on server "..(game.JobId or "local"), "")
+print("[Bridge] Ready — polling every "..POLL_INTERVAL.."s")
+`;}
 function renderBlacklist(c){
   var entries = Object.entries(IP_BLACKLIST).sort(function(a,b){ return b[1].ts-a[1].ts; });
 
@@ -11259,9 +11272,47 @@ async function executeModAction(uid, u, action, reason, note){
   else if(_hm) _exTs=Date.now()+parseInt(_hm[1])*3600000;
   else if(_wm) _exTs=Date.now()+parseInt(_wm[1])*7*86400000;
   const _exStr=_exTs>0?new Date(_exTs).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}):'Permanent';
-  await push(ref(db,`users/${uid}/punishments`),{action,mod:ME,created:nowStr(),expiry:_exStr,expiryTs:_exTs,note:(note||reason||'')+watchTag});
+  const punishmentEntry={action,mod:ME,created:nowStr(),expiry:_exStr,expiryTs:_exTs,note:(note||reason||'')+watchTag};
+  await push(ref(db,`users/${uid}/punishments`),punishmentEntry);
   await push(ref(db,'logs/moderation'),{user:u.username,action,mod:ME,date:nowStr(),reason:reason||'',note:(note||'')+watchTag});
   auditLog('Player Moderated',`${u.username}: ${action}${watchTag}`);
+
+  // ── Push in-game notification/kick command ──
+  const gameAction=buildGameAction(action,u.username,reason,note,_exStr,_exTs,ME);
+  if(gameAction){
+    await push(ref(db,'gameCommands'),gameAction);
+    await push(ref(db,'gameLogs'),{type:gameAction.type,message:`${u.username}: ${action} (in-game sync) — ${reason||'No reason'}`,by:ME,date:nowStr(),ts:Date.now()});
+  }
+}
+
+function buildGameAction(action, username, reason, note, expiryStr, expiryTs, mod){
+  const ts=Date.now();
+  const noteMsg=note&&note.trim()?note.trim():(reason||'No additional note.');
+  const timeStr=new Date().toString().split(' ').slice(0,5).join(' ');
+  const isBan=action.startsWith('Ban');
+  const isSusp=action==='Suspend';
+  const isWarn=action==='Warning';
+  const isRemind=action==='Reminder';
+
+  if(isBan){
+    const duration=action==='Ban (Permanent)'||action==='Ban'?'Permanently':expiryStr||'Permanently';
+    const kickMsg=`\n🚫 You have been BANNED from this experience.\nThis lasts: ${duration}\nModerator note: ${noteMsg}\nTime || ${timeStr}`;
+    return {type:'ban',target:username,message:kickMsg,duration:duration,expiryTs:expiryTs||0,by:mod,ts:ts};
+  }
+  if(isSusp){
+    const duration=expiryStr||'Temporarily';
+    const kickMsg=`\n⏸ You have been SUSPENDED from this experience.\nThis lasts: ${duration}\nModerator note: ${noteMsg}\nTime || ${timeStr}`;
+    return {type:'kick',target:username,message:kickMsg,by:mod,ts:ts};
+  }
+  if(isWarn){
+    const warnMsg=`\n⚠ A moderator has issued a WARNING to your account.\nModerator note: ${noteMsg}\nTime || ${timeStr}`;
+    return {type:'notify_kick',target:username,message:warnMsg,by:mod,ts:ts,kickAfter:true};
+  }
+  if(isRemind){
+    const remindMsg=`\n💬 A moderator has issued a REMINDER to your account.\nModerator note: ${noteMsg}\nTime || ${timeStr}`;
+    return {type:'notify_kick',target:username,message:remindMsg,by:mod,ts:ts,kickAfter:true};
+  }
+  return null;
 }
 
 async function saveNote(uid){
