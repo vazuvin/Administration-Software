@@ -2516,15 +2516,16 @@ function render(){
   if(page==='announcements'){ renderAlerts(c); return; }
 
   // Helper: inject tab wrapper into c
+  // inner must be live in DOM before innerFn runs because render functions
+  // wire buttons via document.getElementById (not container-scoped).
   function renderSection(title, tabs, innerFn){
     const tabBar=renderTabBar(tabs, page);
+    c.innerHTML='<div class="ptitle">'+title+'</div>'+tabBar;
     const inner=document.createElement('div');
-    innerFn(inner);
-    // Strip the individual page's ptitle since the section already has one
+    c.appendChild(inner);  // append FIRST so document.getElementById finds elements
+    innerFn(inner);        // now render + wire into the live DOM element
     const innerPtitle=inner.querySelector('.ptitle');
     if(innerPtitle) innerPtitle.remove();
-    c.innerHTML='<div class="ptitle">'+title+'</div>'+tabBar;
-    c.appendChild(inner);
   }
 
   // ── PEOPLE SECTION ──
