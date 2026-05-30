@@ -2912,8 +2912,8 @@ function updateSidebar(){
 ['useradmin','moderate','accounts','requests','userconfig'],
     moderation:['reputation','appeals','altdetect','msganalyze'],
     'staff-section':['staff','activity','messaging','suggestions','staffconfig','evaluations','calendar','staffreports'],
-    logs:['modlog','revokelog','suspendlog','terminatelog','warnlog','loginlog','auditlog'],
-    configuration:['alerts','adminlog','cflog'],
+    logs:['modlog','revokelog','suspendlog','terminatelog','warnlog','loginlog','auditlog','cflog'],
+    configuration:['alerts','adminlog'],
     machine:['siteconfig','statuslog','wipelog','robloxlog','badgemgmt','leakid','clearance','samlog','blacklist','discordconfig'],
   };
   document.querySelectorAll('.sb-section-link').forEach(el=>el.classList.remove('active'));
@@ -2942,8 +2942,8 @@ var SECTION_PAGES={
 ['useradmin','moderate','accounts','requests','userconfig'],
   moderation:['reputation','appeals','altdetect','msganalyze'],
   'staff-section':['staff','activity','messaging','suggestions','staffconfig','evaluations','calendar','staffreports'],
-  logs:['modlog','revokelog','suspendlog','terminatelog','warnlog','loginlog','auditlog'],
-  configuration:['alerts','adminlog','cflog'],
+  logs:['modlog','revokelog','suspendlog','terminatelog','warnlog','loginlog','auditlog','cflog'],
+  configuration:['alerts','adminlog'],
   machine:['siteconfig','statuslog','wipelog','robloxlog','badgemgmt','leakid','clearance','samlog','blacklist','discordconfig'],
 };
 
@@ -3165,6 +3165,7 @@ function render(){
       {id:'terminatelog', label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><circle cx="5.5" cy="4" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M1 11.5c0-2.5 2-4 4.5-4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="9.5" y1="8.5" x2="12.5" y2="11.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="12.5" y1="8.5" x2="9.5" y2="11.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Termination', perm:'canViewTerminateLogs'},
       {id:'warnlog', label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><path d="M7 1L13 12H1L7 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><line x1="7" y1="5.5" x2="7" y2="8.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="7" cy="10" r="0.8" fill="currentColor"/></svg>Staff Warnings', perm:'canViewStaff'},
       {id:'loginlog', label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><rect x="2" y="2" width="7" height="10" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M9 5l3 2-3 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><line x1="6" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Login', perm:'canViewLoginLog'},
+      {id:'cflog', label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><rect x="2" y="1" width="10" height="12" rx="1.5" stroke="currentColor" stroke-width="1.2"/><line x1="4.5" y1="4.5" x2="9.5" y2="4.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="7" x2="9.5" y2="7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="9.5" x2="9.5" y2="9.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Custom Fields Log', saOnly:true},
       {id:'auditlog', label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><rect x="2" y="1" width="10" height="12" rx="1.5" stroke="currentColor" stroke-width="1.2"/><line x1="4.5" y1="4.5" x2="9.5" y2="4.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="7" x2="9.5" y2="7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="9.5" x2="7" y2="9.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Audit', saOnly:true},
     ], inner=>{
       if(page==='modlog') canDo('canViewModLog')?renderModLog(inner):inner.innerHTML=denied;
@@ -3202,6 +3203,8 @@ function render(){
       {id:'clearance', label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><rect x="3" y="6.5" width="8" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M5 6.5V4.5a2 2 0 0 1 4 0v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="7" cy="9.5" r="1" fill="currentColor"/></svg>Clearance', smOnly:true},
       {id:'samlog', label:'<svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="flex-shrink:0;"><path d="M6 1L11 6L6 11L1 6Z" stroke="currentColor" stroke-width="1.3"/><circle cx="6" cy="6" r="1.5" fill="currentColor"/></svg>SAM Log', smOnly:true},
       {id:'blacklist', label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><line x1="3" y1="3" x2="11" y2="11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>IP Blacklist', smOnly:true},
+      {id:'landingconfig', label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><circle cx="7" cy="5" r="2.5" stroke="currentColor" stroke-width="1.2"/><path d="M1 13c0-3 2.5-5 6-5s6 2 6 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="11" y1="1" x2="13" y2="3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="11" y1="3" x2="13" y2="1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Landing Page', smOnly:true},
+      {id:'appsconfig', label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><rect x="2" y="1" width="10" height="12" rx="1.5" stroke="currentColor" stroke-width="1.2"/><line x1="4.5" y1="4.5" x2="9.5" y2="4.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="7" x2="9.5" y2="7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><path d="M4.5 9.5l1.5 1.5 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Applications', smOnly:true},
       {id:'discordconfig', label:'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;"><path d="M6.5 7.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2M9.5 7.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2" fill="currentColor"/><path d="M13.5 1.5A2 2 0 0 0 11.5 0h-7A2 2 0 0 0 2.5 2v8a2 2 0 0 0 2 2h7l-1-3 2.5 2.5V1.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" fill="none"/></svg>Discord Config', smOnly:true},
     ], inner=>{
       if(!isSoftwareManager()){ inner.innerHTML=denied; return; }
@@ -3215,12 +3218,405 @@ function render(){
       else if(page==='samlog') renderSamLog(inner);
       else if(page==='blacklist') renderBlacklist(inner);
       else if(page==='discordconfig') renderDiscordConfig(inner);
+      else if(page==='landingconfig') renderLandingConfig(inner);
+      else if(page==='appsconfig') renderAppsConfig(inner);
     }); return;
   }
 
   // Fallback
   c.innerHTML=denied;
 }
+
+// ══════════════════════════════════════════════════════
+// LANDING PAGE CONFIG (Machine Management)
+// ══════════════════════════════════════════════════════
+async function renderLandingConfig(c){
+  const snap=await get(ref(db,'meta/landingConfig')).catch(()=>null);
+  const cfg=snap&&snap.exists()?snap.val():{};
+
+  c.innerHTML='<div class="ptitle" style="background:#004466;">Landing Page Configuration</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+
+    // LEFT: Content
+    +'<div style="flex:2;min-width:280px;">'
+    +'<div class="sbox" style="border:2px solid #0066aa;"><div class="stitle" style="background:#004466;color:#fff;">About Section</div><div class="sbody">'
+    +'<div style="margin-bottom:6px;"><label style="font-size:11px;font-weight:600;color:var(--c-text);display:block;margin-bottom:2px;">Subtitle (shown under "About Us")</label>'
+    +'<input type="text" id="lc-about-sub" style="width:100%;" value="'+(cfg.aboutSubtitle||'Keeping our community safe, fair, and fun.')+'"/></div>'
+    +'<div style="margin-bottom:6px;"><label style="font-size:11px;font-weight:600;color:var(--c-text);display:block;margin-bottom:2px;">Body Content</label>'
+    +'<textarea id="lc-about-body" style="width:100%;height:100px;">'+(cfg.aboutBody||'')+'</textarea></div>'
+    +'<div style="margin-bottom:6px;"><label style="font-size:11px;font-weight:600;color:var(--c-text);display:block;margin-bottom:2px;">Banner Image URL (optional)</label>'
+    +'<input type="text" id="lc-about-banner" style="width:100%;" value="'+(cfg.aboutBanner||'')+'" placeholder="https://..."/></div>'
+    +'<button class="btn" id="lc-save-about">Save About</button>'
+    +'<div id="lc-about-msg" style="font-size:11px;margin-top:4px;color:var(--c-ok);min-height:14px;"></div>'
+    +'</div></div>'
+
+    +'<div class="sbox" style="border:2px solid #0066aa;"><div class="stitle" style="background:#004466;color:#fff;">Hero Section</div><div class="sbody">'
+    +'<div style="margin-bottom:6px;"><label style="font-size:11px;font-weight:600;color:var(--c-text);display:block;margin-bottom:2px;">Motto / Tagline</label>'
+    +'<input type="text" id="lc-motto" style="width:100%;" value="'+(cfg.motto||'To fall is to once have soared.')+'" placeholder="Your tagline..."/></div>'
+    +'<button class="btn" id="lc-save-hero">Save Hero</button>'
+    +'<div id="lc-hero-msg" style="font-size:11px;margin-top:4px;color:var(--c-ok);min-height:14px;"></div>'
+    +'</div></div>'
+
+    +'<div class="sbox" style="border:2px solid #0066aa;"><div class="stitle" style="background:#004466;color:#fff;">Policies Sections</div><div class="sbody">'
+    +'<div id="lc-policies-list">'
+    +(cfg.policies?cfg.policies.map(function(p,i){
+      return '<div style="border:1px solid var(--c-border);border-radius:6px;padding:8px;margin-bottom:6px;">'
+        +'<input type="text" class="lc-pol-title" data-i="'+i+'" style="width:100%;margin-bottom:4px;font-weight:600;" value="'+p.title+'"/>'
+        +'<textarea class="lc-pol-body" data-i="'+i+'" style="width:100%;height:60px;">'+p.body+'</textarea>'
+        +'<button class="btn small lc-pol-del" data-i="'+i+'" style="margin-top:3px;background:rgba(248,81,73,0.1);border-color:var(--c-ban);color:var(--c-ban);">Remove</button>'
+        +'</div>';
+    }).join(''):'<div style="font-size:11px;color:var(--c-text2);">No custom policies configured. Using defaults.</div>')
+    +'</div>'
+    +'<button class="btn small" id="lc-add-policy" style="margin-top:6px;width:100%;">+ Add Policy Section</button>'
+    +'<button class="btn" id="lc-save-policies" style="margin-top:6px;width:100%;">Save Policies</button>'
+    +'<div id="lc-pol-msg" style="font-size:11px;margin-top:4px;color:var(--c-ok);min-height:14px;"></div>'
+    +'</div></div>'
+    +'</div>'
+
+    // RIGHT: Stats + visibility toggles
+    +'<div style="flex:1;min-width:200px;">'
+    +'<div class="sbox" style="border:2px solid #0066aa;"><div class="stitle" style="background:#004466;color:#fff;">Statistics</div><div class="sbody">'
+    +'<div style="margin-bottom:6px;"><label style="font-size:11px;font-weight:600;color:var(--c-text);display:block;margin-bottom:2px;">Founded / Launch Date</label>'
+    +'<input type="date" id="lc-founded" style="width:100%;" value="'+(cfg.foundedDate||'2024-01-01')+'"/></div>'
+    +'<div style="margin-bottom:6px;"><label style="font-size:11px;font-weight:600;color:var(--c-text);display:block;margin-bottom:2px;">Public Stats Visibility</label>'
+    +['moderated','thismonth','appeals','staff','online','days','approval'].map(function(k){
+      var labels={moderated:'Players Moderated',thismonth:'Actions This Month',appeals:'Appeals Resolved',staff:'Staff Members',online:'Staff Active Today',days:'Days Operational',approval:'Approval Rate'};
+      return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">'
+        +'<input type="checkbox" class="lc-stat-toggle" data-key="'+k+'" '+(cfg.hideStats&&cfg.hideStats[k]?'':'checked')+' style="width:13px;height:13px;"/>'
+        +'<label style="font-size:11px;color:var(--c-text);">'+labels[k]+'</label></div>';
+    }).join('')
+    +'</div>'
+    +'<button class="btn" id="lc-save-stats" style="width:100%;">Save Stats Config</button>'
+    +'<div id="lc-stats-msg" style="font-size:11px;margin-top:4px;color:var(--c-ok);min-height:14px;"></div>'
+    +'</div></div>'
+
+    +'<div class="sbox" style="border:2px solid #0066aa;"><div class="stitle" style="background:#004466;color:#fff;">Careers Page</div><div class="sbody">'
+    +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">'
+    +'<input type="checkbox" id="lc-show-staff-dir" '+(cfg.showStaffDir!==false?'checked':'')+' style="width:13px;height:13px;"/>'
+    +'<label style="font-size:11px;color:var(--c-text);">Show public staff directory</label></div>'
+    +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">'
+    +'<input type="checkbox" id="lc-hide-sm" '+(cfg.hideSMFromDir?'checked':'')+' style="width:13px;height:13px;"/>'
+    +'<label style="font-size:11px;color:var(--c-text);">Hide Software Managers from directory</label></div>'
+    +'<button class="btn" id="lc-save-careers" style="width:100%;">Save Careers Config</button>'
+    +'<div id="lc-careers-msg" style="font-size:11px;margin-top:4px;color:var(--c-ok);min-height:14px;"></div>'
+    +'</div></div>'
+    +'</div>'
+    +'</div>';
+
+  function msg(id, txt, color){ var el=document.getElementById(id); if(el){ el.style.color=color||'var(--c-ok)'; el.textContent=txt; setTimeout(function(){ if(el) el.textContent=''; },2000); } }
+
+  document.getElementById('lc-save-about').onclick=async function(){
+    await update(ref(db,'meta/landingConfig'),{
+      aboutSubtitle:document.getElementById('lc-about-sub').value.trim(),
+      aboutBody:document.getElementById('lc-about-body').value.trim(),
+      aboutBanner:document.getElementById('lc-about-banner').value.trim(),
+    });
+    msg('lc-about-msg','About section saved!');
+    auditLog('Landing Config Updated','About section by '+ME);
+  };
+
+  document.getElementById('lc-save-hero').onclick=async function(){
+    await update(ref(db,'meta/landingConfig'),{ motto:document.getElementById('lc-motto').value.trim() });
+    msg('lc-hero-msg','Hero section saved!');
+  };
+
+  document.getElementById('lc-add-policy').onclick=function(){
+    var list=document.getElementById('lc-policies-list');
+    var i=list.querySelectorAll('.lc-pol-title').length;
+    var div=document.createElement('div');
+    div.style.cssText='border:1px solid var(--c-border);border-radius:6px;padding:8px;margin-bottom:6px;';
+    div.innerHTML='<input type="text" class="lc-pol-title" data-i="'+i+'" style="width:100%;margin-bottom:4px;font-weight:600;" placeholder="Policy Title"/>'
+      +'<textarea class="lc-pol-body" data-i="'+i+'" style="width:100%;height:60px;" placeholder="Policy body text..."></textarea>'
+      +'<button class="btn small lc-pol-del" data-i="'+i+'" style="margin-top:3px;background:rgba(248,81,73,0.1);border-color:var(--c-ban);color:var(--c-ban);">Remove</button>';
+    list.appendChild(div);
+    div.querySelector('.lc-pol-del').onclick=function(){ div.remove(); };
+  };
+  c.querySelectorAll('.lc-pol-del').forEach(function(btn){
+    btn.onclick=function(){ btn.closest('div[style]').remove(); };
+  });
+  document.getElementById('lc-save-policies').onclick=async function(){
+    var policies=[];
+    var titles=c.querySelectorAll('.lc-pol-title');
+    var bodies=c.querySelectorAll('.lc-pol-body');
+    titles.forEach(function(t,i){ if(t.value.trim()) policies.push({title:t.value.trim(),body:bodies[i]?bodies[i].value.trim():''}); });
+    await update(ref(db,'meta/landingConfig'),{policies:policies});
+    msg('lc-pol-msg','Policies saved!');
+    auditLog('Landing Config Updated','Policies by '+ME);
+  };
+
+  document.getElementById('lc-save-stats').onclick=async function(){
+    var hideStats={};
+    c.querySelectorAll('.lc-stat-toggle').forEach(function(el){ if(!el.checked) hideStats[el.dataset.key]=true; });
+    await update(ref(db,'meta/landingConfig'),{foundedDate:document.getElementById('lc-founded').value,hideStats:hideStats});
+    msg('lc-stats-msg','Stats config saved!');
+  };
+
+  document.getElementById('lc-save-careers').onclick=async function(){
+    await update(ref(db,'meta/landingConfig'),{
+      showStaffDir:document.getElementById('lc-show-staff-dir').checked,
+      hideSMFromDir:document.getElementById('lc-hide-sm').checked,
+    });
+    msg('lc-careers-msg','Careers config saved!');
+  };
+}
+
+// ══════════════════════════════════════════════════════
+// APPLICATIONS CONFIG (Machine Management)
+// ══════════════════════════════════════════════════════
+async function renderAppsConfig(c){
+  const [formsSnap, appsSnap] = await Promise.all([
+    get(ref(db,'meta/applicationForms')).catch(()=>null),
+    get(ref(db,'applications')).catch(()=>null),
+  ]);
+  const forms=formsSnap&&formsSnap.exists()?formsSnap.val():{};
+  const apps=appsSnap&&appsSnap.exists()?appsSnap.val():{};
+
+  const pendingApps=Object.entries(apps).filter(([,a])=>a&&!a.reviewed);
+  const reviewedApps=Object.entries(apps).filter(([,a])=>a&&a.reviewed);
+
+  c.innerHTML='<div class="ptitle" style="background:#004466;">Applications Configuration</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+
+    // LEFT: Submitted applications
+    +'<div style="flex:2;min-width:280px;">'
+    +'<div class="sbox" style="border:2px solid #0066aa;"><div class="stitle" style="background:#004466;color:#fff;">Submitted Applications '+(pendingApps.length?'<span style="background:var(--c-ban);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;margin-left:4px;">'+pendingApps.length+' pending</span>':'')+'</div><div class="sbody" id="apps-list">'
+    +(Object.keys(apps).length===0?'<div style="font-size:11px;color:var(--c-text2);font-style:italic;">No applications submitted yet.</div>'
+      :Object.entries(apps).sort(function(a,b){ return (b[1].ts||0)-(a[1].ts||0); }).map(function(e){
+        var aid=e[0], a=e[1];
+        var statusColor=a.reviewed?(a.outcome==='Approved'?'var(--c-ok)':'var(--c-ban)'):'var(--c-sus)';
+        var status=a.reviewed?(a.outcome||'Reviewed'):'Pending';
+        return '<div style="border:1px solid var(--c-border);border-left:3px solid '+statusColor+';border-radius:6px;padding:10px 12px;margin-bottom:8px;background:var(--bg-tbl-odd);">'
+          +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">'
+          +'<div style="flex:1;">'
+          +'<div style="font-size:12px;font-weight:700;color:var(--c-text);">'+a.formTitle+'</div>'
+          +'<div style="font-size:10px;color:var(--c-text2);">'+a.contact+' &bull; '+(a.date?a.date.split('T')[0]:'?')+'</div>'
+          +'</div>'
+          +'<span style="font-size:10px;font-weight:700;color:'+statusColor+';">'+status+'</span>'
+          +'</div>'
+          +'<div style="font-size:10px;color:var(--c-text2);margin-bottom:6px;">Ref: <code>'+a.refCode+'</code> &bull; For rank: <b style="color:var(--c-text);">'+a.rank+'</b></div>'
+          +'<button class="btn small view-app-btn" data-aid="'+aid+'" style="margin-right:4px;">View Answers</button>'
+          +(!a.reviewed?'<button class="btn small approve-app-btn" data-aid="'+aid+'" style="background:rgba(26,127,55,0.15);border-color:var(--c-ok);color:var(--c-ok);">Approve + Issue Code</button>'
+            +'<button class="btn small deny-app-btn" data-aid="'+aid+'" style="background:rgba(248,81,73,0.08);border-color:var(--c-ban);color:var(--c-ban);">Deny</button>'
+            :'<span style="font-size:10px;color:var(--c-text2);">Reviewed by '+a.reviewedBy+'</span>'
+            +(a.accessCode?'<div style="margin-top:4px;font-size:10px;">Access Code: <code style="color:var(--c-link);">'+a.accessCode+'</code></div>':''))
+          +'</div>';
+      }).join(''))
+    +'</div></div>'
+    +'</div>'
+
+    // RIGHT: Form builder
+    +'<div style="flex:1;min-width:220px;">'
+    +'<div class="sbox" style="border:2px solid #0066aa;"><div class="stitle" style="background:#004466;color:#fff;">Application Forms</div><div class="sbody">'
+    +(Object.keys(forms).length===0?'<div style="font-size:11px;color:var(--c-text2);font-style:italic;">No forms configured. Create one below.</div>'
+      :Object.entries(forms).map(function(e){
+        var fid=e[0], f=e[1];
+        return '<div style="border:1px solid var(--c-border);border-radius:6px;padding:8px 10px;margin-bottom:6px;background:var(--bg-tbl-odd);">'
+          +'<div style="display:flex;align-items:center;gap:6px;">'
+          +'<div style="flex:1;">'
+          +'<div style="font-size:12px;font-weight:700;color:var(--c-text);">'+f.title+'</div>'
+          +'<div style="font-size:10px;color:var(--c-text2);">'+f.rank+' &bull; '+(f.questions||[]).length+' questions</div>'
+          +'</div>'
+          +'<span style="font-size:10px;font-weight:700;color:'+(f.open!==false?'var(--c-ok)':'var(--c-ban)')+';">'+(f.open!==false?'OPEN':'CLOSED')+'</span>'
+          +'</div>'
+          +'<div style="display:flex;gap:4px;margin-top:6px;">'
+          +'<button class="btn small edit-form-btn" data-fid="'+fid+'">Edit</button>'
+          +'<button class="btn small toggle-form-btn" data-fid="'+fid+'" data-open="'+(f.open!==false?'1':'0')+'">'+(f.open!==false?'Close':'Open')+'</button>'
+          +'<button class="btn small del-form-btn" data-fid="'+fid+'" style="background:rgba(248,81,73,0.08);border-color:var(--c-ban);color:var(--c-ban);">Delete</button>'
+          +'</div>'
+          +'</div>';
+      }).join(''))
+    +'<button class="btn" id="ac-new-form-btn" style="width:100%;margin-top:8px;">+ New Application Form</button>'
+    +'</div></div>'
+    +'<div id="ac-form-editor" style="margin-top:0;"></div>'
+    +'</div>'
+    +'</div>';
+
+  // View answers
+  c.querySelectorAll('.view-app-btn').forEach(function(btn){
+    btn.onclick=function(){
+      var a=apps[btn.dataset.aid]; if(!a) return;
+      var rows=Object.values(a.answers||{}).filter(function(x){ return x.question; }).map(function(x){
+        return '<div style="margin-bottom:8px;"><div style="font-size:11px;color:var(--c-text2);margin-bottom:2px;">'+x.question+'</div>'
+          +'<div style="font-size:12px;color:var(--c-text);background:var(--bg-tbl-odd);border:1px solid var(--c-border);border-radius:4px;padding:6px 8px;">'+x.answer+'</div></div>';
+      }).join('');
+      openDialog('Application Answers — '+a.formTitle,'<div style="font-size:11px;color:var(--c-text2);margin-bottom:10px;">Contact: <b style="color:var(--c-text);">'+a.contact+'</b></div>'+rows,'',null);
+      document.getElementById('dlgOK').style.display='none';
+      document.getElementById('dlgCancel').textContent='Close';
+    };
+  });
+
+  // Approve + issue code
+  c.querySelectorAll('.approve-app-btn').forEach(function(btn){
+    btn.onclick=function(){
+      var a=apps[btn.dataset.aid]; if(!a) return;
+      openDialog('Approve Application','Issue an access code for <b>'+a.contact+'</b> ('+a.formTitle+')',
+        '<div style="margin-bottom:6px;"><label style="font-size:11px;font-weight:600;color:var(--c-text);display:block;margin-bottom:2px;">Rank to Grant</label>'
+        +'<select id="approve-rank" style="width:100%;">'
+        +[...LEVEL_LIST,'SOFTWARE MANAGER'].map(function(l){ return '<option value="'+l+'"'+(l===a.rank?' selected':'')+'>'+l+'</option>'; }).join('')
+        +'</select></div>'
+        +'<div><label style="font-size:11px;font-weight:600;color:var(--c-text);display:block;margin-bottom:2px;">Code Expiry</label>'
+        +'<select id="approve-expiry" style="width:100%;"><option value="48h">48 Hours</option><option value="7d">7 Days</option><option value="30d">30 Days</option><option value="never">Never</option></select></div>'
+        +'<div id="approve-code-result" style="margin-top:10px;min-height:16px;"></div>',
+        async function(){
+          var rank=document.getElementById('approve-rank').value;
+          var expiry=document.getElementById('approve-expiry').value;
+          var expiryDate=null;
+          if(expiry==='48h') expiryDate=new Date(Date.now()+48*3600000).toISOString();
+          else if(expiry==='7d') expiryDate=new Date(Date.now()+7*86400000).toISOString();
+          else if(expiry==='30d') expiryDate=new Date(Date.now()+30*86400000).toISOString();
+          // Generate code
+          var code='SAM-'+Math.random().toString(36).substr(2,6).toUpperCase()+'-'+Math.random().toString(36).substr(2,4).toUpperCase();
+          await update(ref(db,'accessCodes/'+code),{
+            rank:rank, issuedBy:ME, issued:new Date().toISOString(),
+            expires:expiryDate, used:false, applicationId:btn.dataset.aid
+          });
+          await update(ref(db,'applications/'+btn.dataset.aid),{
+            reviewed:true, outcome:'Approved', reviewedBy:ME, reviewDate:nowStr(), accessCode:code, grantedRank:rank
+          });
+          auditLog('Application Approved',a.contact+' — Code: '+code+' ['+rank+']');
+          showToast('Application approved. Access code: '+code,'success',6000);
+          renderAppsConfig(c);
+        }
+      );
+    };
+  });
+
+  // Deny
+  c.querySelectorAll('.deny-app-btn').forEach(function(btn){
+    btn.onclick=function(){
+      var a=apps[btn.dataset.aid]; if(!a) return;
+      openDialog('Deny Application','Deny the application from <b>'+(a.contact||'?')+'</b>?',
+        '<textarea id="deny-note" style="width:100%;height:50px;" placeholder="Reason for denial (optional)"></textarea>',
+        async function(){
+          var note=document.getElementById('deny-note').value.trim()||'No reason given.';
+          await update(ref(db,'applications/'+btn.dataset.aid),{reviewed:true,outcome:'Denied',reviewedBy:ME,reviewDate:nowStr(),denyNote:note});
+          auditLog('Application Denied',a.contact+' — '+note);
+          showToast('Application denied.','warning');
+          renderAppsConfig(c);
+        }
+      );
+    };
+  });
+
+  // Toggle form open/closed
+  c.querySelectorAll('.toggle-form-btn').forEach(function(btn){
+    btn.onclick=async function(){
+      var isOpen=btn.dataset.open==='1';
+      await update(ref(db,'meta/applicationForms/'+btn.dataset.fid),{open:!isOpen});
+      renderAppsConfig(c);
+    };
+  });
+
+  // Delete form
+  c.querySelectorAll('.del-form-btn').forEach(function(btn){
+    btn.onclick=function(){
+      openDialog('Delete Form','Permanently delete this application form and all its questions?','',async function(){
+        await remove(ref(db,'meta/applicationForms/'+btn.dataset.fid));
+        renderAppsConfig(c);
+      });
+    };
+  });
+
+  // New / Edit form
+  function openFormEditor(fid, existing){
+    var editor=document.getElementById('ac-form-editor');
+    var f=existing||{title:'',description:'',rank:'CONTENT REVIEWER',open:true,questions:[]};
+    var questions=f.questions||[];
+    editor.innerHTML='<div class="sbox" style="border:2px solid #0066aa;margin-top:0;"><div class="stitle" style="background:#004466;color:#fff;">'+(fid?'Edit Form':'New Form')+'</div><div class="sbody">'
+      +'<div style="margin-bottom:5px;"><label style="font-size:11px;font-weight:600;color:var(--c-text);display:block;margin-bottom:2px;">Form Title</label>'
+      +'<input type="text" id="fe-title" style="width:100%;" value="'+(f.title||'')+'" placeholder="e.g. Content Moderator Application"/></div>'
+      +'<div style="margin-bottom:5px;"><label style="font-size:11px;font-weight:600;color:var(--c-text);display:block;margin-bottom:2px;">Description</label>'
+      +'<textarea id="fe-desc" style="width:100%;height:50px;">'+(f.description||'')+'</textarea></div>'
+      +'<div style="margin-bottom:5px;"><label style="font-size:11px;font-weight:600;color:var(--c-text);display:block;margin-bottom:2px;">Target Rank</label>'
+      +'<select id="fe-rank" style="width:100%;">'
+      +[...LEVEL_LIST].map(function(l){ return '<option value="'+l+'"'+(l===f.rank?' selected':'')+'>'+l+'</option>'; }).join('')
+      +'</select></div>'
+      +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">'
+      +'<input type="checkbox" id="fe-open" '+(f.open!==false?'checked':'')+' style="width:13px;height:13px;"/>'
+      +'<label style="font-size:11px;color:var(--c-text);">Open for applications</label></div>'
+      +'<div style="font-size:11px;font-weight:700;color:var(--c-text);margin-bottom:6px;">Questions</div>'
+      +'<div id="fe-questions">'
+      +questions.map(function(q,i){
+        return '<div class="fe-q-row" style="border:1px solid var(--c-border);border-radius:6px;padding:7px;margin-bottom:5px;">'
+          +'<div style="display:flex;gap:4px;margin-bottom:4px;">'
+          +'<input type="text" class="fe-q-text" style="flex:1;" value="'+q.text+'" placeholder="Question text"/>'
+          +'<select class="fe-q-type" style="width:90px;">'
+          +['long','short','choice','yesno'].map(function(t){ return '<option value="'+t+'"'+(t===q.type?' selected':'')+'>'+t+'</option>'; }).join('')
+          +'</select>'
+          +'<input type="checkbox" class="fe-q-req" title="Required" '+(q.required?'checked':'')+' style="width:13px;height:13px;align-self:center;"/>'
+          +'<button class="btn small fe-q-del" style="background:rgba(248,81,73,0.08);border-color:var(--c-ban);color:var(--c-ban);">✕</button>'
+          +'</div>'
+          +(q.type==='choice'?'<input type="text" class="fe-q-options" style="width:100%;font-size:10px;" value="'+(q.options?q.options.join(', '):'')+'" placeholder="Options: comma separated"/>':'')
+          +'</div>';
+      }).join('')
+      +'</div>'
+      +'<button class="btn small" id="fe-add-q" style="width:100%;margin-bottom:8px;">+ Add Question</button>'
+      +'<div style="display:flex;gap:6px;">'
+      +'<button class="btn" id="fe-save" style="flex:1;">Save Form</button>'
+      +'<button class="btn small" id="fe-cancel">Cancel</button>'
+      +'</div>'
+      +'<div id="fe-msg" style="font-size:11px;margin-top:4px;color:var(--c-ok);min-height:14px;"></div>'
+      +'</div></div>';
+
+    editor.querySelectorAll('.fe-q-del').forEach(function(btn){ btn.onclick=function(){ btn.closest('.fe-q-row').remove(); }; });
+    document.getElementById('fe-add-q').onclick=function(){
+      var qlist=document.getElementById('fe-questions');
+      var div=document.createElement('div');
+      div.className='fe-q-row';
+      div.style.cssText='border:1px solid var(--c-border);border-radius:6px;padding:7px;margin-bottom:5px;';
+      div.innerHTML='<div style="display:flex;gap:4px;margin-bottom:4px;">'
+        +'<input type="text" class="fe-q-text" style="flex:1;" placeholder="Question text"/>'
+        +'<select class="fe-q-type" style="width:90px;"><option value="long">long</option><option value="short">short</option><option value="choice">choice</option><option value="yesno">yesno</option></select>'
+        +'<input type="checkbox" class="fe-q-req" title="Required" checked style="width:13px;height:13px;align-self:center;"/>'
+        +'<button class="btn small fe-q-del" style="background:rgba(248,81,73,0.08);border-color:var(--c-ban);color:var(--c-ban);">✕</button>'
+        +'</div>';
+      qlist.appendChild(div);
+      div.querySelector('.fe-q-del').onclick=function(){ div.remove(); };
+    };
+    document.getElementById('fe-cancel').onclick=function(){ editor.innerHTML=''; };
+    document.getElementById('fe-save').onclick=async function(){
+      var title=document.getElementById('fe-title').value.trim();
+      var msg=document.getElementById('fe-msg');
+      if(!title){ msg.style.color='var(--c-ban)'; msg.textContent='Title required.'; return; }
+      var newQ=[];
+      editor.querySelectorAll('.fe-q-row').forEach(function(row){
+        var text=row.querySelector('.fe-q-text').value.trim();
+        if(!text) return;
+        var type=row.querySelector('.fe-q-type').value;
+        var required=row.querySelector('.fe-q-req').checked;
+        var q={text:text,type:type,required:required};
+        if(type==='choice'){
+          var optsEl=row.querySelector('.fe-q-options');
+          if(optsEl) q.options=optsEl.value.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+        }
+        newQ.push(q);
+      });
+      var formData={
+        title:title,
+        description:document.getElementById('fe-desc').value.trim(),
+        rank:document.getElementById('fe-rank').value,
+        open:document.getElementById('fe-open').checked,
+        questions:newQ,
+        updatedBy:ME, updatedAt:nowStr(),
+      };
+      if(fid){
+        await update(ref(db,'meta/applicationForms/'+fid),formData);
+      } else {
+        await push(ref(db,'meta/applicationForms'),formData);
+      }
+      auditLog('Application Form Saved',title+' by '+ME);
+      showToast('Form saved.','success');
+      editor.innerHTML='';
+      renderAppsConfig(c);
+    };
+  }
+
+  document.getElementById('ac-new-form-btn').onclick=function(){ openFormEditor(null, null); };
+  c.querySelectorAll('.edit-form-btn').forEach(function(btn){
+    btn.onclick=function(){ openFormEditor(btn.dataset.fid, forms[btn.dataset.fid]); };
+  });
+}
+
 
 // ══════════════════════════════════════════════════════
 // STAFF REPORTS
@@ -13885,6 +14281,7 @@ async function doLogin(){
     status.textContent='';
     document.getElementById('loginScreen').style.display='none';
     document.getElementById('adminScreen').style.display='block';
+    try{ wireTopbar(); }catch(e){}
     document.getElementById('topbarTitle').innerHTML=`<span style='color:#58a6ff;font-weight:800;letter-spacing:-0.5px;font-size:14px;'>SAMARITAN</span><span style='color:var(--c-topbar-sub);font-weight:400;font-size:12px;'> | Internal</span> <span style='color:var(--c-topbar-sub);font-size:11px;font-weight:400;'>&mdash; ${ME}</span> <span style='color:var(--c-topbar-text);font-size:11px;font-weight:600;'>[${MY_LEVEL}]</span>`;
     startListeners();
     startHeartbeat();
@@ -15597,6 +15994,33 @@ applyTheme();
 
 try{ setupMenus(); }catch(e){ console.warn("setupMenus error:",e); }
 
+function wireTopbar(){
+  var nb=document.getElementById('nightModeBtn');
+  if(nb) nb.onclick=function(){ darkMode=!darkMode; applyTheme(); };
+  var rb=document.getElementById('refreshBtn');
+  if(rb) rb.onclick=function(){
+    lastRefreshed=nowStr(); rb.style.opacity='0.5';
+    render(); updateAnnouncements(); updateTopInfo();
+    setTimeout(function(){ rb.style.opacity='1'; },600);
+  };
+  var sb=document.getElementById('searchBtn');
+  if(sb) sb.onclick=function(){ var o=document.getElementById('searchOverlay'); if(o) o.classList.toggle('show'); };
+  var lob=document.getElementById('logoutBtn');
+  if(lob) lob.onclick=doLogout;
+  // Notif bell
+  var notifBtn=document.getElementById('notifBtn');
+  var notifDrop=document.getElementById('notifDropdown');
+  if(notifBtn&&notifDrop){
+    notifBtn.onclick=function(e){
+      e.stopPropagation();
+      var isOpen=notifDrop.style.display==='block';
+      notifDrop.style.display=isOpen?'none':'block';
+      if(!isOpen) renderNotifDropdown();
+    };
+  }
+}
+
+
 function openNotifSettings(){
   const avail=ALL_NOTIF_EVENTS.filter(ev=>!ev.perm||canDo(ev.perm));
   const listEl=document.getElementById('notifSettingsList');
@@ -16208,7 +16632,7 @@ showLanding();
 
 })();
 
-['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','warnlog','loginlog','auditlog','alerts','adminlog','home','messaging','requests','userconfig','siteconfig','suggestions','staffconfig','msganalyze','statuslog','badgemgmt','wipelog','robloxlog','cflog','customfieldlog','gamelogs','gameintegration','information','leakid','clearance','samaritan','samlog','evaluations','blacklist','people','moderation','logs','configuration','machine','calendar','discordconfig','staffreports'].forEach(p=>{
+['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','warnlog','loginlog','auditlog','alerts','adminlog','home','messaging','requests','userconfig','siteconfig','suggestions','staffconfig','msganalyze','statuslog','badgemgmt','wipelog','robloxlog','cflog','customfieldlog','gamelogs','gameintegration','information','leakid','clearance','samaritan','samlog','evaluations','blacklist','people','moderation','logs','configuration','machine','calendar','discordconfig','staffreports','landingconfig','appsconfig'].forEach(p=>{
   const el=document.getElementById('nav-'+p);
   if(el) el.onclick=()=>nav(p);
 });
