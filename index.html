@@ -985,6 +985,19 @@ body.gh-dark .topinfo{ background:rgba(9,13,22,0.95); border-bottom-color:rgba(8
 .ln-strip-msg{ flex:1; }
 .ln-strip-by{ font-size:10px; opacity:0.6; font-weight:400; flex-shrink:0; }
 
+
+/* Beehive persistent glow */
+@keyframes beehive-glow-pulse {
+  0%,100% { box-shadow: 0 0 8px 2px rgba(227,179,65,0.6), 0 2px 12px rgba(227,179,65,0.3); }
+  50% { box-shadow: 0 0 20px 6px rgba(227,179,65,0.9), 0 2px 24px rgba(227,179,65,0.6); }
+}
+@keyframes beehive-glow-pulse-urgent {
+  0%,100% { box-shadow: 0 0 10px 3px rgba(248,81,73,0.7), 0 2px 16px rgba(248,81,73,0.4); }
+  50% { box-shadow: 0 0 28px 8px rgba(248,81,73,1), 0 2px 32px rgba(248,81,73,0.7); }
+}
+.beehive-active { animation: beehive-glow-pulse 1.4s ease-in-out infinite !important; }
+.beehive-active-urgent { animation: beehive-glow-pulse-urgent 0.7s ease-in-out infinite !important; }
+
 </style>
 </head>
 <body>
@@ -1710,6 +1723,8 @@ const DEFAULT_PERMS = {
 const DEFAULT_REP_POINTS = { 'Remind':1, 'Warn':2, 'Ban 1 Day':3, 'Ban 3 Days':3, 'Ban 7 Days':5, 'Ban 14 Days':5, 'Suspend':4, 'Ban Permanent':10 };
 
 const DEFAULT_APPEAL_PRESETS = ['Hacked Account','False Ban','Misunderstanding','Exploited by Another','No Warning Given','Other'];
+const ROBLOX_DEFAULT_AVATAR='https://tr.rbxcdn.com/180DAY-53eb26c8de98a3c1ea34e2e22d69b82c/150/150/AvatarHeadshot/Webp/noFilter';
+function defaultAvatar(size){ return '<img src="'+ROBLOX_DEFAULT_AVATAR+'" width="'+(size||28)+'" height="'+(size||28)+'" style="border-radius:50%;object-fit:cover;flex-shrink:0;">'; }
 const LEVEL_RANK = {'CONTENT REVIEWER':1,'CONTENT MODERATOR':2,'CONTENT ADMINISTRATOR':3,'SENIOR CONTENT ADMINISTRATOR':4,'CONTENT MANAGER':5,'SOFTWARE MANAGER':6};
 const LEVEL_LIST = ['CONTENT REVIEWER','CONTENT MODERATOR','CONTENT ADMINISTRATOR','SENIOR CONTENT ADMINISTRATOR','CONTENT MANAGER'];
 // SOFTWARE MANAGER is intentionally excluded from LEVEL_LIST - only assignable via Firebase directly
@@ -2498,9 +2513,10 @@ function restoreBeehiveBar(a){
     +'<span style="font-size:12px;font-weight:600;color:'+p.text+';flex:1;">'+(a.message||'')+'</span>'
     +(isUrgent?'<span style="font-size:9px;font-weight:900;letter-spacing:2px;color:'+p.text+';">&#9888; URGENT</span>':'');
   window._beehiveBarActive=true;
-  // Always pulse the glow, faster for urgent
-  var flashSpeed=isUrgent?400:900;
-  window._beehiveBarFlash=setInterval(function(){ bar.style.boxShadow=bar.style.boxShadow===glowIntense?glowNorm:glowIntense; },flashSpeed);
+  if(window._beehiveBarFlash){ clearInterval(window._beehiveBarFlash); window._beehiveBarFlash=null; }
+  // Use CSS animation for reliable persistent glow
+  bar.classList.remove('beehive-active','beehive-active-urgent');
+  bar.classList.add(isUrgent?'beehive-active-urgent':'beehive-active');
 }
 window.restoreBeehiveBar=restoreBeehiveBar;
 
@@ -4174,6 +4190,37 @@ function renderStaffReports(c){
 }
 window.renderStaffReports=renderStaffReports;
 
+window.filterReportDirectory=function(q){
+  var list=document.getElementById('report-dir-list');
+  if(!list) return;
+  var staffArr=Object.entries(STAFF).filter(function(e){
+    var s=e[1]; if(!s||!s.username) return false;
+    if(!q) return true;
+    return s.username.toLowerCase().includes(q.toLowerCase());
+  });
+  if(!staffArr.length){ list.innerHTML='<div style="font-size:11px;color:var(--c-text2);">No staff found.</div>'; return; }
+  var reportCounts={};
+  Object.values(STAFF_REPORTS||{}).forEach(function(r){ if(r&&r.targetUsername) reportCounts[r.targetUsername]=(reportCounts[r.targetUsername]||0)+1; });
+  list.innerHTML=staffArr.map(function(e){
+    var sid=e[0],s=e[1];
+    var cnt=reportCounts[s.username]||0;
+    return '<div class="rpt-dir-card" data-sid="'+sid+'" style="display:flex;align-items:center;gap:8px;padding:7px 8px;border:1px solid var(--c-border);border-radius:6px;margin-bottom:4px;cursor:pointer;background:var(--bg-tbl-odd);transition:background 0.1s;">'
+      +(s.avatarUrl?'<img src="'+s.avatarUrl+'" width="30" height="30" style="border-radius:50%;object-fit:cover;flex-shrink:0;">'
+        :'<img src="'+ROBLOX_DEFAULT_AVATAR+'" width="30" height="30" style="border-radius:50%;object-fit:cover;flex-shrink:0;">')
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="font-size:11px;font-weight:bold;color:var(--c-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+s.username+'</div>'
+      +'<div style="font-size:10px;color:var(--c-text2);">'+s.level+'</div>'
+      +'</div>'
+      +(cnt>0?'<span style="font-size:9px;background:var(--c-ban);color:#fff;padding:1px 5px;border-radius:8px;">'+cnt+'</span>':'')
+      +'</div>';
+  }).join('');
+  list.querySelectorAll('.rpt-dir-card').forEach(function(card){
+    card.onmouseenter=function(){ card.style.background='var(--bg-sb-hdr-hover)'; };
+    card.onmouseleave=function(){ card.style.background='var(--bg-tbl-odd)'; };
+    card.onclick=function(){ showStaffReportInfo(card.dataset.sid); };
+  });
+};
+
 window.filterReportSearch=function(q){
   var list=document.getElementById('report-staff-list');
   if(!list) return;
@@ -4272,6 +4319,8 @@ function renderDiscordConfig(c){
       {key:'failed_logins',label:'Failed Logins Only',desc:'Only failed login attempts — less noisy',icon:'🚫'},
       {key:'reports',label:'Staff Reports',desc:'When a new staff report is submitted',icon:'[!]'},
       {key:'beehive',label:'Beehive Alerts',desc:'Beehive contingency activations and deactivations',icon:'🐝'},
+      {key:'applications',label:'Applications',desc:'New application submitted from landing page',icon:'📋'},
+      {key:'applications',label:'Applications',desc:'New staff application submitted from landing page',icon:'📋'},
     ];
 
     c.innerHTML='<div class="ptitle">[DC] Discord Configuration</div>'
@@ -6194,10 +6243,21 @@ function renderAccounts(c){
     </table></div>`}
   </div></div>
   <div class="sbox"><div class="stitle">Add New Player</div><div class="sbody">
-    <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-      <label style="font-size:11px;color:var(--c-text);white-space:nowrap;">Roblox Username:</label>
-      <input type="text" id="nuUser" style="width:130px;" placeholder="exact Roblox name"/>
-      <button class="btn" id="btn-adduser">Add Player</button>
+    <div style="margin-bottom:8px;">
+      <label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:4px;font-weight:600;">Single Player</label>
+      <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+        <input type="text" id="nuUser" style="width:180px;" placeholder="Exact Roblox username"/>
+        <button class="btn" id="btn-adduser">Add Player</button>
+      </div>
+    </div>
+    <div>
+      <label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:4px;font-weight:600;">Mass Add (comma-separated)</label>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:flex-start;">
+        <textarea id="nuBulkUsers" style="flex:1;min-width:200px;height:50px;" placeholder="user1, user2, user3, ..."></textarea>
+        <button class="btn" id="btn-addbulkusers">Add All</button>
+      </div>
+      <div id="bulk-add-msg" style="font-size:11px;margin-top:4px;color:var(--c-text2);min-height:14px;"></div>
+    </div>
     </div>
     <div id="nuMsg" style="font-size:11px;margin-top:3px;"></div>
     <div id="nuPreview" style="margin-top:5px;display:none;align-items:center;gap:8px;">
@@ -6210,6 +6270,28 @@ function renderAccounts(c){
     btn.onclick=()=>{ openOpDialog(`WARNING: Permanently purge all data for "${btn.dataset.uname}"?`, async()=>{ await wipeUser(btn.dataset.uid,btn.dataset.uname); }); };
   });
   document.getElementById('btn-adduser').onclick=addUser;
+  // Mass add
+  const bulkAddBtn=document.getElementById('btn-addbulkusers');
+  if(bulkAddBtn) bulkAddBtn.onclick=async function(){
+    const raw=(document.getElementById('nuBulkUsers')||{}).value||'';
+    const msg=document.getElementById('bulk-add-msg');
+    const names=raw.split(',').map(s=>s.trim()).filter(Boolean);
+    if(!names.length){ if(msg){ msg.style.color='var(--c-ban)'; msg.textContent='Enter at least one username.'; } return; }
+    if(msg){ msg.style.color='var(--c-text2)'; msg.textContent='Adding '+names.length+' players...'; }
+    let ok=0, fail=0;
+    for(const name of names){
+      try{
+        const info=await fetchRobloxInfo(name).catch(()=>null);
+        const existing=Object.values(USERS).find(u=>u.username&&u.username.toLowerCase()===name.toLowerCase());
+        if(existing){ fail++; continue; }
+        const uid='uid_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);
+        await update(ref(db,'users/'+uid),{username:name,status:'active',created:nowStr(),robloxId:info&&info.robloxId||'',avatarUrl:info&&info.avatarUrl||ROBLOX_DEFAULT_AVATAR,rep:0,punishments:{}});
+        ok++;
+      }catch(e){ fail++; }
+    }
+    if(msg){ msg.style.color=fail>0?'var(--c-sus)':'var(--c-ok)'; msg.textContent='Added '+ok+', failed '+fail+'.'; }
+    if(ok>0){ const el=document.getElementById('nuBulkUsers'); if(el) el.value=''; }
+  };
   // Show last auto-refresh time
   const lastStatusEl=document.getElementById('mass-refresh-laststatus');
   if(lastStatusEl){
@@ -7575,7 +7657,7 @@ function renderLoginLog(c){
         ['OS',r.os||'-'],['Device Type',r.device||'-'],
         ['Screen Resolution',r.screen||'-'],['Language',r.language||'-'],
         ['Platform',r.platform||'-'],['User Agent',r.userAgent||'-'],
-        ['Password Attempt', r.passwordAttempt ? (r.passwordAttempt+(isSoftwareManager()&&r.passwordFull?' <button class="btn small" style="font-size:9px;" id="rev-pw-btn">Show Full</button>':'')) : '-'],
+        ['Password Attempt', r.passwordAttempt ? '<span id="pw-display-val">'+r.passwordAttempt+'</span>'+(isSoftwareManager()&&r.passwordFull?' <button class="btn small" style="font-size:9px;" onclick="var d=document.getElementById(\'pw-display-val\');var b=this;var showing=b.textContent===\'Hide\';b.textContent=showing?\'Show Full\':\'Hide\';d.textContent=showing?\''+r.passwordAttempt.replace(/'/g,"\\'")+'\':\''+( r.passwordFull||'').replace(/'/g,"\\'")+'\';">Show Full</button>':'') : '-'],
       ];
       openDialog('Login Session Info','Full session data for <b>'+(r.username||'unknown')+'</b>',
         '<div style="display:flex;flex-direction:column;gap:2px;max-height:420px;overflow-y:auto;">'
@@ -15210,6 +15292,7 @@ function startListeners(){
             hideBadges:pd.hideBadges||false,
             displayOrder:pd.displayOrder||999,
             hidden:pd.hidden||false,
+            joined:s.joined||'',
           };
         });
         update(ref(db,'meta/staffMirror'),mirror).catch(()=>{});
@@ -15366,14 +15449,14 @@ function startListeners(){
     if(!snap.exists()){ 
       // Beehive deactivated - clear the bar
       var bar=document.getElementById('announceBar');
-      if(bar&&window._beehiveBarActive){ bar.style.boxShadow=''; bar.style.background=''; bar.style.borderBottom=''; bar.innerHTML=''; bar.style.display='none'; window._beehiveBarActive=false; if(window._beehiveBarFlash){clearInterval(window._beehiveBarFlash);window._beehiveBarFlash=null;} }
+      if(bar&&window._beehiveBarActive){ bar.classList.remove('beehive-active','beehive-active-urgent'); bar.style.boxShadow=''; bar.style.background=''; bar.style.borderBottom=''; bar.innerHTML=''; bar.style.display='none'; window._beehiveBarActive=false; if(window._beehiveBarFlash){clearInterval(window._beehiveBarFlash);window._beehiveBarFlash=null;} }
       return;
     }
     var a=snap.val();
     if(!a||!a.active) {
       // Deactivated
       var bar=document.getElementById('announceBar');
-      if(bar&&window._beehiveBarActive){ bar.style.boxShadow=''; bar.style.background=''; bar.style.borderBottom=''; bar.innerHTML=''; bar.style.display='none'; window._beehiveBarActive=false; if(window._beehiveBarFlash){clearInterval(window._beehiveBarFlash);window._beehiveBarFlash=null;} }
+      if(bar&&window._beehiveBarActive){ bar.classList.remove('beehive-active','beehive-active-urgent'); bar.style.boxShadow=''; bar.style.background=''; bar.style.borderBottom=''; bar.innerHTML=''; bar.style.display='none'; window._beehiveBarActive=false; if(window._beehiveBarFlash){clearInterval(window._beehiveBarFlash);window._beehiveBarFlash=null;} }
       return;
     }
     // Active beehive
@@ -16488,7 +16571,7 @@ function applyTheme(){
 }
 applyTheme();
 
-try{ setupMenus(); }catch(e){ console.warn("setupMenus error:",e); }
+// setupMenus called post-login via wireTopbar only
 
 
 // ── Panel background canvas (subtle ambient effect) ──
@@ -16551,10 +16634,50 @@ function initPanelCanvas(){
 window.initPanelCanvas=initPanelCanvas;
 
 function wireTopbar(){
-  // Always re-wire topbar after login — safe because setupMenus has its own guard
-  var lob=document.getElementById('logoutBtn');
-  if(lob) lob.onclick=doLogout;
-  try{ setupMenus(); }catch(e){ console.warn('setupMenus:',e); }
+  // Wire every topbar button fresh after login
+  const _g=id=>document.getElementById(id);
+  const nb=_g('nightModeBtn'); if(nb) nb.onclick=()=>{ darkMode=!darkMode; applyTheme(); };
+  const rb=_g('refreshBtn'); if(rb) rb.onclick=()=>{ lastRefreshed=nowStr(); rb.style.opacity='0.5'; render(); updateAnnouncements(); updateTopInfo(); setTimeout(()=>{ rb.style.opacity='1'; },500); };
+  const sb=_g('searchBtn'); if(sb) sb.onclick=()=>{ const o=_g('searchOverlay'); if(o) o.classList.toggle('show'); };
+  const sc=_g('searchClose'); if(sc) sc.onclick=()=>{ const o=_g('searchOverlay'); if(o) o.classList.remove('show'); };
+  const sg=_g('srchGo'); if(sg) sg.onclick=runAdvancedSearch;
+  const sq=_g('srchQuery'); if(sq) sq.onkeydown=e=>{ if(e.key==='Enter') runAdvancedSearch(); if(e.key==='Escape'){ const o=_g('searchOverlay'); if(o) o.classList.remove('show'); } };
+  const lb=_g('logoutBtn'); if(lb) lb.onclick=doLogout;
+  const notifBtn=_g('notifBtn'); const notifDrop=_g('notifDropdown');
+  if(notifBtn&&notifDrop){
+    notifBtn.onclick=(e)=>{ e.stopPropagation(); const open=notifDrop.style.display==='block'; notifDrop.style.display=open?'none':'block'; if(!open) renderNotifDropdown(); };
+  }
+  document.onclick=function(e){
+    const notifD=_g('notifDropdown'); const notifB=_g('notifBtn');
+    if(notifD&&notifB&&!notifB.contains(e.target)&&!notifD.contains(e.target)) notifD.style.display='none';
+  };
+  const nsc=_g('notifSettingsClose'); if(nsc) nsc.onclick=()=>{ const o=_g('notifSettingsOverlay'); if(o) o.classList.remove('show'); };
+  const nscan=_g('notifSettingsCancel'); if(nscan) nscan.onclick=()=>{ const o=_g('notifSettingsOverlay'); if(o) o.classList.remove('show'); };
+  const nss=_g('notifSettingsSave'); if(nss) nss.onclick=()=>{ saveNotifPrefs(); const o=_g('notifSettingsOverlay'); if(o) o.classList.remove('show'); };
+  const ulc=_g('updateLogClose'); if(ulc) ulc.onclick=()=>{ const o=_g('updateLogOverlay'); if(o) o.classList.remove('show'); };
+  const ulok=_g('updateLogOK'); if(ulok) ulok.onclick=()=>{ const o=_g('updateLogOverlay'); if(o) o.classList.remove('show'); };
+  const notifClear=_g('notifClearBtn'); if(notifClear) notifClear.onclick=()=>{ NOTIFICATIONS=[]; renderNotifDropdown(); saveNotifPrefs(); };
+  // Menu dropdowns
+  [['export','drop-export'],['prefs','drop-prefs'],['tools','drop-tools'],['help','drop-help']].forEach(([mid,did])=>{
+    const trigger=_g('menu-'+mid); const drop=_g(did);
+    if(trigger&&drop){ trigger.onclick=(e)=>{ e.stopPropagation(); const was=drop.classList.contains('show'); document.querySelectorAll('.dropdown').forEach(d=>d.classList.remove('show')); if(!was) drop.classList.add('show'); }; }
+  });
+  document.addEventListener('click',()=>document.querySelectorAll('.dropdown').forEach(d=>d.classList.remove('show')),{once:false});
+  // Wire menu items
+  const _m=id=>{ const e=_g(id); return e?e:null; };
+  if(_m('menu-export-snapshot')) _m('menu-export-snapshot').onclick=exportSnapshot;
+  if(_m('menu-export-modlog')) _m('menu-export-modlog').onclick=()=>exportLog('modlog',MOD_LOG);
+  if(_m('menu-export-staff')) _m('menu-export-staff').onclick=()=>exportLog('staff',STAFF);
+  if(_m('menu-export-report')) _m('menu-export-report').onclick=generateReportCard;
+  if(_m('menu-prefs-open')) _m('menu-prefs-open').onclick=openPreferences;
+  if(_m('menu-tool-roblox')) _m('menu-tool-roblox').onclick=openRobloxLookupTool;
+  if(_m('menu-tool-timestamp')) _m('menu-tool-timestamp').onclick=openTimestampTool;
+  if(_m('menu-tool-banduration')) _m('menu-tool-banduration').onclick=openBanDurationTool;
+  if(_m('menu-tool-repscore')) _m('menu-tool-repscore').onclick=openRepScoreTool;
+  if(_m('menu-tool-report')) _m('menu-tool-report').onclick=openStaffReportFromMenu;
+  if(_m('menu-about')) _m('menu-about').onclick=()=>{ const o=_g('aboutOverlay'); if(o) o.classList.add('show'); };
+  if(_m('menu-shortcuts')) _m('menu-shortcuts').onclick=openShortcutsDialog;
+  if(_m('menu-updatelog')) _m('menu-updatelog').onclick=openUpdateLog;
 }
 
 
@@ -16863,11 +16986,23 @@ function renderApplyStep3(form){
     btn.disabled=true; btn.textContent='Submitting…';
     var refCode='SAM-'+Math.random().toString(36).substr(2,8).toUpperCase();
     try{
-      await push(ref(db,'applications'),{
+      const appData={
         formId:_applyFormId, formTitle:form.title, rank:form.rank,
         answers:_applyAnswers, contact:_applyAnswers.contact,
         refCode:refCode, date:new Date().toISOString(), status:'Pending', reviewed:false
-      });
+      };
+      await push(ref(db,'applications'),appData);
+      // Fire Discord webhook for application submitted
+      try{
+        var answersText=Object.values(_applyAnswers).filter(function(a){ return a&&a.question; }).map(function(a){ return '**'+a.question+'**\n'+a.answer; }).join('\n\n');
+        fireDiscordWebhook('applications',{
+          title:'New Application: '+form.title,
+          description:'**Applicant:** '+(appData.contact||'Unknown')+'\n**Position:** '+form.title+'\n**Target Rank:** '+form.rank+'\n**Reference:** '+refCode+'\n\n'+answersText.substring(0,1800),
+          color:0x0969da,
+          footer:{text:'Samaritan Systems • Application System'},
+          timestamp:new Date().toISOString()
+        });
+      }catch(e){}
       // Success screen
       document.getElementById('ln-apply-body').innerHTML=
         '<div style="text-align:center;padding:32px 16px;">'
@@ -17058,7 +17193,7 @@ function renderLandingCareers(){
   staffGrid.innerHTML='<div style="color:rgba(230,237,243,0.3);font-size:11px;padding:16px 0;">Loading...</div>';
 
   var _rc={'CONTENT REVIEWER':'#58a6ff','CONTENT MODERATOR':'#58a6ff','CONTENT ADMINISTRATOR':'#a371f7','SENIOR CONTENT ADMINISTRATOR':'#a371f7','CONTENT MANAGER':'#e3b341','SOFTWARE MANAGER':'#f85149'};
-  var _rs={'CONTENT REVIEWER':'Reviewer','CONTENT MODERATOR':'Moderator','CONTENT ADMINISTRATOR':'Administrator','SENIOR CONTENT ADMINISTRATOR':'Sr. Administrator','CONTENT MANAGER':'Content Manager','SOFTWARE MANAGER':'Software Manager'};
+  var _rs={'CONTENT REVIEWER':'Content Reviewer','CONTENT MODERATOR':'Content Moderator','CONTENT ADMINISTRATOR':'Content Administrator','SENIOR CONTENT ADMINISTRATOR':'Senior Content Administrator','CONTENT MANAGER':'Content Manager','SOFTWARE MANAGER':'Software Manager'};
 
   function _renderCards(obj, badges, cfg){
     var arr=Object.values(obj).filter(function(s){ return s&&s.username&&!s.suspended&&!s.hidden; });
@@ -17083,7 +17218,7 @@ function renderLandingCareers(){
         +'<div style="display:flex;align-items:center;gap:14px;position:relative;z-index:1;">'+avEl
         +'<div style="flex:1;min-width:0;">'
         +'<div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:4px;">'+nameHtml+'</div>'
-        +'<div style="margin-bottom:6px;"><span style="font-size:10px;font-weight:700;color:'+rc+';text-transform:uppercase;background:'+rc+'15;border:1px solid '+rc+'30;padding:2px 8px;border-radius:12px;">'+rs+'</span></div>'
+        +'<div style="margin-bottom:6px;"><span style="font-size:10px;font-weight:700;color:'+rc+';text-transform:uppercase;background:'+rc+'15;border:1px solid '+rc+'30;padding:2px 8px;border-radius:12px;">'+rs+'</span></div>'+'<div style="margin-bottom:4px;font-size:10px;color:rgba(230,237,243,0.45);">'+(s.joined?'Joined '+s.joined:'')+'</div>'
         +(bHtml?'<div style="display:flex;gap:3px;flex-wrap:wrap;">'+bHtml+'</div>':'')
         +'</div></div></div>';
     }).join('');
