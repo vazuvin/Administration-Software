@@ -3572,59 +3572,125 @@ function openLandingStaffPanel(container){
 function openStaffCardEditor(sid, parentOverlay, onSave){
   var s=STAFF[sid]; if(!s) return;
   var pd=s.publicDisplay||{};
+  var rankColors={'CONTENT REVIEWER':'#58a6ff','CONTENT MODERATOR':'#58a6ff','CONTENT ADMINISTRATOR':'#a371f7','SENIOR CONTENT ADMINISTRATOR':'#a371f7','CONTENT MANAGER':'#e3b341','SOFTWARE MANAGER':'#f85149'};
+  var rankShort={'CONTENT REVIEWER':'Reviewer','CONTENT MODERATOR':'Moderator','CONTENT ADMINISTRATOR':'Administrator','SENIOR CONTENT ADMINISTRATOR':'Sr. Administrator','CONTENT MANAGER':'Content Manager','SOFTWARE MANAGER':'Software Manager'};
+  var rc=rankColors[s.level]||'#58a6ff';
+  var shortRank=rankShort[s.level]||s.level||'Unknown';
+  var initials=(s.username||'?').charAt(0).toUpperCase();
+
   var editor=document.createElement('div');
-  editor.style.cssText='position:absolute;inset:0;background:var(--bg-sbox);z-index:10;display:flex;flex-direction:column;overflow:hidden;border-radius:10px;';
-  editor.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--c-border);flex-shrink:0;">'
-    +'<button id="sce-back" style="background:none;border:1px solid var(--c-border);color:var(--c-text2);font-size:12px;cursor:pointer;padding:4px 10px;border-radius:5px;">← Back</button>'
-    +'<div style="font-size:13px;font-weight:700;color:var(--c-text);">Editing: '+s.username+'</div>'
+  editor.style.cssText='position:absolute;inset:0;background:var(--bg-page);z-index:10;display:flex;flex-direction:column;overflow:hidden;border-radius:10px;';
+
+  // Build badge HTML for preview
+  function buildBadgeHtml(hideBadges){
+    if(hideBadges||!s.customBadges||!CUSTOM_BADGES.length) return '';
+    return CUSTOM_BADGES.filter(function(b){ return (b.usage||'both')!=='players'&&s.customBadges[b.key]; })
+      .map(function(b){ return '<span style="font-size:9px;font-weight:700;padding:2px 5px;border:1px solid '+(b.borderColor||'#808080')+';background:'+(b.bgColor||'#333')+';color:'+(b.textColor||'#fff')+';border-radius:3px;letter-spacing:0.3px;">'+b.label+'</span>'; }).join(' ');
+  }
+
+  function renderPreview(showRoblox, robloxUser, hideBadges){
+    var nameLine='<span style="font-size:14px;font-weight:700;color:#e6edf3;">'+s.username+'</span>';
+    if(showRoblox&&robloxUser){
+      nameLine+=' <span style="font-size:11px;color:rgba(230,237,243,0.4);">—</span> <span style="font-size:11px;color:'+rc+';font-weight:500;">'+robloxUser+'</span>';
+    }
+    var bHtml=buildBadgeHtml(hideBadges);
+    return (s.avatarUrl
+      ?'<img src="'+s.avatarUrl+'" width="64" height="64" style="border-radius:50%;object-fit:cover;border:2px solid '+rc+';flex-shrink:0;">'
+      :'<div style="width:64px;height:64px;border-radius:50%;background:'+rc+'20;border:2px solid '+rc+'40;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:'+rc+';flex-shrink:0;">'+initials+'</div>')
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:6px;">'+nameLine+'</div>'
+      +'<div style="margin-bottom:6px;"><span style="font-size:10px;font-weight:700;color:'+rc+';letter-spacing:0.5px;text-transform:uppercase;background:'+rc+'15;border:1px solid '+rc+'30;padding:2px 10px;border-radius:12px;">'+shortRank+'</span></div>'
+      +(bHtml?'<div style="display:flex;gap:3px;flex-wrap:wrap;">'+bHtml+'</div>':'')
+      +'</div>';
+  }
+
+  var robloxVal=pd.robloxDisplayName||s.avatarUser||'';
+  editor.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--c-border);flex-shrink:0;background:var(--bg-sbox);">'
+    +'<button id="sce-back" style="background:none;border:1px solid var(--c-border);color:var(--c-text2);font-size:12px;cursor:pointer;padding:4px 12px;border-radius:6px;">← Back</button>'
+    +'<div style="font-size:13px;font-weight:700;color:var(--c-text);">Editing: <span style="color:'+rc+';">'+s.username+'</span></div>'
+    +'<div style="margin-left:auto;">'+levelBadge(s.level)+'</div>'
     +'</div>'
-    +'<div style="flex:1;overflow-y:auto;padding:18px;">'
-    // Preview
-    +'<div style="font-size:11px;font-weight:700;color:var(--c-text);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Preview</div>'
-    +'<div id="sce-preview" style="background:rgba(13,17,23,0.88);border:1px solid var(--c-border);border-radius:10px;padding:16px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;">'
-    +(s.avatarUrl?'<img src="'+s.avatarUrl+'" width="56" height="56" style="border-radius:50%;object-fit:cover;border:2px solid rgba(88,166,255,0.3);flex-shrink:0;">'
-      :'<div style="width:56px;height:56px;border-radius:50%;background:rgba(88,166,255,0.15);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#58a6ff;flex-shrink:0;">'+s.username.charAt(0).toUpperCase()+'</div>')
-    +'<div id="sce-preview-text" style="flex:1;"><b>'+s.username+'</b></div>'
+    +'<div style="flex:1;overflow-y:auto;padding:20px;background:var(--bg-page);">'
+    // Live preview
+    +'<div style="font-size:10px;font-weight:700;color:var(--c-text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Live Preview</div>'
+    +'<div id="sce-preview-card" style="background:rgba(13,17,23,0.95);border:1px solid '+rc+'40;border-radius:14px;padding:18px 20px;margin-bottom:20px;display:flex;align-items:center;gap:14px;box-shadow:0 0 20px '+rc+'15;">'
+    +renderPreview(pd.showRobloxUser, robloxVal, pd.hideBadges)
     +'</div>'
-    // Options
-    +'<div style="font-size:11px;font-weight:700;color:var(--c-text);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">Display Settings</div>'
-    +'<div style="display:flex;flex-direction:column;gap:8px;">'
-    +'<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--c-text);cursor:pointer;">'
+
+    // Settings in a clean grid
+    +'<div style="font-size:10px;font-weight:700;color:var(--c-text2);margin-bottom:12px;text-transform:uppercase;letter-spacing:1px;">Display Settings</div>'
+    +'<div style="display:flex;flex-direction:column;gap:10px;">'
+
+    // Roblox username field
+    +'<div style="background:var(--bg-sbox);border:1px solid var(--c-border);border-radius:8px;padding:12px 14px;">'
+    +'<div style="font-size:11px;font-weight:600;color:var(--c-text);margin-bottom:4px;">Roblox Username</div>'
+    +'<div style="font-size:11px;color:var(--c-text2);margin-bottom:8px;">Set the Roblox username shown next to their staff name. Optional.</div>'
+    +'<div style="display:flex;gap:6px;align-items:center;">'
+    +'<input type="text" id="sce-roblox-name" style="flex:1;" value="'+robloxVal+'" placeholder="e.g. rpatoff (optional)"/>'
+    +'<label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--c-text);cursor:pointer;white-space:nowrap;">'
+    +'<input type="checkbox" id="sce-show-roblox" '+(pd.showRobloxUser?'checked':'')+' style="width:13px;height:13px;"/> Show it</label>'
+    +'</div></div>'
+
+    // Visibility
+    +'<div style="background:var(--bg-sbox);border:1px solid var(--c-border);border-radius:8px;padding:12px 14px;">'
+    +'<div style="font-size:11px;font-weight:600;color:var(--c-text);margin-bottom:8px;">Visibility & Badges</div>'
+    +'<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--c-text);cursor:pointer;margin-bottom:7px;">'
     +'<input type="checkbox" id="sce-hidden" '+(pd.hidden?'checked':'')+' style="width:14px;height:14px;"/>'
-    +'<span>Hide from public staff directory</span></label>'
-    +'<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--c-text);cursor:pointer;">'
-    +'<input type="checkbox" id="sce-show-roblox" '+(pd.showRobloxUser?'checked':'')+' style="width:14px;height:14px;"/>'
-    +'<span>Show Roblox username ('+(s.avatarUser||'not set')+')</span></label>'
+    +'<span>Hide this staff member from the public directory</span></label>'
     +'<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--c-text);cursor:pointer;">'
     +'<input type="checkbox" id="sce-hide-badges" '+(pd.hideBadges?'checked':'')+' style="width:14px;height:14px;"/>'
-    +'<span>Hide badges on public card</span></label>'
-    +'<div style="display:flex;align-items:center;gap:8px;">'
-    +'<label style="font-size:12px;color:var(--c-text);">Display order (lower = higher):</label>'
-    +'<input type="number" id="sce-order" value="'+(pd.displayOrder||999)+'" min="1" max="999" style="width:60px;"/>'
+    +'<span>Hide badges on their public card</span></label>'
+    +'</div>'
+
+    // Display order
+    +'<div style="background:var(--bg-sbox);border:1px solid var(--c-border);border-radius:8px;padding:12px 14px;">'
+    +'<div style="font-size:11px;font-weight:600;color:var(--c-text);margin-bottom:4px;">Display Order</div>'
+    +'<div style="font-size:11px;color:var(--c-text2);margin-bottom:8px;">Within the same rank, lower number = appears first.</div>'
+    +'<input type="number" id="sce-order" value="'+(pd.displayOrder||999)+'" min="1" max="999" style="width:80px;"/>'
     +'</div>'
     +'</div>'
-    +'<div style="margin-top:14px;display:flex;gap:8px;">'
-    +'<button class="btn" id="sce-save" style="flex:1;">Save</button>'
-    +'</div>'
-    +'<div id="sce-msg" style="font-size:11px;margin-top:6px;color:var(--c-ok);min-height:14px;"></div>'
+
+    +'<button class="btn" id="sce-save" style="width:100%;margin-top:16px;padding:10px;font-size:13px;font-weight:700;">Save Changes</button>'
+    +'<div id="sce-msg" style="font-size:11px;margin-top:8px;color:var(--c-ok);min-height:14px;text-align:center;"></div>'
     +'</div>';
 
   var parentPanel=parentOverlay.querySelector('div');
   parentPanel.style.position='relative';
   parentPanel.appendChild(editor);
 
+  // Live preview update on input change
+  function updatePreview(){
+    var showRoblox=document.getElementById('sce-show-roblox').checked;
+    var robloxUser=document.getElementById('sce-roblox-name').value.trim();
+    var hideBadges=document.getElementById('sce-hide-badges').checked;
+    var card=document.getElementById('sce-preview-card');
+    if(card) card.innerHTML=renderPreview(showRoblox, robloxUser, hideBadges);
+  }
+  ['sce-show-roblox','sce-hide-badges'].forEach(function(id){
+    var el=editor.querySelector('#'+id); if(el) el.onchange=updatePreview;
+  });
+  var robloxInput=editor.querySelector('#sce-roblox-name');
+  if(robloxInput) robloxInput.oninput=updatePreview;
+
   editor.querySelector('#sce-back').onclick=function(){ editor.remove(); };
   editor.querySelector('#sce-save').onclick=async function(){
+    var robloxName=(editor.querySelector('#sce-roblox-name')||{}).value||'';
     var newPD={
-      hidden:document.getElementById('sce-hidden').checked,
-      showRobloxUser:document.getElementById('sce-show-roblox').checked,
-      hideBadges:document.getElementById('sce-hide-badges').checked,
-      displayOrder:parseInt(document.getElementById('sce-order').value)||999,
+      hidden:editor.querySelector('#sce-hidden').checked,
+      showRobloxUser:editor.querySelector('#sce-show-roblox').checked,
+      hideBadges:editor.querySelector('#sce-hide-badges').checked,
+      displayOrder:parseInt((editor.querySelector('#sce-order')||{}).value)||999,
+      robloxDisplayName:robloxName.trim(),
     };
-    await update(ref(db,'staff/'+sid+'/publicDisplay'),newPD);
-    if(STAFF[sid]) STAFF[sid].publicDisplay=newPD;
+    // Also update avatarUser on the staff record if roblox name was set
+    var staffPDPath='staff/'+sid+'/publicDisplay';
+    var updates={};
+    updates[staffPDPath]=newPD;
+    if(robloxName.trim()){ var auPath='staff/'+sid+'/avatarUser'; updates[auPath]=robloxName.trim(); }
+    await update(ref(db,'/'),updates);
+    if(STAFF[sid]){ STAFF[sid].publicDisplay=newPD; if(robloxName.trim()) STAFF[sid].avatarUser=robloxName.trim(); }
     auditLog('Staff Public Display Updated',s.username+' by '+ME);
-    var msg=document.getElementById('sce-msg');
+    var msg=editor.querySelector('#sce-msg');
     if(msg){ msg.textContent='Saved!'; setTimeout(function(){ editor.remove(); if(onSave) onSave(); },800); }
   };
 }
@@ -6504,6 +6570,23 @@ function renderStaff(c){
         <div style="font-size:11px;margin:3px 0 2px;color:var(--c-text);">Notes:</div>
         <textarea id="snTA" style="width:100%;height:40px;box-sizing:border-box;">${s.notes||''}</textarea>
         <button class="btn" id="btn-savestaffnote" style="margin-top:2px;width:100%;">Save Note</button>
+        ${(()=>{
+          const staffBadgesAvail=CUSTOM_BADGES.filter(cb=>(cb.usage||'both')!=='players'&&(isSoftwareManager()||rankOf(MY_LEVEL)>=rankOf(cb.assignLevel||'CONTENT MODERATOR')));
+          if(!staffBadgesAvail.length) return '';
+          return '<div style="font-size:11px;margin:8px 0 4px;color:var(--c-text);font-weight:600;">Badges:</div>'
+            +'<div style="display:flex;flex-direction:column;gap:3px;">'
+            +staffBadgesAvail.map(cb=>{
+              const has=s.customBadges&&s.customBadges[cb.key];
+              return '<label style="display:flex;align-items:center;gap:5px;cursor:pointer;">'
+                +'<input type="checkbox" class="staff-badge-toggle" data-key="'+cb.key+'" '+(has?'checked':'')+' style="width:12px;height:12px;"/>'
+                +'<span style="font-size:9px;font-weight:bold;padding:1px 4px;border:1px solid '+(cb.borderColor||'#808080')+';background:'+(cb.bgColor||'#333')+';color:'+(cb.textColor||'#fff')+';border-radius:2px;">'+cb.label+'</span>'
+                +'<span style="font-size:10px;color:var(--c-text2);">'+cb.desc+'</span>'
+                +'</label>';
+            }).join('')
+            +'</div>'
+            +'<button class="btn" id="btn-save-staff-badges" style="width:100%;margin-top:4px;font-size:11px;">Save Badges</button>'
+            +'<div id="staff-badge-msg" style="font-size:10px;color:var(--c-ok);min-height:12px;"></div>';
+        })()}
         <div style="font-size:11px;margin:5px 0 2px;color:var(--c-text);">Avatar (Roblox username):</div>
         <div style="display:flex;gap:3px;">
           <input type="text" id="saInput" style="flex:1;min-width:0;" placeholder="Roblox username" value="${s.avatarRobloxUser||''}"/>
@@ -15850,6 +15933,8 @@ function renderBadgeMgmt(c){
       openDialog(`Edit Badge - ${b.label}`,'',`
         <div style="margin-bottom:4px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;font-weight:bold;">Label:</label>
           <input type="text" id="eb-label" style="width:100%;" value="${b.label}" maxlength="10"/></div>
+        <div style="margin-bottom:4px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;font-weight:bold;">Usage:</label>
+          <select id="eb-usage" style="width:100%;"><option value="players" ${(b.usage||'both')==='players'?'selected':''}>Players only</option><option value="staff" ${(b.usage||'both')==='staff'?'selected':''}>Staff only</option><option value="both" ${(b.usage||'both')==='both'?'selected':''}>Players &amp; Staff</option></select></div>
         <div style="margin-bottom:4px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;font-weight:bold;">Min. Level to Assign:</label>
           <select id="eb-level" style="width:100%;">${LEVEL_OPTIONS.map(l=>`<option value="${l}" ${b.assignLevel===l?'selected':''}>${l}</option>`).join('')}</select></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -15866,6 +15951,7 @@ function renderBadgeMgmt(c){
           const newBadges=[...CUSTOM_BADGES];
           newBadges[idx]={...b,
             label:(document.getElementById('eb-label').value.trim().toUpperCase()||b.label),
+            usage:(document.getElementById('eb-usage')||{value:'both'}).value||'both',
             assignLevel:document.getElementById('eb-level').value,
             bgColor:document.getElementById('eb-bg').value.trim(),
             textColor:document.getElementById('eb-text').value.trim(),
