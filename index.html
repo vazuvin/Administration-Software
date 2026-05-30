@@ -6694,6 +6694,18 @@ function renderStaff(c){
     document.querySelectorAll('.view-staff-btn').forEach(btn=>{btn.onclick=()=>{ currentStaffId=btn.dataset.sid; nav('staff'); };});
     document.getElementById('btn-addstaff').onclick=addStaff;
   }
+  // Wire staff badge save
+  const _sbBtn=document.getElementById('btn-save-staff-badges');
+  if(_sbBtn) _sbBtn.onclick=async function(){
+    const checks=document.querySelectorAll('.staff-badge-toggle');
+    const cb={};
+    checks.forEach(function(el){ cb[el.dataset.key]=el.checked; });
+    await update(ref(db,'staff/'+currentStaffId),{customBadges:cb});
+    if(STAFF[currentStaffId]) STAFF[currentStaffId].customBadges=cb;
+    auditLog('Staff Badges Updated',(STAFF[currentStaffId]&&STAFF[currentStaffId].username)||currentStaffId);
+    const m2=document.getElementById('staff-badge-msg');
+    if(m2){ m2.style.color='var(--c-ok)'; m2.textContent='Saved!'; setTimeout(function(){ if(m2) m2.textContent=''; },1500); }
+  };
   if(canDo('canViewStaffProfile')){
     const sn=document.getElementById('btn-savestaffnote'); if(sn) sn.onclick=()=>saveStaffNote(currentStaffId);
     const nnBtn=document.getElementById('btn-savenickname');
@@ -7841,6 +7853,8 @@ function renderAlerts(c){
       await push(ref(db,'siteAlerts'),{message:msg,type,by:ME,date:nowStr(),active:true,expiresAt:expiryMins>0?Date.now()+expiryMins*60000:0,visibility:alertVis});
       auditLog('Site Alert Posted',`[${type}] ${msg.substring(0,50)}`);
       document.getElementById('newAlertMsg').value='';
+      // Refresh external strip if on landing page
+      if(typeof window.checkExternalStrip==='function') setTimeout(window.checkExternalStrip, 500);
       const el=document.getElementById('alertMsg');
       el.textContent='Alert posted!'; setTimeout(()=>{ if(el) el.textContent=''; },1500);
     };
@@ -16295,9 +16309,7 @@ function runAdvancedSearch(){
   },10);
 }
 
-var _setupMenusDone=false;
 function setupMenus(){
-  if(_setupMenusDone) return; _setupMenusDone=true;
   const menus=[['file','drop-file'],['view','drop-view'],['export','drop-export'],['prefs','drop-prefs'],['tools','drop-tools'],['help','drop-help']];
   menus.forEach(([name,dropId])=>{
     const trigger=document.getElementById('menu-'+name);
@@ -16542,7 +16554,6 @@ function wireTopbar(){
   // Always re-wire topbar after login — safe because setupMenus has its own guard
   var lob=document.getElementById('logoutBtn');
   if(lob) lob.onclick=doLogout;
-  _setupMenusDone=false; // reset so setupMenus re-wires properly after login
   try{ setupMenus(); }catch(e){ console.warn('setupMenus:',e); }
 }
 
@@ -16591,6 +16602,11 @@ function showLanding(){
 function hideLanding(){
   var el=document.getElementById('landingScreen');
   if(el) el.style.display='none';
+  // Stop the landing canvas so it doesn't render over admin screen
+  if(window._lnAnimId){ cancelAnimationFrame(window._lnAnimId); window._lnAnimId=null; }
+  // Clear the canvas
+  var cv=document.getElementById('ln-hero-canvas');
+  if(cv){ var ctx=cv.getContext('2d'); ctx.clearRect(0,0,cv.width,cv.height); }
 }
 window.showLanding=showLanding;
 window.hideLanding=hideLanding;
@@ -17036,21 +17052,70 @@ function renderLandingCareers(){
     }
   });
 
-  // Staff directory
+  // Staff directory - fetch from meta/staffMirror via anonymous auth
   var staffGrid=document.getElementById('ln-staff-grid');
   if(!staffGrid) return;
-  var staffArr=Object.entries(STAFF||{}).filter(function(e){ return e[1]&&e[1].username; });
-  staffArr.sort(function(a,b){ return (LEVEL_RANK[b[1].level]||0)-(LEVEL_RANK[a[1].level]||0); });
-  if(!staffArr.length){ staffGrid.innerHTML='<div style="color:rgba(230,237,243,0.4);font-size:12px;">No staff to display.</div>'; return; }
-  staffGrid.innerHTML=staffArr.map(function(e){
-    var s=e[1];
-    // Don't show suspended or software managers if configured to hide
-    var avatar=s.avatarUrl?'<img src="'+s.avatarUrl+'" class="ln-staff-avatar" onerror="this.style.display=\'none\'">':'<div class="ln-staff-avatar-placeholder">'+s.username.charAt(0).toUpperCase()+'</div>';
-    var rankLabel=s.level||'';
-    // Shorten rank for card
-    var shortRank=rankLabel.replace('CONTENT ','').replace('SENIOR ','SR. ');
-    return '<div class="ln-staff-card">'+avatar+'<div class="ln-staff-name">'+s.username+'</div><div class="ln-staff-rank">'+shortRank+'</div></div>';
-  }).join('');
+  staffGrid.innerHTML='<div style="color:rgba(230,237,243,0.3);font-size:11px;padding:16px 0;">Loading...</div>';
+
+  var _rc={'CONTENT REVIEWER':'#58a6ff','CONTENT MODERATOR':'#58a6ff','CONTENT ADMINISTRATOR':'#a371f7','SENIOR CONTENT ADMINISTRATOR':'#a371f7','CONTENT MANAGER':'#e3b341','SOFTWARE MANAGER':'#f85149'};
+  var _rs={'CONTENT REVIEWER':'Reviewer','CONTENT MODERATOR':'Moderator','CONTENT ADMINISTRATOR':'Administrator','SENIOR CONTENT ADMINISTRATOR':'Sr. Administrator','CONTENT MANAGER':'Content Manager','SOFTWARE MANAGER':'Software Manager'};
+
+  function _renderCards(obj, badges, cfg){
+    var arr=Object.values(obj).filter(function(s){ return s&&s.username&&!s.suspended&&!s.hidden; });
+    if(cfg&&cfg.hideSMFromDir) arr=arr.filter(function(s){ return s.level!=='SOFTWARE MANAGER'; });
+    arr.sort(function(a,b){ return (LEVEL_RANK[b.level]||0)-(LEVEL_RANK[a.level]||0)||(a.displayOrder||999)-(b.displayOrder||999); });
+    if(!arr.length){ staffGrid.innerHTML='<div style="color:rgba(230,237,243,0.3);font-size:11px;padding:16px 0;">No staff to display.</div>'; return; }
+    staffGrid.innerHTML=arr.map(function(s){
+      var rc=_rc[s.level]||'#58a6ff';
+      var rs=_rs[s.level]||s.level||'';
+      var bHtml='';
+      if(!s.hideBadges&&s.customBadges&&badges&&badges.length){
+        bHtml=badges.filter(function(b){ return (b.usage||'both')!=='players'&&s.customBadges[b.key]; }).map(function(b){
+          return '<span style="font-size:9px;font-weight:700;padding:2px 5px;border:1px solid '+(b.borderColor||'#808080')+';background:'+(b.bgColor||'#333')+';color:'+(b.textColor||'#fff')+';border-radius:3px;">'+b.label+'</span>';
+        }).join('');
+      }
+      var nameHtml='<span style="font-size:13px;font-weight:700;color:#e6edf3;">'+s.username+'</span>';
+      if(s.showRobloxUser&&s.robloxDisplayName) nameHtml+=' <span style="font-size:11px;color:rgba(230,237,243,0.4);">—</span> <span style="font-size:11px;color:'+rc+';font-weight:500;">'+s.robloxDisplayName+'</span>';
+      var init=s.username.charAt(0).toUpperCase();
+      var avEl=s.avatarUrl?'<img src="'+s.avatarUrl+'" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid '+rc+'30;flex-shrink:0;">'
+        :'<div style="width:64px;height:64px;border-radius:50%;background:'+rc+'20;border:2px solid '+rc+'40;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:'+rc+';flex-shrink:0;">'+init+'</div>';
+      return '<div class="ln-staff-card-wide" style="--card-glow:'+rc+';">'
+        +'<div style="display:flex;align-items:center;gap:14px;position:relative;z-index:1;">'+avEl
+        +'<div style="flex:1;min-width:0;">'
+        +'<div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:4px;">'+nameHtml+'</div>'
+        +'<div style="margin-bottom:6px;"><span style="font-size:10px;font-weight:700;color:'+rc+';text-transform:uppercase;background:'+rc+'15;border:1px solid '+rc+'30;padding:2px 8px;border-radius:12px;">'+rs+'</span></div>'
+        +(bHtml?'<div style="display:flex;gap:3px;flex-wrap:wrap;">'+bHtml+'</div>':'')
+        +'</div></div></div>';
+    }).join('');
+  }
+
+  function _doStaffFetch(){
+    Promise.all([
+      get(ref(db,'meta/staffMirror')).catch(function(){ return null; }),
+      get(ref(db,'meta/customBadges')).catch(function(){ return null; }),
+      get(ref(db,'meta/landingConfig')).catch(function(){ return null; }),
+    ]).then(function(r){
+      var mirror=r[0],badges=r[1],cfg=r[2];
+      if(!mirror||!mirror.exists()){ staffGrid.innerHTML='<div style="color:rgba(230,237,243,0.3);font-size:11px;padding:16px 0;">No staff data yet. Log in to the panel to populate.</div>'; return; }
+      _renderCards(mirror.val()||{}, badges&&badges.exists()&&Array.isArray(badges.val())?badges.val():[], cfg&&cfg.exists()?cfg.val():{});
+    }).catch(function(err){
+      // Try anonymous sign-in and retry
+      import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js').then(function(m){
+        return m.signInAnonymously(auth);
+      }).then(function(){
+        return Promise.all([
+          get(ref(db,'meta/staffMirror')),
+          get(ref(db,'meta/customBadges')).catch(function(){ return null; }),
+          get(ref(db,'meta/landingConfig')).catch(function(){ return null; }),
+        ]);
+      }).then(function(r){
+        var mirror=r[0],badges=r[1],cfg=r[2];
+        if(!mirror||!mirror.exists()){ staffGrid.innerHTML='<div style="color:rgba(230,237,243,0.3);font-size:11px;padding:16px 0;">No staff data yet.</div>'; return; }
+        _renderCards(mirror.val()||{}, badges&&badges.exists()&&Array.isArray(badges.val())?badges.val():[], cfg&&cfg.exists()?cfg.val():{});
+      }).catch(function(){ staffGrid.innerHTML='<div style="color:rgba(230,237,243,0.3);font-size:11px;padding:16px 0;">Unable to load staff.</div>'; });
+    });
+  }
+  _doStaffFetch();
 }
 
 // ── Stats loader + counter animation ──
@@ -17214,7 +17279,8 @@ function startLandingCanvas(){
   var t=0;
   var STEP=50, COLS=Math.ceil(W/STEP)+2, ROWS=Math.ceil(H/STEP)+2;
   function draw(){
-    if(!document.getElementById('landingScreen')||document.getElementById('landingScreen').style.display==='none') return;
+    var _ls=document.getElementById('landingScreen');
+    if(!_ls||_ls.style.display==='none'||_ls.style.display==='') return;
     ctx.clearRect(0,0,W,H);
     // Orbs
     orbs.forEach(function(o,i){
@@ -17285,7 +17351,7 @@ showLanding();
 
 })();
 
-['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','warnlog','loginlog','auditlog','alerts','adminlog','home','messaging','requests','userconfig','siteconfig','suggestions','staffconfig','msganalyze','statuslog','badgemgmt','wipelog','robloxlog','cflog','customfieldlog','gamelogs','gameintegration','information','leakid','clearance','samaritan','samlog','evaluations','blacklist','people','moderation','logs','configuration','machine','calendar','discordconfig','staffreports','landingconfig','appsconfig'].forEach(p=>{
+['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','warnlog','loginlog','auditlog','alerts','adminlog','home','messaging','requests','userconfig','siteconfig','suggestions','staffconfig','msganalyze','statuslog','badgemgmt','wipelog','robloxlog','cflog','customfieldlog','information','leakid','clearance','samaritan','samlog','evaluations','blacklist','people','moderation','logs','configuration','machine','calendar','discordconfig','staffreports','landingconfig','appsconfig'].forEach(p=>{
   const el=document.getElementById('nav-'+p);
   if(el) el.onclick=()=>nav(p);
 });
