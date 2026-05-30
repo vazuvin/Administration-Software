@@ -61,7 +61,7 @@ body.gh-dark {
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;background:var(--bg-page);min-height:100vh;display:block;}
 
 /* ── LOGIN ── */
-#loginScreen{display:flex;align-items:center;justify-content:center;width:100%;min-height:100vh;}
+#loginScreen{display:flex;align-items:center;justify-content:center;width:100%;min-height:100vh;background:#080c14;overflow:hidden;}
 .login-popup{background:var(--bg-dialog);border:1px solid var(--c-border);width:340px;border-radius:6px;box-shadow:0 8px 24px rgba(1,4,9,0.2);}
 .titlebar{background:var(--bg-topbar);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-radius:6px 6px 0 0;}
 .titlebar-title{color:var(--c-topbar-text);font-size:13px;font-weight:600;}
@@ -2504,7 +2504,7 @@ function restoreBeehiveBar(a){
   var svgIcon=icons[level]||icons.warning;
   bar.style.background=p.bg;
   bar.style.borderBottom='2px solid '+p.border;
-  bar.style.boxShadow=glowNorm;
+  bar.style.boxShadow='';
   bar.style.display='flex';
   bar.style.alignItems='center';
   bar.style.padding='5px 16px';
@@ -10595,7 +10595,8 @@ async function massRefreshRoblox(statusCallback){
   var updated=0, skipped=0, failed=0;
   for(var i=0;i<uArr.length;i++){
     var uid=uArr[i][0], u=uArr[i][1];
-    if(statusCallback) statusCallback(i+1, uArr.length, u.username||'?');
+    if(!u||!u.username||u.username==="[WIPED]"){ skipped++; continue; }
+    if(statusCallback) statusCallback(i+1, uArr.length, u.username);
     try{
       var info=await fetchRobloxInfo(u.username);
       if(!info||!info.robloxId){ failed++; continue; }
@@ -14421,7 +14422,7 @@ async function updateStaffLevel(sid){
   }
   const oldLevel=s?s.level:'?';
   await update(ref(db,`staff/${sid}`),{level:l});
-  auditLog('Staff Level Changed',`${s?s.username:sid}: ${oldLevel} -> ${l}`);
+  auditLog('Staff Level Changed',`${s?s.username:sid}: ${oldLevel} → ${l}`);
   fireDiscordWebhook('staff_events',buildGenericEmbed('Rank Changed',ME+' changed **'+(s?s.username:sid)+'** from '+oldLevel+' to **'+l+'**.','#9a6700')).catch(()=>{});
   el.style.color='#006600'; el.textContent=`Level set to ${l}.`;
   setTimeout(()=>{ if(el) el.textContent=''; },1500);
@@ -17307,6 +17308,36 @@ function loadLandingData(){
   setInterval(checkExternalStrip, 60000);
 
   // Site status
+  // Load About, Hero, and Policies config from Firebase
+  get(ref(db,'meta/landingConfig')).then(function(snap){
+    if(!snap.exists()) return;
+    var cfg=snap.val()||{};
+    // About section
+    var aboutSub=document.getElementById('ln-about-sub');
+    var aboutBody=document.getElementById('ln-about-body');
+    var aboutBannerWrap=document.getElementById('ln-about-banner-wrap');
+    if(aboutSub&&cfg.aboutSubtitle) aboutSub.textContent=cfg.aboutSubtitle;
+    if(aboutBody&&cfg.aboutBody) aboutBody.innerHTML=cfg.aboutBody.replace(/\n/g,'<br>');
+    if(aboutBannerWrap&&cfg.aboutBanner) aboutBannerWrap.innerHTML='<img src="'+cfg.aboutBanner+'" class="ln-about-banner" alt=""/>';
+    // Hero motto
+    var mottoEl=document.querySelector('.ln-hero-motto');
+    if(mottoEl&&cfg.motto) mottoEl.textContent='"'+cfg.motto+'"';
+    // Policies
+    if(cfg.policies&&cfg.policies.length){
+      var polBody=document.getElementById('ln-policies-body');
+      if(polBody){
+        polBody.innerHTML=cfg.policies.map(function(p,i){
+          return '<div class="ln-policy-section">'
+            +'<div class="ln-policy-num">'+String(i+1).padStart(2,'0')+'</div>'
+            +'<div class="ln-policy-content">'
+            +'<div class="ln-policy-title">'+p.title+'</div>'
+            +'<div class="ln-policy-body">'+p.body+'</div>'
+            +'</div></div>';
+        }).join('');
+      }
+    }
+  }).catch(function(){});
+
   get(ref(db,'meta/siteStatus')).then(function(snap){
     if(!snap.exists()) return;
     var s=snap.val().status||'OK';
@@ -17386,9 +17417,9 @@ function animateCounters(){
 }
 
 // ── Hero canvas (rich animated background) ──
-var _lnAnimId=null;
+window._lnAnimId=null;
 function startLandingCanvas(){
-  if(_lnAnimId){ cancelAnimationFrame(_lnAnimId); _lnAnimId=null; }
+  if(window._lnAnimId){ cancelAnimationFrame(window._lnAnimId); window._lnAnimId=null; }
   var canvas=document.getElementById('ln-hero-canvas');
   if(!canvas) return;
   var ctx=canvas.getContext('2d');
@@ -17461,7 +17492,7 @@ function startLandingCanvas(){
     hg.addColorStop(1,'rgba(88,166,255,0.03)');
     ctx.fillStyle=hg; ctx.fillRect(0,H*0.7,W,H*0.3);
     t+=0.01;
-    _lnAnimId=requestAnimationFrame(draw);
+    window._lnAnimId=requestAnimationFrame(draw);
   }
   draw();
 }
