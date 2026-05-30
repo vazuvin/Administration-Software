@@ -899,8 +899,13 @@ body.gh-dark .stitle{ background:rgba(88,166,255,0.06); border-bottom:1px solid 
 body.gh-dark .tbl tr:hover td{ background:rgba(88,166,255,0.04); }
 body.gh-dark .page-tab.active{ border-bottom-color:#58a6ff; text-shadow:0 0 16px rgba(88,166,255,0.4); }
 body.gh-dark .page-tabs{ border-bottom-color:rgba(88,166,255,0.15); }
-body.gh-dark .badge.softwaremanager{ box-shadow:0 0 8px rgba(248,81,73,0.4); }
-body.gh-dark .badge.superadmin{ box-shadow:0 0 6px rgba(227,179,65,0.3); }
+/* Rank badge glows matching each rank's accent color */
+body.gh-dark .badge.intern{ box-shadow:0 0 6px rgba(130,232,155,0.35); }
+body.gh-dark .badge.moderator{ box-shadow:0 0 6px rgba(121,192,255,0.35); }
+body.gh-dark .badge.administrator{ box-shadow:0 0 6px rgba(227,179,65,0.3); }
+body.gh-dark .badge.senioradmin{ box-shadow:0 0 7px rgba(255,166,87,0.35); }
+body.gh-dark .badge.superadmin{ box-shadow:0 0 7px rgba(255,129,130,0.35); }
+body.gh-dark .badge.softwaremanager{ box-shadow:0 0 9px rgba(121,192,255,0.5); }
 .topbar{ position:relative; z-index:10; }
 .sidebar{ position:relative; z-index:2; }
 #content{ position:relative; z-index:2; }
@@ -989,15 +994,36 @@ body.gh-dark .topinfo{ background:rgba(9,13,22,0.95); border-bottom-color:rgba(8
 
 /* Beehive persistent glow */
 @keyframes beehive-glow-pulse {
-  0%,100% { box-shadow: 0 0 8px 2px rgba(227,179,65,0.6), 0 2px 12px rgba(227,179,65,0.3); }
-  50% { box-shadow: 0 0 20px 6px rgba(227,179,65,0.9), 0 2px 24px rgba(227,179,65,0.6); }
+  0%,100% { opacity: 0.7; transform: scaleX(1); }
+  50% { opacity: 1; transform: scaleX(1.005); }
 }
 @keyframes beehive-glow-pulse-urgent {
-  0%,100% { box-shadow: 0 0 10px 3px rgba(248,81,73,0.7), 0 2px 16px rgba(248,81,73,0.4); }
-  50% { box-shadow: 0 0 28px 8px rgba(248,81,73,1), 0 2px 32px rgba(248,81,73,0.7); }
+  0%,100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
-.beehive-active { animation: beehive-glow-pulse 1.4s ease-in-out infinite !important; box-shadow: 0 0 20px 4px rgba(227,179,65,0.7), 0 2px 24px rgba(227,179,65,0.4) !important; }
-.beehive-active-urgent { animation: beehive-glow-pulse-urgent 0.7s ease-in-out infinite !important; box-shadow: 0 0 24px 6px rgba(248,81,73,0.8), 0 2px 32px rgba(248,81,73,0.5) !important; }
+/* Use ::after for glow so it can't be killed by inline styles */
+.beehive-active { position: relative !important; }
+.beehive-active::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 4px;
+  box-shadow: 0 0 16px 4px rgba(227,179,65,0.8), 0 0 32px 8px rgba(227,179,65,0.4);
+  animation: beehive-glow-pulse 1.4s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+.beehive-active-urgent { position: relative !important; }
+.beehive-active-urgent::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 4px;
+  box-shadow: 0 0 20px 6px rgba(248,81,73,0.9), 0 0 40px 10px rgba(248,81,73,0.5);
+  animation: beehive-glow-pulse-urgent 0.7s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
 
 </style>
 </head>
@@ -3391,7 +3417,7 @@ function render(){
       {id:'suspendlog', label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><line x1="5" y1="4.5" x2="5" y2="9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="4.5" x2="9" y2="9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Suspension', perm:'canViewSuspendLogs'},
       {id:'terminatelog', label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><circle cx="5" cy="4" r="2.2" stroke="currentColor" stroke-width="1.2"/><path d="M1.5 12c0-2.5 1.5-4 3.5-4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M9 9l3.5 3.5M12.5 9L9 12.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>Termination', perm:'canViewTerminateLogs'},
       {id:'warnlog', label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><path d="M7 1L13 12H1L7 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><line x1="7" y1="5.5" x2="7" y2="8.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="7" cy="10" r="0.8" fill="currentColor"/></svg>Staff Warnings', perm:'canViewStaff'},
-      {id:'loginlog', label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><rect x="2" y="2" width="7" height="10" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M9 5l3 2-3 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><line x1="6" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Login', perm:'canViewLoginLog'},
+      {id:'loginlog', label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><rect x="2" y="2" width="7" height="10" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M9 5l3 2-3 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><line x1="6" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Login', perm:'canViewLoginLog', smOnly:true},
       {id:'cflog', label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><rect x="2" y="1" width="10" height="12" rx="1.5" stroke="currentColor" stroke-width="1.2"/><line x1="4.5" y1="4.5" x2="9.5" y2="4.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="7" x2="9.5" y2="7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="9.5" x2="9.5" y2="9.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Custom Fields Log', saOnly:true},
       {id:'auditlog', label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><rect x="2" y="1" width="10" height="12" rx="1.5" stroke="currentColor" stroke-width="1.2"/><line x1="4.5" y1="4.5" x2="9.5" y2="4.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="7" x2="9.5" y2="7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="9.5" x2="7" y2="9.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Audit', saOnly:true},
     ], inner=>{
@@ -3400,7 +3426,7 @@ function render(){
       else if(page==='suspendlog') canDo('canViewSuspendLogs')?renderSuspendLog(inner):inner.innerHTML=denied;
       else if(page==='terminatelog') canDo('canViewTerminateLogs')?renderTerminateLog(inner):inner.innerHTML=denied;
       else if(page==='warnlog') canDo('canViewStaff')?renderWarnLog(inner):inner.innerHTML=denied;
-      else if(page==='loginlog') canDo('canViewLoginLog')?renderLoginLog(inner):inner.innerHTML=denied;
+      else if(page==='loginlog') (canDo('canViewLoginLog')&&isSoftwareManager())?renderLoginLog(inner):inner.innerHTML=denied;
       else if(page==='auditlog') isSuperAdmin()?renderAuditLog(inner):inner.innerHTML=denied;
     }); return;
   }
@@ -7942,12 +7968,12 @@ function renderAlerts(c){
       el.textContent='Alert posted!'; setTimeout(()=>{ if(el) el.textContent=''; },1500);
     };
     document.getElementById('btn-clearalerts').onclick=async()=>{
-      // Mark all alerts as inactive (preserves history) instead of deleting them
       const updates={};
       Object.keys(SITE_ALERTS).forEach(lid=>{ updates[`siteAlerts/${lid}/active`]=false; });
       if(Object.keys(updates).length>0) await update(ref(db,'/'),updates);
       updateAnnouncements();
       auditLog('Site Alerts Cleared','All alerts set to inactive');
+      if(typeof window.checkExternalStrip==='function') window.checkExternalStrip();
       render();
     };
   }
@@ -14937,26 +14963,7 @@ async function doLogout(fromPoison){
     showPoisonLockout(wasMe);
   } else {
     window._poisonRunning=false;
-    // Stop admin panel canvas first
-    if(window._panelAnimId){ cancelAnimationFrame(window._panelAnimId); window._panelAnimId=null; }
-    // Stop landing canvas if running (prevents double-canvas)
-    if(window._lnAnimId){ cancelAnimationFrame(window._lnAnimId); window._lnAnimId=null; }
-    // Clear landing canvas
-    var _lnCv=document.getElementById('ln-hero-canvas');
-    if(_lnCv){ var _lnCtx=_lnCv.getContext('2d'); _lnCtx.clearRect(0,0,_lnCv.width,_lnCv.height); }
-    // Hide admin, hide login, show landing
-    var _as=document.getElementById('adminScreen'); if(_as) _as.style.display='none';
-    var _ls=document.getElementById('loginScreen'); if(_ls) _ls.style.display='none';
-    var _land=document.getElementById('landingScreen'); if(_land) _land.style.display='flex';
-    // Now start fresh landing canvas
-    if(typeof window.startLandingCanvas==='function') setTimeout(window.startLandingCanvas, 50);
-    if(typeof window.loadLandingData==='function') window.loadLandingData();
-    // Reattach scroll listener
-    setTimeout(function(){
-      var c=document.getElementById('landingScreen');
-      if(c){ c.removeEventListener('scroll',window.revealLandingSections||function(){}); c.addEventListener('scroll',window.revealLandingSections||function(){},{passive:true}); }
-      if(typeof window.revealLandingSections==='function') window.revealLandingSections();
-    },100);
+    window._returnToLanding();
   }
 }
 
@@ -15278,7 +15285,7 @@ function pushScreenSnapshot(immediate){
 }
 
 function startListeners(){
-  let firstMod=true, firstAppeals=true, firstAnnounce=true, firstTerminate=true;
+  let firstMod=true, firstAppeals=true, firstAnnounce=true, firstTerminate=true, firstSuspend=true, firstStaff=true;
   onValue(ref(db,'users'),snap=>{
     const raw=snap.val()||{};
     // Strip any null/undefined entries that can appear after deletes
@@ -15327,7 +15334,8 @@ function startListeners(){
   onValue(ref(db,'logs/suspend'),snap=>{
     const prev=Object.keys(SUSPEND_LOG||{}).length;
     SUSPEND_LOG=snap.val()||{};
-    if(Object.keys(SUSPEND_LOG).length>prev){ const e=Object.values(SUSPEND_LOG).at(-1); if(e&&e.action==='Suspend') pushNotif('staffSuspended',`Staff suspended: ${e.username} by ${e.by}`); }
+    if(!firstSuspend && Object.keys(SUSPEND_LOG).length>prev){ const e=Object.values(SUSPEND_LOG).at(-1); if(e&&e.action==='Suspend') pushNotif('staffSuspended',`Staff suspended: ${e.username} by ${e.by}`); }
+    firstSuspend=false;
     if(page==='suspendlog') safeRender();
   });
   onValue(ref(db,'logs/terminate'),snap=>{
@@ -16750,6 +16758,32 @@ function hideLanding(){
 window.showLanding=showLanding;
 window.hideLanding=hideLanding;
 
+// Clean return-to-landing function used by logout
+window._returnToLanding=function(){
+  // 1. Kill all running canvases
+  if(window._panelAnimId){ cancelAnimationFrame(window._panelAnimId); window._panelAnimId=null; }
+  if(window._lnAnimId){ cancelAnimationFrame(window._lnAnimId); window._lnAnimId=null; }
+  // 2. Clear the landing canvas pixel buffer
+  var cv=document.getElementById('ln-hero-canvas');
+  if(cv){ var cx=cv.getContext('2d'); cx.clearRect(0,0,cv.width,cv.height); }
+  // 3. Hide all screens
+  var admin=document.getElementById('adminScreen'); if(admin) admin.style.display='none';
+  var login=document.getElementById('loginScreen'); if(login) login.style.display='none';
+  // 4. Show landing
+  var land=document.getElementById('landingScreen'); if(land) land.style.display='flex';
+  // 5. Start fresh canvas after a tick
+  setTimeout(function(){
+    if(typeof startLandingCanvas==='function') startLandingCanvas();
+    if(typeof loadLandingData==='function') loadLandingData();
+    var c=document.getElementById('landingScreen');
+    if(c){
+      c.removeEventListener('scroll',window.revealLandingSections);
+      c.addEventListener('scroll',window.revealLandingSections,{passive:true});
+      if(typeof window.revealLandingSections==='function') window.revealLandingSections();
+    }
+  }, 30);
+};
+
 // ── Nav tab clicking scrolls to section ──
 document.querySelectorAll('.ln-nav-tab').forEach(function(tab){
   tab.onclick=function(){
@@ -17234,8 +17268,8 @@ function renderLandingCareers(){
         +'<div style="display:flex;align-items:center;gap:14px;position:relative;z-index:1;">'+avEl
         +'<div style="flex:1;min-width:0;">'
         +'<div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:4px;">'+nameHtml+'</div>'
-        +'<div style="margin-bottom:6px;"><span style="font-size:10px;font-weight:700;color:'+rc+';text-transform:uppercase;background:'+rc+'15;border:1px solid '+rc+'30;padding:2px 8px;border-radius:12px;">'+rs+'</span></div>'+'<div style="margin-bottom:4px;font-size:10px;color:rgba(230,237,243,0.45);">'+(s.joined?'Joined '+s.joined:'')+'</div>'
-        +(bHtml?'<div style="display:flex;gap:3px;flex-wrap:wrap;">'+bHtml+'</div>':'')
+        +'<div style="margin-bottom:6px;"><span style="font-size:10px;font-weight:700;color:'+rc+';text-transform:uppercase;background:'+rc+'15;border:1px solid '+rc+'30;padding:2px 8px;border-radius:12px;">'+rs+'</span></div>'+(s.joined?'<div style="display:flex;align-items:center;gap:5px;margin-bottom:5px;"><span style="width:4px;height:4px;border-radius:50%;background:rgba(230,237,243,0.25);flex-shrink:0;display:inline-block;"></span><span style="font-size:9px;color:rgba(230,237,243,0.4);letter-spacing:0.3px;">Joined '+s.joined+'</span></div>':'')
+        +(bHtml?'<div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:2px;">'+bHtml+'</div>':'')
         +'</div></div></div>';
     }).join('');
   }
@@ -17318,8 +17352,8 @@ function loadLandingData(){
       }).catch(function(){});
     }).catch(function(){});
   }
+  window.checkExternalStrip=checkExternalStrip;
   checkExternalStrip();
-  // Re-check every minute
   setInterval(checkExternalStrip, 60000);
 
   // Site status
