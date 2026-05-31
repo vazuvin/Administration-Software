@@ -1029,34 +1029,34 @@ body.gh-dark .topinfo{ background:rgba(9,13,22,0.95); border-bottom-color:rgba(8
   position: fixed;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%) rotate(-30deg);
-  font-size: 11px;
+  transform: translate(-50%, -50%) rotate(-28deg);
+  font-size: 13px;
   font-family: monospace;
   color: var(--c-text2);
-  opacity: 0.04;
+  opacity: 0.055;
   pointer-events: none;
   user-select: none;
   white-space: nowrap;
-  z-index: 0;
-  letter-spacing: 8px;
+  z-index: 99999;
+  letter-spacing: 10px;
   font-weight: 400;
 }
 /* Second watermark instance - offset position */
 #content::after {
   content: var(--fp-bid, '');
   position: fixed;
-  bottom: 30%;
-  right: 10%;
-  transform: rotate(-20deg);
-  font-size: 9px;
+  bottom: 28%;
+  right: 8%;
+  transform: rotate(-18deg);
+  font-size: 10px;
   font-family: monospace;
   color: var(--c-text2);
-  opacity: 0.035;
+  opacity: 0.05;
   pointer-events: none;
   user-select: none;
   white-space: nowrap;
-  z-index: 0;
-  letter-spacing: 4px;
+  z-index: 99999;
+  letter-spacing: 5px;
 }
 
 </style>
@@ -1368,12 +1368,6 @@ body.gh-dark .topinfo{ background:rgba(9,13,22,0.95); border-bottom-color:rgba(8
   </div>
 </div>
 
-<!-- POISON LOCKOUT SCREEN (replaces login screen when poisoned) -->
-<div id="poisonLockout" style="display:none;position:fixed;inset:0;z-index:999997;background:#000;flex-direction:column;align-items:center;justify-content:center;">
-  <canvas id="poisonLockoutCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;"></canvas>
-  <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:16px;pointer-events:none;user-select:none;">
-    <div id="poisonLockoutIcon" style="opacity:0.07;">
-      <div style="font-size:11px;letter-spacing:6px;color:#444;text-transform:uppercase;margin-bottom:8px;text-align:center;">SAMARITAN SYSTEMS</div>
       <svg width="80" height="80" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
         <circle cx="50" cy="50" r="46" stroke="#333" stroke-width="3"/>
         <path d="M50 18 L50 82 M18 50 L82 50" stroke="#333" stroke-width="2.5"/>
@@ -1383,8 +1377,6 @@ body.gh-dark .topinfo{ background:rgba(9,13,22,0.95); border-bottom-color:rgba(8
       <div style="font-size:9px;letter-spacing:4px;color:#333;text-transform:uppercase;margin-top:8px;text-align:center;">INTERNAL ADMINISTRATION</div>
     </div>
   </div>
-  <div id="poisonLockoutCode" style="position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1;"></div>
-</div>
 
 <div id="adminScreen" style="position:relative;">
 <canvas id="panelBgCanvas" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0.8;"></canvas>
@@ -1816,7 +1808,6 @@ let GLASGOW_DATA={};
 let FREEZE_DATA={};
 let LULLABY_DATA={};
 let OPENHOUSE_DATA={};
-let POISON_DATA={};
 let WARN_LOG={};
 let SHIFTS={};
 let SHIFT_SLOTS={};
@@ -3308,7 +3299,7 @@ function nav(p){
     // Node 5: faint ref code at bottom of main content area
     var _fpEl5=document.getElementById('__fp_node5');
     var _shell=document.querySelector('#content');
-    if(!_fpEl5&&_shell){ _fpEl5=document.createElement('div'); _fpEl5.id='__fp_node5'; _fpEl5.setAttribute('aria-hidden','true'); _fpEl5.style.cssText='position:fixed;bottom:3px;right:8px;font-size:8px;opacity:0.12;color:var(--c-text2);pointer-events:none;user-select:none;font-family:monospace;z-index:1;letter-spacing:0.5px;'; document.body.appendChild(_fpEl5); }
+    if(!_fpEl5){ _fpEl5=document.createElement('div'); _fpEl5.id='__fp_node5'; _fpEl5.setAttribute('aria-hidden','true'); _fpEl5.style.cssText='position:fixed;bottom:4px;right:10px;font-size:8px;opacity:0.22;color:var(--c-text2);pointer-events:none;user-select:none;font-family:monospace;z-index:999998;letter-spacing:0.8px;'; document.body.appendChild(_fpEl5); }
     if(_fpEl5) _fpEl5.textContent=_fp.tag+' '+_fp.sessionSalt;
 
     // Node 6: tiny label under the dashboard stat numbers (looks like a unit label)
@@ -9028,7 +9019,7 @@ function renderSamaritanMain(c){
     +'</div>';
 
   // Wire contingency buttons
-  var buttons = ['glasgow','lullaby','freeze','cleanslate','elephant','goldfish','beehive','overtime','branchtransfer','openhouse','poison','monitor'];
+  var buttons = ['glasgow','lullaby','freeze','cleanslate','elephant','goldfish','beehive','overtime','branchtransfer','openhouse','monitor'];
   buttons.forEach(function(name){
     var btn = document.getElementById('cont-'+name);
     if(btn) btn.onclick = function(){ openContingency(name, isManager); };
@@ -9047,7 +9038,6 @@ function renderContingencyButtons(isManager){
     {id:'overtime',   name:'Overtime',         icon:'⚡', desc:'Elevated permissions',    color:'#8250df'},
     {id:'branchtransfer',name:'Branch Transfer',icon:'📦',desc:'Mass import/export',      color:'#1a7f37'},
     {id:'openhouse',  name:'Open House',       icon:'🏠', desc:'Unlock restricted areas', color:'#0969da'},
-    {id:'poison',     name:'Poison',           icon:'☠️', desc:'System deterioration',    color:'#3d0066'},
     {id:'monitor',    name:'Live Monitor',     icon:'📺', desc:'Real-time screen viewer', color:'#0550ae'},
   ];
   return contingencies.map(function(ct){
@@ -9079,7 +9069,6 @@ function openContingency(name, isManager){
     overtime: renderOvertime,
     branchtransfer: renderBranchTransfer,
     openhouse: renderOpenHouse,
-    poison: renderPoison,
     monitor: renderMonitorContingency,
   };
   if(fns[name]) fns[name](panel);
@@ -9882,530 +9871,14 @@ function renderOpenHouse(panel){
 
 
 // ══════════════════════════════════════════════════════════════
-// POISON - System Deterioration Contingency
 // ══════════════════════════════════════════════════════════════
-function renderPoison(panel){
-  var sArr = Object.entries(STAFF).filter(function(e){ return e[1]&&e[1].username && e[1].username !== ME; });
-  // Check active poisons
-  var activePoisons = [];
-  get(ref(db,'contingencies/poison')).then(function(snap){
-    var allPoison = snap.val()||{};
-    activePoisons = Object.entries(allPoison).filter(function(e){ return e[1]&&e[1].active; });
-    var activeHtml = activePoisons.length === 0
-      ? '<div style="font-size:11px;color:var(--c-text2);font-style:italic;">No active poison instances.</div>'
-      : activePoisons.map(function(e){
-          var sid=e[0], p=e[1];
-          var s=STAFF[sid]||{};
-          return '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:rgba(61,0,102,0.2);border:1px solid rgba(138,43,226,0.3);border-radius:5px;margin-bottom:4px;">'
-            +'<span style="font-size:16px;">☠️</span>'
-            +'<div style="flex:1;"><b style="font-size:12px;color:#cc88ff;">'+(s.username||sid)+'</b>'
-            +'<div style="font-size:10px;color:var(--c-text2);">Active since '+p.activatedAt+' - by '+p.by+'</div></div>'
-            +'<button class="btn small poison-deactivate-btn" data-sid="'+sid+'" style="background:#3d0066;color:#cc88ff;border-color:#8a2be2;">Cure</button>'
-            +'</div>';
-        }).join('');
-    document.getElementById('poison-active-list').innerHTML=activeHtml;
-    // wire cure buttons
-    panel.querySelectorAll('.poison-deactivate-btn').forEach(function(btn){
-      btn.onclick=async function(){
-        var sid=btn.dataset.sid;
-        var s=STAFF[sid]||{};
-        await update(ref(db,'contingencies/poison/'+sid),{active:false});
-        auditLog('Poison Deactivated',(s.username||sid)+' cured by '+ME);
-        samAuditLog('Poison','Deactivated',(s.username||sid),'System restored',0);
-        showToast((s.username||sid)+' has been cured.','success');
-        renderPoison(panel);
-      };
-    });
-  }).catch(function(){});
-
-  panel.innerHTML = contPanel('Poison','☠️','#3d0066',
-    '<div style="background:rgba(61,0,102,0.3);border:1px solid rgba(138,43,226,0.4);border-radius:6px;padding:8px 10px;margin-bottom:10px;font-size:11px;color:#cc88ff;line-height:1.7;">'
-    +'☠ Poison injects a persistent system corruption sequence into the target\'s session. '
-    +'Their screen will begin to deteriorate - flickering, blackouts, kernel panic cascades, cryptic system messages. '
-    +'It triggers on every page load until cured. The target will not know why it is happening.'
-    +'</div>'
-    +'<div style="margin-bottom:10px;">'
-    +'<label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:3px;font-weight:bold;">Target Staff Member</label>'
-    +'<select id="poison-target" style="width:100%;">'
-    +sArr.map(function(e){ return '<option value="'+e[0]+'">'+e[1].username+' ('+e[1].level+')</option>'; }).join('')
-    +'</select></div>'
-    +'<div style="margin-bottom:10px;">'
-    +'<label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:3px;font-weight:bold;">Intensity</label>'
-    +'<select id="poison-intensity" style="width:100%;">'
-    +'<option value="mild">Mild - subtle glitches, occasional panic</option>'
-    +'<option value="severe" selected>Severe - heavy corruption, frequent panic</option>'
-    +'<option value="terminal">Terminal - relentless, constant deterioration</option>'
-    +'</select></div>'
-    +'<div style="display:flex;gap:8px;margin-bottom:12px;">'
-    +'<button class="btn" id="poison-activate-btn" style="background:#3d0066;color:#cc88ff;border-color:#8a2be2;flex:1;">☠ Inject Poison</button>'
-    +'</div>'
-    +'<div id="poison-msg" style="font-size:11px;margin-bottom:10px;color:var(--c-ok);min-height:14px;"></div>'
-    +'<div style="border-top:1px solid rgba(138,43,226,0.3);padding-top:10px;margin-top:2px;">'
-    +'<div style="font-size:11px;font-weight:bold;color:#cc88ff;margin-bottom:6px;letter-spacing:1px;">ACTIVE INSTANCES</div>'
-    +'<div id="poison-active-list"><div style="font-size:11px;color:var(--c-text2);font-style:italic;">Loading...</div></div>'
-    +'</div>'
-  );
-
-  // Re-run active list render after innerHTML swap
-  get(ref(db,'contingencies/poison')).then(function(snap){
-    var allPoison = snap.val()||{};
-    var active = Object.entries(allPoison).filter(function(e){ return e[1]&&e[1].active; });
-    var listEl = document.getElementById('poison-active-list');
-    if(!listEl) return;
-    listEl.innerHTML = active.length === 0
-      ? '<div style="font-size:11px;color:var(--c-text2);font-style:italic;">No active poison instances.</div>'
-      : active.map(function(e){
-          var sid=e[0], p=e[1];
-          var s=STAFF[sid]||{};
-          return '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:rgba(61,0,102,0.2);border:1px solid rgba(138,43,226,0.3);border-radius:5px;margin-bottom:4px;">'
-            +'<span style="font-size:16px;">☠️</span>'
-            +'<div style="flex:1;"><b style="font-size:12px;color:#cc88ff;">'+(s.username||sid)+'</b>'
-            +'<div style="font-size:10px;color:var(--c-text2);">Active since '+p.activatedAt+' - by '+p.by+'</div></div>'
-            +'<button class="btn small poison-deactivate-btn" data-sid="'+sid+'" style="background:#3d0066;color:#cc88ff;border-color:#8a2be2;">Cure</button>'
-            +'</div>';
-        }).join('');
-    panel.querySelectorAll('.poison-deactivate-btn').forEach(function(btn){
-      btn.onclick=async function(){
-        var sid=btn.dataset.sid;
-        var s=STAFF[sid]||{};
-        await update(ref(db,'contingencies/poison/'+sid),{active:false});
-        auditLog('Poison Deactivated',(s.username||sid)+' cured by '+ME);
-        samAuditLog('Poison','Deactivated',(s.username||sid),'System restored',0);
-        showToast((s.username||sid)+' has been cured.','success');
-        renderPoison(panel);
-      };
-    });
-  }).catch(function(){});
-
-  document.getElementById('poison-activate-btn').onclick = async function(){
-    var sid = document.getElementById('poison-target').value;
-    var intensity = document.getElementById('poison-intensity').value;
-    var s = STAFF[sid]||{};
-    if(!sid){ showToast('Select a target.','error'); return; }
-    if(sid===ME){ showToast('Cannot poison yourself.','error'); return; }
-    await set(ref(db,'contingencies/poison/'+sid),{
-      active:true, intensity:intensity,
-      activatedAt:nowStr(), activatedTs:Date.now(), by:ME
-    });
-    auditLog('Poison Activated',(s.username||sid)+' intensity:'+intensity+' by '+ME);
-    samAuditLog('Poison','Activated',(s.username||sid),'Intensity: '+intensity,0);
-    var msgEl=document.getElementById('poison-msg');
-    msgEl.style.color='#cc88ff';
-    msgEl.textContent='☠ Poison injected into '+(s.username||sid)+'. Deterioration begins on their next page load.';
-    showToast('Poison activated for '+(s.username||sid)+'.','warning');
-    setTimeout(function(){ renderPoison(panel); }, 1500);
-  };
-}
 
 // ══════════════════════════════════════════════════════════════
-// POISON ENGINE v2 - GPU Artifact + Kernel Panic System
 // ══════════════════════════════════════════════════════════════
-function checkPoisonActive(){
-  if(!ME) return;
-  if(isSoftwareManager()) return; // SM immune
-  var p = POISON_DATA[ME]||{};
-  if(!p.active) return;
-  if(window._poisonRunning) return;
-  // Grace period: only trigger if logged in for at least 15 seconds
-  // Prevents stale/leftover Firebase data from triggering on login
-  if(!window._loginTimestamp||Date.now()-window._loginTimestamp<15000){
-    // Re-check after 15 seconds
-    setTimeout(function(){ if(ME&&!isSoftwareManager()) checkPoisonActive(); },15000);
-    return;
-  }
-  startPoisonSequence(p.intensity||'severe');
-}
 
-function startPoisonSequence(intensity){
-  if(window._poisonRunning) return;
-  window._poisonRunning = true;
-
-  // Inject CSS once
-  if(!document.getElementById('poison-style')){
-    var s=document.createElement('style');
-    s.id='poison-style';
-    s.textContent=`
-      @keyframes pscan{0%{top:-4px}100%{top:100vh}}
-      @keyframes prgb{0%,100%{clip-path:inset(0 0 98% 0)}10%{clip-path:inset(12% 0 72% 0)}30%{clip-path:inset(55% 0 22% 0)}50%{clip-path:inset(80% 0 4% 0)}70%{clip-path:inset(30% 0 60% 0)}90%{clip-path:inset(5% 0 85% 0)}}
-      @keyframes pshake{0%,100%{transform:translate(0,0) skewX(0)}15%{transform:translate(-6px,2px) skewX(-1.5deg)}30%{transform:translate(5px,-3px) skewX(1deg)}45%{transform:translate(-4px,1px)}60%{transform:translate(6px,2px) skewX(-0.5deg)}75%{transform:translate(-3px,-2px)}90%{transform:translate(4px,1px) skewX(1deg)}}
-      @keyframes pjitter{0%,100%{transform:translate(0,0)}25%{transform:translate(-2px,1px)}50%{transform:translate(2px,-1px)}75%{transform:translate(-1px,2px)}}
-      @keyframes pnoise{0%{background-position:0 0}100%{background-position:100% 100%}}
-      @keyframes pblink{0%,49%{opacity:1}50%,100%{opacity:0}}
-      .p-glitch-active{animation:pjitter 0.08s infinite!important;}
-      .p-glitch-active *{animation:pjitter 0.12s infinite!important;}
-    `;
-    document.head.appendChild(s);
-  }
-
-  var cfg={
-    mild:    {firstPanic:6000, panicInterval:20000, panicDur:11000, gpuInterval:8000,  gpuDur:3500,  logoutChance:0,    speed:70},
-    severe:  {firstPanic:3500, panicInterval:11000, panicDur:8000,  gpuInterval:3500,  gpuDur:2500,  logoutChance:0.04, speed:28},
-    terminal:{firstPanic:1800, panicInterval:5500,  panicDur:6000,  gpuInterval:1500,  gpuDur:2000,  logoutChance:0.12, speed:14},
-  }[intensity]||{firstPanic:3500,panicInterval:11000,panicDur:8000,gpuInterval:3500,gpuDur:2500,logoutChance:0.04,speed:28};
-
-  // ── Phase 1: GPU corruption layer on the live page ──
-  // ── Realistic website-breaking effects (no colorful squares) ──
-  function runGpuLayer(){
-    if(!window._poisonRunning) return;
-    var shell=document.getElementById('adminScreen');
-    var sidebar=document.querySelector('.sidebar');
-    var topbar=document.querySelector('.topbar');
-    var content=document.querySelector('.content');
-    var startTime=Date.now();
-    var dur=cfg.gpuDur;
-    var effects=[];
-
-    // 1. Whole-page CSS filter degradation (desaturation, brightness drop, hue shift)
-    var filterEffects=['saturate(0.1)','saturate(0.3) brightness(0.7)','saturate(0)brightness(0.5)hue-rotate(30deg)',
-      'contrast(0.4)brightness(0.6)','sepia(0.8)brightness(0.5)','brightness(0.2)'];
-    if(shell) shell.style.filter=filterEffects[Math.floor(Math.random()*filterEffects.length)];
-
-    // 2. Sidebar or topbar goes completely black or transparent
-    if(sidebar&&Math.random()<0.5) sidebar.style.visibility=Math.random()<0.4?'hidden':'visible';
-    if(topbar&&Math.random()<0.4) topbar.style.background='#000';
-
-    // 3. Content area skew/scale - page looks broken
-    if(content&&Math.random()<0.6){
-      var skew=(Math.random()-0.5)*3;
-      var scale=0.92+Math.random()*0.12;
-      content.style.transform='skewY('+skew+'deg) scale('+scale+')';
-      content.style.transformOrigin='top left';
-    }
-
-    // 4. Text rendering corruption via letter-spacing blowout on random elements
-    var textEls=document.querySelectorAll('.ptitle,.stitle,.topbar-right,.sb-group-label');
-    textEls.forEach(function(el){
-      if(Math.random()<0.4){
-        el.style.letterSpacing=(Math.random()*8-2)+'px';
-        el.style.opacity=(0.1+Math.random()*0.5).toString();
-      }
-    });
-
-    // 5. Canvas overlay - monochrome scanlines and vignette only (realistic monitor failure)
-    var canvas=document.createElement('canvas');
-    canvas.id='poison-gpu-canvas';
-    canvas.style.cssText='position:fixed;inset:0;width:100%;height:100%;z-index:99990;pointer-events:none;mix-blend-mode:multiply;';
-    canvas.width=window.innerWidth; canvas.height=window.innerHeight;
-    document.body.appendChild(canvas);
-    var ctx=canvas.getContext('2d');
-    var W=canvas.width, H=canvas.height;
-    var artFrame=0;
-    var scanOffset=Math.random()*H;
-
-    function drawArtifacts(){
-      if(!window._poisonRunning||Date.now()-startTime>dur){ removeGpu(); return; }
-      artFrame++;
-      ctx.clearRect(0,0,W,H);
-
-      // Monochromatic scanlines (no color)
-      ctx.fillStyle='rgba(0,0,0,0.85)';
-      ctx.fillRect(0,0,W,H);
-
-      // Horizontal bands of varying darkness (monitor failure)
-      for(var y=0;y<H;y+=2){
-        var darkLevel=0.6+0.4*Math.sin((y+artFrame*0.8+scanOffset)*0.04);
-        ctx.globalAlpha=darkLevel*0.15;
-        ctx.fillStyle='#000000';
-        ctx.fillRect(0,y,W,1);
-      }
-
-      // Occasional horizontal tear - white/grey pixel shift (no color)
-      if(Math.random()<0.25){
-        var ty=Math.floor(Math.random()*H);
-        var shift=Math.floor((Math.random()-0.5)*30);
-        ctx.globalAlpha=0.12+Math.random()*0.18;
-        ctx.fillStyle='#ffffff';
-        ctx.fillRect(0,ty,W,1+Math.floor(Math.random()*3));
-        // Offset duplicate of adjacent row
-        if(shift!==0){
-          ctx.globalAlpha=0.08;
-          ctx.fillStyle='rgba(255,255,255,0.5)';
-          ctx.fillRect(shift,ty+1,W,1);
-        }
-      }
-
-      // Vignette corners darkening
-      var vg=ctx.createRadialGradient(W/2,H/2,H*0.3,W/2,H/2,H*0.9);
-      vg.addColorStop(0,'rgba(0,0,0,0)');
-      vg.addColorStop(1,'rgba(0,0,0,0.6)');
-      ctx.globalAlpha=0.5+Math.sin(artFrame*0.05)*0.2;
-      ctx.fillStyle=vg;
-      ctx.fillRect(0,0,W,H);
-
-      // Random dead pixel rows (black)
-      if(artFrame%6===0&&Math.random()<0.3){
-        var dpY=Math.floor(Math.random()*H);
-        ctx.globalAlpha=0.9;
-        ctx.fillStyle='#000000';
-        ctx.fillRect(0,dpY,W,1);
-      }
-
-      ctx.globalAlpha=1;
-      requestAnimationFrame(drawArtifacts);
-    }
-    drawArtifacts();
-
-    // 6. Shake whole shell
-    var shakeT=null;
-    if(shell&&intensity!=='mild'){
-      var shakes=intensity==='terminal'?6:3;
-      function doShake(n){
-        if(!window._poisonRunning||n<=0) return;
-        var dx=(Math.random()-0.5)*18, dy=(Math.random()-0.5)*10;
-        shell.style.transform='translate('+dx+'px,'+dy+'px)';
-        setTimeout(function(){ if(shell) shell.style.transform=''; setTimeout(function(){ doShake(n-1); },200+Math.random()*400); },80);
-      }
-      setTimeout(function(){ doShake(shakes); }, 300+Math.random()*800);
-    }
-
-    // 7. Occasional full-screen brief blackout (monitor power flicker)
-    if(Math.random()<0.5){
-      setTimeout(function(){
-        if(!window._poisonRunning) return;
-        var flash=document.createElement('div');
-        flash.style.cssText='position:fixed;inset:0;background:#000;z-index:999991;pointer-events:none;';
-        document.body.appendChild(flash);
-        setTimeout(function(){ if(flash.parentNode) flash.parentNode.removeChild(flash); },80+Math.random()*150);
-      }, 400+Math.random()*(dur*0.6));
-    }
-
-    // 8. Forced logout
-    if(Math.random()<cfg.logoutChance){
-      setTimeout(function(){
-        if(!window._poisonRunning) return;
-        window._pendingPoisonLogout=true;
-        doLogout(true);
-      }, 1200+Math.random()*2000);
-    }
-
-    // Cleanup after duration
-    setTimeout(function(){
-      if(shell) shell.style.filter='';
-      if(content){ content.style.transform=''; content.style.transformOrigin=''; }
-      if(sidebar) sidebar.style.visibility='';
-      if(topbar) topbar.style.background='';
-      textEls.forEach(function(el){ el.style.letterSpacing=''; el.style.opacity=''; });
-    }, dur);
-  }
-
-  function removeGpu(){
-    var c=document.getElementById('poison-gpu-canvas');
-    if(c&&c.parentNode) c.parentNode.removeChild(c);
-    var sh=document.getElementById('adminScreen');
-    if(sh) sh.style.transform='';
-  }
-
-  // ── Phase 2: Kernel Panic full-screen takeover ──
-  var KERNEL_LINES=[
-    // Boot/init
-    'BIOS-provided physical RAM map:','BIOS-e820: 0000000000000000 - 000000000009f800 (usable)',
-    'BIOS-e820: 000000000009f800 - 00000000000a0000 (reserved)',
-    'DMI: Samaritan Systems SSP-440 v4.2, BIOS SP4C 10/05/2019',
-    'ACPI: RSDP 0x00000000000F04B0 000024 (v02 SAMAR)',
-    'ACPI: XSDT 0x0000000007FE18E4 00006C (v01 SAMAR  SAMARSYS 00000001 INTL 20120913)',
-    'ACPI: IRQ0 used by override.','ACPI: IRQ9 used by override.','ACPI: IRQ14 used by override.',
-    'PCI: Using ACPI for IRQ routing','PCI: pci_cache_line_size set to 64 bytes',
-    'NET: Registered protocol family 2','NET: Registered protocol family 10',
-    'TCP established hash table entries: 4096 (order: 3, 32768 bytes)',
-    'TCP bind hash table entries: 4096 (order: 4, 65536 bytes)',
-    'TCP: Hash tables configured (established 4096 bind 4096)',
-    // Memory/CPU
-    'Calibrating delay loop (skipped)... 4800.00 BogoMIPS (lpj=24000000)',
-    'pid_max: default: 32768 minimum: 301',
-    'Mount-cache hash table entries: 512','Initializing cgroup subsys memory',
-    'SLUB: HWalign=64, Order=0-3, MinObjects=0, CPUs=4, Nodes=1',
-    'Freeing SMP alternatives memory: 32K (ffffffff81f8e000 - ffffffff81f96000)',
-    'ACPI: bus type PCI registered','vgaarb: loaded',
-    'ACPI: Added _OSI(Module Device)','ACPI: Added _OSI(Processor Device)',
-    'ACPI: Added _OSI(3.0 _SCP Extensions)','ACPI: Added _OSI(Processor Aggregator Device)',
-    // GPU/DRM
-    '[drm] Initialized drm 1.1.0 20060810',
-    '[drm:i915_driver_load] *ERROR* Failed to find MMIO registers',
-    '[drm:intel_pipe_crc_irq_handler] *ERROR* pipe A FIFO underrun',
-    '[drm:intel_gpu_reset] *ERROR* Failed to reset chip',
-    'NVRM: loading NVIDIA UNIX x86_64 Kernel Module  510.60.02  Thu Mar  3 21:57:20 UTC 2022',
-    'NVRM: GPU-00000000:00:03.0 OS Error: NV_ERR_INVALID_STATE 0x0000003B (0x00000000 0x00000000)',
-    'NVRM: RmInitAdapter failed! (0x25:0x65:1452)','NVRM: rm_init_adapter failed, device minor number 0',
-    'nvidia: probe of 0000:00:03.0 failed with error -5',
-    // Filesystem
-    'EXT4-fs (sda1): mounted filesystem with ordered data mode. Opts: (null)',
-    'EXT4-fs error (device sda1): ext4_validate_block_bitmap:376: comm systemd: bg 0: bad block bitmap checksum',
-    'EXT4-fs error (device sda1): ext4_find_entry:1455: inode #131073: comm php-fpm: reading directory lblock 0',
-    'BTRFS: error (device sdb) in btree_readahead_worker:2276: errno=-5 IO failure',
-    'BTRFS: error (device sdb) in btrfs_run_delalloc_range:1863: errno=-5 IO failure',
-    'EXT4-fs (sda1): delayed block allocation failed for inode 394 at logical offset 0 with max blocks 8 with error -28',
-    'VFS: Cannot open root device "sda1" or unknown-block(8,1): error -6',
-    'VFS: Mounted root (ext2 filesystem) readonly on device 8:1.',
-    'VFS: Unable to mount root fs on unknown-block(0,0)',
-    'Please append a correct "root=" boot option; here are the available partitions:',
-    '0800         5120000 sda  driver: sd','0810          512000 sda1 ffffffff81','0811        4607488 sda2',
-    // Kernel oops
-    'BUG: unable to handle kernel NULL pointer dereference at           (null)',
-    'BUG: unable to handle kernel paging request at ffff88003fa03bd8',
-    'IP: [<ffffffff8108f36b>] __do_page_fault+0x2ab/0x5a0',
-    'IP: [<ffffffff810937c2>] native_write_cr4+0x0/0x40',
-    'IP: [<ffffffff81276bc3>] copy_from_user_inatomic+0x33/0x80',
-    'PGD 0 [0000000000000000] PUD 0 [0000000000000000]',
-    'Oops: 0002 [#1] SMP PREEMPT','Oops: 0000 [#4] SMP PREEMPT_RT','Oops: 0000 [#7] SMP',
-    'CPU: 2 PID: 1 Comm: swapper/0 Not tainted 5.15.0-86-generic #96-Ubuntu',
-    'CPU: 3 PID: 4421 Comm: auth_daemon Tainted: G    B   W        5.4.0-204-generic #224',
-    'CPU: 0 PID: 7731 Comm: kworker/u8:5 Not tainted 5.15.108 #1',
-    'Hardware name: Samaritan Systems SSP-440 Board v2.1 (rev 3)',
-    'Hardware name: VMware, Inc. VMware Virtual Platform/440BX Desktop Reference Platform, BIOS 6.00 07/22/2020',
-    'Workqueue: events_unbound btrfs_async_reclaim_metadata_space',
-    'RIP: 0010:[<ffffffff810937c2>] [<ffffffff810937c2>] native_write_cr4+0x0/0x40',
-    'RIP: 0010:copy_page_to_iter+0x6b/0x1f0','RIP: 0010:__ext4_journal_stop+0x37/0x90',
-    'RSP: 0018:ffff88003fa03bd8 EFLAGS: 00010046',
-    'RAX: 00000000000406e0 RBX: 0000000000000000 RCX: 0000000000000000',
-    'RDX: 0000000000000000 RSI: 00000000ffffffff RDI: 0000000000000021',
-    'RBP: ffff88003fa03be8 R08: 0000000000000001 R09: 000000000000fffe',
-    'R10: 0000000000000000 R11: 0000000000000000 R12: ffffffff81c4c040',
-    'R13: 0000000000000000 R14: ffff88003da1b448 R15: 0000000000000000',
-    'FS:  00007f8d1a403700(0000) GS:ffff88003fc00000(0000) knlGS:0000000000000000',
-    'CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033',
-    'CR2: ffffffff81276bc3 CR3: 0000000001c0b000 CR4: 00000000000406f0',
-    'Call Trace:','Call Trace: <IRQ>','Call Trace: <TASK>',
-    ' [<ffffffff8104e3c5>] dump_stack+0x45/0x56',
-    ' [<ffffffff8104e3c5>] panic+0xd4/0x21e',
-    ' [<ffffffff810967f8>] mount_block_root+0x1a8/0x20c',
-    ' [<ffffffff810969e4>] mount_root+0xb8/0xc5',
-    ' [<ffffffff81096b35>] prepare_namespace+0x14a/0x1b4',
-    ' [<ffffffff81096440>] kernel_init_freeable+0x22b/0x24f',
-    ' [<ffffffff8174e2c0>] ret_from_fork+0x20/0x30',
-    ' [<ffffffff81275e80>] __do_page_fault+0x140/0x450',
-    ' [<ffffffff81276570>] trace_do_page_fault+0x50/0x130',
-    ' [<ffffffff81276490>] do_async_page_fault+0x30/0xb0',
-    ' [<ffffffff8174e978>] async_page_fault+0x28/0x30',
-    ' [<ffffffff811b6618>] kmem_cache_alloc+0x198/0x2f0',
-    ' [<ffffffff81222c04>] __d_alloc+0x24/0x1f0',
-    ' [<ffffffff81223510>] d_alloc+0x20/0x60',
-    ' [<ffffffff8121e6c1>] __lookup_hash+0x81/0xb0',
-    ' [<ffffffff8122cf92>] kern_path_create+0x82/0x180',
-    ' [<ffffffff8122d0de>] user_path_create+0x4e/0x90',
-    ' [<ffffffff8122d1ef>] SyS_mkdir+0x6f/0xf0',
-    ' [<ffffffff8174f1c9>] system_call_fastpath+0x16/0x1b',
-    'Code: 48 c7 c7 68 a4 d8 81 e8 fb 7a fb ff 66 0f 1f 84 00 00 00 00 00 <48> f7 04',
-    'Code: ff ff ff ff 44 89 e9 44 89 f2 4c 89 ee 48 89 df e8 56 fe ff',
-    'RIP [<ffffffff810937c2>] native_write_cr4+0x0/0x40 RSP <ffff88003fa03bd8>',
-    'CR2: 0000000000000000','CR2: ffffffffffffffff',
-    '---[ end trace 4eaa2a86a8e2da52 ]---','---[ end trace b72ae21d99b89ff5 ]---',
-    '---[ end trace 9b85c43d9e8d879a ]---',
-    // Kernel panic messages
-    'Kernel panic - not syncing: VFS: Unable to mount root fs on unknown-block(0,0)',
-    'Kernel panic - not syncing: Fatal exception in interrupt',
-    'Kernel panic - not syncing: Attempted to kill init! exitcode=0x0000000b',
-    'Kernel panic - not syncing: stack-protector: Kernel stack is corrupted in: ffffffff81276bc3',
-    // Memory
-    'Out of memory: Kill process 4421 (auth_daemon) score 982 or sacrifice child',
-    'Killed process 4421 (auth_daemon) total-vm:2048kB, anon-rss:1024kB, file-rss:512kB',
-    'Out of memory: Kill process 1 (systemd) score 0 or sacrifice child',
-    'Killed process 1337 (samaritan) total-vm:8192kB, anon-rss:4096kB',
-    'mm: page allocation failure: order:4, mode:0x40d0',
-    'swapper/0: page allocation failure: order:0, mode:0x20',
-    // Signals/segfaults
-    'segfault at 7f3b2a1c4000 ip 00007f3b2a1c4000 sp 00007ffc3d8e4200 error 14 in libsys.so[7f3b2a000000+200000]',
-    'segfault at 0 ip (null) sp 00007fff7c0b7ab8 error 14 in auth_module.so',
-    'general protection fault: 0000 [#2] SMP','general protection fault: 0000 [#5] SMP PREEMPT',
-    'divide error: 0000 [#3] SMP PREEMPT_RT',
-    'process watchdog[1337] killed by signal 11',
-    'process auth_daemon[4421] killed by signal 9',
-    'kernel BUG at fs/buffer.c:1492!','kernel BUG at mm/slub.c:3722!','kernel BUG at lib/list_debug.c:29!',
-    // ACPI
-    'ACPI Error: [_SB_.PCI0.ISA_.RTC_] Namespace lookup failure AE_NOT_FOUND (20180105/dswload-421)',
-    'ACPI Exception: AE_NOT_FOUND, During name lookup/catalog (20180105/psobject-252)',
-    'ACPI Error: Method parse/execution failed \\_SB.PCI0.ISA.RTC, AE_NOT_FOUND (20180105/psparse-516)',
-    'ACPI: FADT: invalid checksum (5)','ACPI Error: SMBus or IPMI do not allow accesses above 8-bit (20160831/evregion-141)',
-    // MCE
-    'EDAC MC0: 1 CE read error on CPU#0Channel#0_DIMM#0 (csrow 0, channel 0, offset 0x00000000, grain 1, syndrome 0x00000000)',
-    'mce: [Hardware Error]: Machine check events logged',
-    'mce: [Hardware Error]: CPU 0: Machine Check Exception: 5 Bank 4: b200000000070f0f',
-    'mce: [Hardware Error]: RIP !INEXACT! 10:<ffffffff81276bc3> {__do_page_fault+0x143/0x450}',
-    'mce: [Hardware Error]: TSC 12ac7e965 ADDR ffffc90000000000 MISC 12c',
-    'WARNING: at arch/x86/kernel/cpu/mcheck/mce.c:1523 mce_panic+0xdb/0x17f()',
-    'Machine check: Processor context corrupt',
-    // Watchdog/hung
-    'BUG: soft lockup - CPU#0 stuck for 23s! [kworker/0:1:12345]',
-    'BUG: soft lockup - CPU#2 stuck for 67s! [auth_daemon:4421]',
-    'hung_task: blocked tasks','INFO: task kworker/u8:5:4421 blocked for more than 120 seconds.',
-    'INFO: task auth_daemon:1337 blocked for more than 120 seconds. Not tainted',
-    '"echo 0 > /proc/sys/kernel/hung_task_timeout_secs" disables this message.',
-    // Network
-    '[  4.327123] r8169 0000:02:00.0: firmware: failed to load rtl_nic/rtl8168e-3.fw (-2)',
-    '[  5.102441] e1000e 0000:00:19.0: The NVM Checksum Is Not Valid',
-    '[  5.220189] iwlwifi 0000:03:00.0: No alive response from device after 3 seconds',
-    // Samaritan-specific fabricated lines
-    '[samaritan] auth_module: identity verification FAILED - hash mismatch 0xDEADBEEF',
-    '[samaritan] session_mgr: token 0x7A3F1C2D expired - clearing keychain',
-    '[samaritan] core: watchdog timer expired - process terminated',
-    '[samaritan] integrity_check: SIGNATURE MISMATCH on samaritan_core.ko',
-    '[samaritan] memory_guard: write to protected region 0xFFFF_FFFF - FAULT',
-    '[samaritan] scheduler: task 0x4421 exceeded CPU budget - forced eviction',
-    '[samaritan] crypto: key derivation failure - entropy source exhausted',
-    '[samaritan] net: unauthorized packet from 10.0.0.1 - dropping session',
-    // Doom messages
-    'INIT: version 2.88 booting - halted','systemd[1]: Failed to start Emergency Shell.',
-    'systemd[1]: Reached target Emergency Mode.','Emergency mode activated.',
-    'FATAL: Module samaritan_core not found in directory /lib/modules/5.15.0-86-generic',
-    'FATAL: Error inserting acpi_cpufreq: No such device',
-    'INIT: PANIC: segmentation violation! - giving up...',
-  ];
-
-  var CRYPTIC=[
-    'YOU SHOULD NOT BE HERE.',
-    'THE SYSTEM HAS BEEN NOTIFIED.',
-    'YOUR SESSION IS BEING TRACED.',
-    'MEMORY INTEGRITY: COMPROMISED.',
-    'DO NOT ATTEMPT TO REFRESH.',
-    'WE KNOW WHO YOU ARE.',
-    'THIS TERMINAL IS FLAGGED.',
-    'GOODBYE.',
-    'ERROR: IDENTITY UNRESOLVED.',
-    'CORE INTEGRITY: 0%',
-    'SAMARITAN IS WATCHING.',
-    'YOUR ACTIONS HAVE BEEN LOGGED.',
-    'AUTHORIZATION REVOKED.',
-    'CONNECTION WILL BE TERMINATED.',
-    'YOU CANNOT ESCAPE THIS.',
-    'SECTOR 7 QUARANTINE ACTIVE.',
-    'DO NOT POWER OFF THE MACHINE.',
-    'ALL DATA WILL BE PRESERVED.',
-    'THERE IS NO RECOVERY.',
-    'SESSION ID: NULL.',
-  ];
-
-  // Run GPU layer on a loop between panics
-  function gpuLoop(){
-    if(!window._poisonRunning) return;
-    runGpuLayer();
-    setTimeout(gpuLoop, cfg.gpuInterval + Math.random()*2000);
-  }
-
-  // First GPU hit quick
-  setTimeout(function(){ if(window._poisonRunning) runGpuLayer(); }, 600);
-  setTimeout(gpuLoop, cfg.gpuInterval);
-
-  // Kernel panic loop
-  function panicLoop(){
-    if(!window._poisonRunning) return;
-    showKernelPanic(KERNEL_LINES, CRYPTIC, intensity, cfg, function(){
-      if(!window._poisonRunning) return;
-      // Short GPU artifact burst between panics before next one
-      runGpuLayer();
-      setTimeout(panicLoop, cfg.panicInterval*0.3 + Math.random()*cfg.panicInterval*0.4);
-    });
-  }
-
-  setTimeout(function(){ if(window._poisonRunning) panicLoop(); }, cfg.firstPanic);
-}
 
 function showKernelPanic(LINES, CRYPTIC, intensity, cfg, onComplete){
-  var existing=document.getElementById('poison-panic-overlay');
-  if(existing) existing.remove();
-  var gpuC=document.getElementById('poison-gpu-canvas');
-  if(gpuC) gpuC.style.zIndex='99989'; // push gpu behind panic
 
-  var overlay=document.createElement('div');
-  overlay.id='poison-panic-overlay';
   overlay.style.cssText='position:fixed;inset:0;background:#0a0a0a;z-index:999999;'
     +'font-family:"Courier New",Courier,monospace;font-size:11px;line-height:1.45;color:#c8c8c8;'
     +'padding:10px 14px;overflow:hidden;cursor:default;user-select:none;';
@@ -10476,7 +9949,6 @@ function showKernelPanic(LINES, CRYPTIC, intensity, cfg, onComplete){
   }
 
   function addLine(){
-    if(!window._poisonRunning){ cleanup(); return; }
     var line=nextLine();
     var el=document.createElement('div');
     // Timestamp prefix on ~30% of lines
@@ -10521,7 +9993,6 @@ function showKernelPanic(LINES, CRYPTIC, intensity, cfg, onComplete){
   var shakeTimer=null;
   if(intensity!=='mild'){
     shakeTimer=setInterval(function(){
-      if(!window._poisonRunning) return;
       if(Math.random()<0.35){
         var dx=(Math.random()-0.5)*10, dy=(Math.random()-0.5)*6;
         overlay.style.transform='translate('+dx+'px,'+dy+'px) skewX('+(Math.random()-0.5)*2+'deg)';
@@ -10533,10 +10004,8 @@ function showKernelPanic(LINES, CRYPTIC, intensity, cfg, onComplete){
   // White/color flash bursts
   var numFlash=intensity==='terminal'?8:intensity==='severe'?4:2;
   function doFlash(remaining){
-    if(!window._poisonRunning||remaining<=0) return;
     var delay=500+Math.random()*3000;
     setTimeout(function(){
-      if(!window._poisonRunning) return;
       // Pick flash type
       var type=Math.floor(Math.random()*3);
       if(type===0){ overlay.style.background='#ffffff'; overlay.style.color='#000'; }
@@ -10555,7 +10024,6 @@ function showKernelPanic(LINES, CRYPTIC, intensity, cfg, onComplete){
   // Ghost layer flicker (chromatic aberration)
   ghost.style.opacity='0.4';
   var ghostTimer=setInterval(function(){
-    if(!window._poisonRunning) return;
     var ox=(Math.random()-0.5)*8, oy=(Math.random()-0.5)*4;
     ghost.style.transform='translate('+ox+'px,'+oy+'px)';
     ghost.style.opacity=(0.1+Math.random()*0.5).toString();
@@ -10568,10 +10036,8 @@ function showKernelPanic(LINES, CRYPTIC, intensity, cfg, onComplete){
   // Forced logout with small chance mid-panic
   if(Math.random()<cfg.logoutChance*0.5){
     setTimeout(function(){
-      if(!window._poisonRunning) return;
       cleanup();
-      window._pendingPoisonLogout=true;
-      setTimeout(function(){ doLogout(true); }, 400);
+            setTimeout(function(){ doLogout(); }, 400);
     }, 1500+Math.random()*3000);
     return;
   }
@@ -10583,12 +10049,11 @@ function showKernelPanic(LINES, CRYPTIC, intensity, cfg, onComplete){
     if(overlay.parentNode){
       overlay.style.transition='opacity 0.3s';
       overlay.style.opacity='0';
-      setTimeout(function(){ if(overlay.parentNode) overlay.parentNode.removeChild(overlay); var g=document.getElementById('poison-gpu-canvas'); if(g) g.style.zIndex='99990'; },350);
+      setTimeout(function(){ if(overlay.parentNode) overlay.parentNode.removeChild(overlay); },350);
     }
   }
 
   setTimeout(function(){
-    if(!window._poisonRunning){ cleanup(); return; }
     cleanup();
     if(onComplete) setTimeout(onComplete, 200+Math.random()*800);
   }, dur);
@@ -15082,21 +14547,20 @@ async function doLogin(){
     document.getElementById('adminScreen').style.display='block';
     try{ wireTopbar(); }catch(e){}
     try{ initPanelCanvas(); }catch(e){}
-    window._loginTimestamp=Date.now(); // for poison grace period
-    // Set fingerprint build ID in sidebar
-    setTimeout(function(){
-      if(ME&&STAFF[ME]){
-        var _sfp=generateStaffFingerprint(ME,STAFF[ME]);
+    window._loginTimestamp=Date.now();
+    // Set fingerprint build ID - retry until STAFF[ME] is populated
+    (function trySetBuildId(attempts){
+      setTimeout(function(){
+        var s=STAFF[ME];
+        if(!s&&attempts>0){ trySetBuildId(attempts-1); return; }
+        var _sfp=generateStaffFingerprint(ME,s||{username:ME});
         var _sbd=document.getElementById('sb-build-id');
         if(_sbd) _sbd.textContent='Build ID: '+_sfp.buildId;
-        // Also set stat bar player count offset
-        var _spEl=document.getElementById('topinfo-players');
-        if(_spEl&&USERS){
-          var _baseCount=Object.keys(USERS).length;
-          _spEl.setAttribute('data-fp-offset',_sfp.statOffset);
-        }
-      }
-    },300);
+        // Set CSS custom properties for watermarks
+        document.documentElement.style.setProperty('--fp-wm','"'+_sfp.tag+' '+_sfp.sessionSalt+'"');
+        document.documentElement.style.setProperty('--fp-bid','"'+_sfp.buildId+'"');
+      }, attempts===10?400:800);
+    })(10);
     document.getElementById('topbarTitle').innerHTML=`<span style='color:#58a6ff;font-weight:800;letter-spacing:-0.5px;font-size:14px;'>SAMARITAN</span><span style='color:var(--c-topbar-sub);font-weight:400;font-size:12px;'> | Internal</span> <span style='color:var(--c-topbar-sub);font-size:11px;font-weight:400;'>&mdash; ${ME}</span> <span style='color:var(--c-topbar-text);font-size:11px;font-weight:600;'>[${MY_LEVEL}]</span>`;
     startListeners();
     startHeartbeat();
@@ -15187,25 +14651,16 @@ async function doLogin(){
   }
 }
 
-async function doLogout(fromPoison){
+async function doLogout(){
   if(heartbeatInterval){ clearInterval(heartbeatInterval); heartbeatInterval=null; }
-  var wasMe=ME;
-  // Stop poison canvas/panic UI
-  var pp=document.getElementById('poison-panic-overlay'); if(pp) pp.remove();
-  var gc=document.getElementById('poison-gpu-canvas'); if(gc) gc.remove();
-  var sh=document.getElementById('adminScreen'); if(sh) sh.style.transform='';
+    var sh=document.getElementById('adminScreen'); if(sh) sh.style.transform='';
   if(ME) await update(ref(db,'staff/'+ME),{lastActive:nowStr(),lastAction:'Logged out'}).catch(()=>{});
   await signOut(auth);
   ME=''; MY_LEVEL=''; currentPassword='';
   document.getElementById('adminScreen').style.display='none';
 
-  // If poison is active for the logged-out user, show lockout screen instead of login
-  if(fromPoison||window._pendingPoisonLogout){
-    window._pendingPoisonLogout=false;
-    showPoisonLockout(wasMe);
-  } else {
-    window._poisonRunning=false;
-    // ── END SESSION: stop everything, show login screen ──
+  {
+        // ── END SESSION: stop everything, show login screen ──
     // Stop canvases
     if(window._panelAnimId){ cancelAnimationFrame(window._panelAnimId); window._panelAnimId=null; }
     if(window._lnAnimId){ cancelAnimationFrame(window._lnAnimId); window._lnAnimId=null; }
@@ -15235,131 +14690,7 @@ async function doLogout(fromPoison){
   }
 }
 
-function showPoisonLockout(username){
-  var el=document.getElementById('poisonLockout');
-  if(!el) return;
-  el.style.display='flex';
-  // Make login screen hidden
-  document.getElementById('loginScreen').style.display='none';
-  // Start the lockout canvas
-  initPoisonLockoutCanvas();
-  // Keep checking Firebase - if cured, show login
-  if(window._poisonLockoutCheck) clearInterval(window._poisonLockoutCheck);
-  window._poisonLockoutCheck=setInterval(async function(){
-    if(!username) return;
-    try{
-      var snap=await get(ref(db,'contingencies/poison/'+username));
-      var p=snap.exists()?snap.val():{};
-      if(!p.active){
-        // Cured - hide lockout, show login
-        clearInterval(window._poisonLockoutCheck);
-        window._poisonRunning=false;
-        window._poisonLockoutRunning=false;
-        el.style.display='none';
-        document.getElementById('loginScreen').style.display='flex';
-        document.getElementById('loginUser').value='';
-        document.getElementById('loginPass').value='';
-        if(typeof window.initLoginBgFn==='function') setTimeout(function(){ if(document.getElementById('loginScreen').style.display!=='none') window.initLoginBgFn(); },150);
-      }
-    }catch(e){}
-  },4000);
-}
 
-function initPoisonLockoutCanvas(){
-  if(window._poisonLockoutRunning) return;
-  window._poisonLockoutRunning=true;
-  var canvas=document.getElementById('poisonLockoutCanvas');
-  var codeEl=document.getElementById('poisonLockoutCode');
-  if(!canvas||!codeEl) return;
-  canvas.width=window.innerWidth; canvas.height=window.innerHeight;
-  window.addEventListener('resize',function(){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; });
-  var ctx=canvas.getContext('2d');
-  var W=canvas.width, H=canvas.height;
-
-  // Scrolling code lines
-  var CODE_POOL=[
-    'BUG: unable to handle kernel NULL pointer dereference at 0000000000000000',
-    'IP: [<ffffffff8108f36b>] __do_page_fault+0x2ab/0x5a0','PGD 0','Oops: 0002 [#1] SMP PREEMPT',
-    'CPU: 0 PID: 1 Comm: samaritan Not tainted 5.15.0-86-generic #96',
-    'RIP: 0010:[<ffffffff810937c2>] native_write_cr4+0x0/0x40',
-    'RAX: 00000000000406e0 RBX: 0000000000000000 RCX: 0000000000000000',
-    'Call Trace:',' [<ffffffff8104e3c5>] dump_stack+0x45/0x56',' [<ffffffff8104e3c5>] panic+0xd4/0x21e',
-    'Kernel panic - not syncing: VFS: Unable to mount root fs on unknown-block(0,0)',
-    '[samaritan] auth_module: identity verification FAILED - session invalidated',
-    '[samaritan] core: watchdog timer expired - process terminated',
-    '[samaritan] integrity_check: SIGNATURE MISMATCH on samaritan_core.ko',
-    'FATAL: Module samaritan_core not found.','segfault at 7f3b2a1c4000 ip 00007f3b2a1c4000',
-    'Out of memory: Kill process 4421 (auth_daemon) score 982 or sacrifice child',
-    'EXT4-fs error (device sda1): ext4_validate_block_bitmap:376',
-    'NVRM: GPU-00000000:00:03.0 OS Error: NV_ERR_INVALID_STATE 0x0000003B',
-    'kernel BUG at fs/buffer.c:1492!','general protection fault: 0000 [#2] SMP',
-    '---[ end trace 4eaa2a86a8e2da52 ]---','ACPI Error: AE_NOT_FOUND (20180105/dswload-421)',
-    'WARNING: at arch/x86/kernel/cpu/mcheck/mce.c:1523 mce_panic+0xdb/0x17f()',
-    'mce: [Hardware Error]: Machine check events logged',
-    'BUG: soft lockup - CPU#0 stuck for 23s! [kworker/0:1]',
-    'Code: 48 c7 c7 68 a4 d8 81 e8 fb 7a fb ff 66 0f 1f 84 00 00 00 00 00 <48> f7 04',
-  ];
-  var lines=[];
-  var maxLines=Math.ceil(H/14)+5;
-
-  function rHex(n){ return Math.floor(Math.random()*Math.pow(16,n)).toString(16).padStart(n,'0'); }
-
-  function addCodeLine(){
-    var line;
-    if(Math.random()<0.18){
-      var procs=['['+rHex(8)+'.'+rHex(6)+'] EXT4-fs error errno=-'+Math.floor(Math.random()*30),
-        'RAX: '+rHex(16)+' RBX: '+rHex(16)+' RCX: '+rHex(16),
-        ' [<ffff88'+rHex(8)+'>] panic+0x'+rHex(2)+'/0x'+rHex(3),
-        '[samaritan] mem: write to protected region '+rHex(16)+' - FAULT',
-        '---[ end trace '+rHex(16)+' ]---'];
-      line=procs[Math.floor(Math.random()*procs.length)];
-    } else { line=CODE_POOL[Math.floor(Math.random()*CODE_POOL.length)]; }
-    lines.push({text:line, y:-14, opacity:0.55+Math.random()*0.35, speed:0.3+Math.random()*0.5,
-      color:line.includes('panic')||line.includes('FATAL')||line.includes('FAULT')?'#553333':
-            line.includes('samaritan')?'#334433':
-            line.includes('WARNING')||line.includes('Error')?'#443322':'#2a2a2a'});
-    if(lines.length>maxLines*2) lines.splice(0, lines.length-maxLines);
-  }
-
-  var frame=0;
-  function drawLockout(){
-    if(!window._poisonLockoutRunning) return;
-    W=canvas.width; H=canvas.height;
-    ctx.fillStyle='rgba(0,0,0,0.92)';
-    ctx.fillRect(0,0,W,H);
-
-    // Move lines down
-    for(var i=lines.length-1;i>=0;i--){
-      lines[i].y+=lines[i].speed;
-      if(lines[i].y>H+20) lines.splice(i,1);
-    }
-    // Add new lines
-    if(frame%12===0) addCodeLine();
-
-    // Draw lines
-    ctx.font='11px "Courier New", monospace';
-    for(var j=0;j<lines.length;j++){
-      var ln=lines[j];
-      ctx.globalAlpha=ln.opacity;
-      ctx.fillStyle=ln.color;
-      ctx.fillText(ln.text, 10+Math.floor(Math.random()<0.005?Math.random()*4:0), ln.y);
-    }
-    ctx.globalAlpha=1;
-
-    // Subtle occasional horizontal glitch line
-    if(Math.random()<0.03){
-      var gy=Math.random()*H;
-      ctx.globalAlpha=0.04+Math.random()*0.05;
-      ctx.fillStyle=Math.random()>0.5?'#ffffff':'#330000';
-      ctx.fillRect(0,gy,W,1+Math.floor(Math.random()*3));
-      ctx.globalAlpha=1;
-    }
-
-    frame++;
-    requestAnimationFrame(drawLockout);
-  }
-  drawLockout();
-}
 
 // ── ACTIVITY HEARTBEAT ──
 let heartbeatInterval=null;
@@ -15404,11 +14735,6 @@ function startHeartbeat(){
   onValue(ref(db,'staff/'+ME+'/freezeActive'),function(snap){
     setTimeout(checkFreezeFrame, 100);
   });
-  // Poison - check on login
-  get(ref(db,'contingencies/poison/'+ME)).then(function(snap){
-    if(snap.exists()) POISON_DATA[ME]=snap.val();
-    checkPoisonActive();
-  }).catch(function(){});
   heartbeatInterval=setInterval(async()=>{
     if(!ME) return;
     const snap=await get(ref(db,`staff/${ME}`));
@@ -15728,11 +15054,8 @@ function startListeners(){
   onValue(ref(db,'meta/shiftConfig'),snap=>{ if(snap.exists()) SHIFT_CONFIG=snap.val(); });
   onValue(ref(db,'staffReports'),snap=>{ STAFF_REPORTS=snap.val()||{}; if(page==='staffreports') safeRender(); });
   onValue(ref(db,'shiftSlots'),snap=>{ SHIFT_SLOTS=snap.val()||{}; if(page==='calendar') safeRender(); });
-  // Poison listener - real-time check if current user is poisoned
   onValue(ref(db,'contingencies/poison/'+ME),function(snap){
-    POISON_DATA[ME]=snap.val()||{};
-    checkPoisonActive();
-  });
+          });
   // Beehive listener - watch dedicated beehive path
   var _lastBeehiveTs = 0;
   onValue(ref(db,'contingencies/beehive'),function(snap){
@@ -16098,22 +15421,177 @@ function renderStaffConfig(c){
 // Rule-based message analyzer (works without API)
 function analyzeMessageLocally(msg){
   const m=msg.toLowerCase();
-  const l33t=m.replace(/0/g,'o').replace(/1/g,'i').replace(/3/g,'e').replace(/4/g,'a').replace(/5/g,'s').replace(/7/g,'t').replace(/\$/g,'s').replace(/@/g,'a');
-  const flags=[];
-  function hit(patterns,text){ return patterns.some(p=>{ if(p instanceof RegExp?p.test(text):text.includes(p)){ flags.push(p instanceof RegExp?p.source.replace(/\\b/g,''):p); return true; } return false; }); }
-  const critical=[/\bkill\b/,/\bkys\b/,/\bsuicid/,/\bmurder\b/,/\bbombing?\b/,/\bshoot(ing)?\b/,/\bstab(bing)?\b/,/ip.?grab/,/\bdox/,/\bswat/,/\bddos\b/,/\bhack(ing)?\b/,/\bexploit/,/\bpedo/,/child.?porn/,/\bra(pe|ping)\b/,/i('ll|will)\s+(kill|hurt|find)\s+you/,/your\s+address/,/where\s+(do\s+)?you\s+live/,/free.?robux.*link/];
-  const high=[/f+u+c+k/,/sh+i+t/,/b+i+t+c+h/,/c+u+n+t/,/\bwhore\b/,/n+i+g+g[ae]+r/,/f+a+g+g*o+t/,/\bretard/,/\bspic\b/,/\bchink\b/,/\bkike\b/,/\bgook\b/,/\bslut\b/,/\braci(st|sm)/,/\bdie\b/,/\bkill.?yourself/,/go\s+die/,/i\s+hate\s+you/,/you('re|\s+are)\s+(worthless|pathetic|trash|garbage)/,/\bsex.?harass/];
-  const medium=[/\bdamn\b/,/\bhell\b/,/\bcrap\b/,/\bdick\b/,/\bcock\b/,/\bstupid\b/,/\bidiot\b/,/\bmoron\b/,/\bdumbass\b/,/\bloser\b/,/free.?robux/,/\bscam\b/,/click.?link/,/discord\.gg/,/\bphishing\b/,/\bspam\b/,/\bbully/,/\bstalk/,/\bblackmail\b/,/\bporn\b/,/nude(s)?\b/];
-  const low=[/\bnoob\b/,/\bsucks?\b/,/\bcringe\b/,/\breport\s+(you|him|her)/,/\bban\s+you\b/];
+  const matches=[];
+
+  // ── Multi-layer normalisation ──────────────────────────────────────────────
+  // Strip zero-width / invisible chars, combining marks
+  const stripped=m.replace(/[\u200b-\u200f\u00ad\u2060\ufeff\u034f\u202a-\u202e]/g,'');
+  // l33tspeak map (broad)
+  function unl33t(s){ return s.replace(/0/g,'o').replace(/1/g,'i').replace(/!/g,'i').replace(/3/g,'e').replace(/4/g,'a').replace(/@/g,'a').replace(/5/g,'s').replace(/\$/g,'s').replace(/6/g,'g').replace(/7/g,'t').replace(/8/g,'b').replace(/9/g,'g').replace(/\|/g,'i').replace(/\(/g,'c').replace(/\+/g,'t').replace(/\*/g,'a'); }
+  // Remove spaces/dots/dashes between letters (bypass detection: f u c k, f.u.c.k)
+  function despaced(s){ return s.replace(/([a-z0-9])[^a-z0-9]+([a-z0-9])/g,'$1$2').replace(/[^a-z0-9]+/g,''); }
+  // Remove repeated chars (fuuuuck → fuck)
+  function dedup(s){ return s.replace(/(.)\1{2,}/g,'$1$1'); }
+
+  const norm1=unl33t(stripped);
+  const norm2=despaced(stripped);
+  const norm3=dedup(unl33t(despaced(stripped)));
+  const all=[m, stripped, norm1, norm2, norm3];
+
+  function testAny(pattern){ return all.some(v=>pattern instanceof RegExp?pattern.test(v):v.includes(p)); }
+  function hit(patterns){ return patterns.some(p=>{ const found=all.some(v=>p instanceof RegExp?p.test(v):v.includes(p)); if(found){ const label=p instanceof RegExp?p.source.replace(/[\\^$.*+?()[\]{}|\\\\]/g,'').replace(/\\b/g,'').substring(0,30):p; if(!matches.includes(label)) matches.push(label); } return found; }); }
+
+  // ── CRITICAL ──────────────────────────────────────────────────────────────
+  const critical=[
+    // Threats
+    /\bkys\b/,/\bkill\s*(your|ur|u)?self\b/,/kill\s+yo(urself|u)\b/,
+    /go\s*(kill|hang|neck)\s*(your|ur)?self/,/i\s*(will|('ll))\s*(kill|hurt|murder|find|stab)\s+(you|u|them|him|her)\b/,
+    /i'?m\s*(gonna|going\s+to)\s*(kill|hurt|shoot|stab)/,
+    /death\s*threat/,/gonna\s*(shoot|stab|kill|bomb)/,/shoot\s*(up|the|this)/,
+    /bomb(ing|ed|s)?\s*(this|the|your|school|place)/,
+    // Doxxing / real world
+    /\bdox(x?ing|ed|er)?\b/,/your\s*(home|house|address|school|ip)/,/where\s*(do\s*)?you\s*live/,
+    /ip\s*(address|grab|log|steal)/,/\bswat(ted|ting)?\b/,/\bddos(ing|ed)?\b/,
+    // CSAM
+    /child\s*porn/,/cp\s*link/,/\bpedo(phile)?\b/,/loli\s*(link|porn|nude)/,
+    /kid(s|die)?\s*nude/,/minor\s*(porn|nude|sex)/,
+    // Suicide
+    /\bsuicid(e|al|ing)?\b/,/end\s*(it|my\s*life|everything)/,/want\s*to\s*die/,
+    /better\s*off\s*dead/,
+    // Hacking/exploiting
+    /\bexploit(ing|er|s)?\b/,/\bhack(ing|ed|er|s)?\b.*\b(you|account|roblox)\b/,
+    /\bduplicate\s*(glitch|bug|exploit)/,/\bcheat\s*(engine|program)/,
+  ];
+
+  // ── HIGH ──────────────────────────────────────────────────────────────────
+  const high=[
+    // Hard slurs - many bypass forms
+    /n[i1!|]+[gq6][g6q]*[ae3@]+r/,        // n-word all forms
+    /n[i1!]+[gq]+[ae3@]+[sz]/,             // plural/verb forms
+    /\bni+g+a+\b/,                          // soft form
+    /nigg[ae3@]/,                           // combined
+    /f[a@4][gq][g6q]*[o0][t7]/,            // f-slur
+    /f[a@4][gq]{2,}/,                       // short form
+    /\bfag\b/,/\bfags\b/,
+    /[ck][u*][n@][t7]/,                     // c-word
+    /wh[o0][r*][e3]/,                       // w-slur
+    /\bwhore\b/,/\bwhores\b/,/\bwh0re\b/,
+    /[s5][l1][u*][t7]/,                     // s-word
+    /\bslut\b/,/\bsluts\b/,
+    /[ck]h[i1][n@][gqk]/,                  // c-slur (Asian)
+    /\bchink\b/,/\bchinks\b/,
+    /g[o0][o0][k]/,                         // g-slur
+    /\bgook\b/,/\bgooks\b/,
+    /\bspic\b/,/\bspics\b/,/\bspick\b/,
+    /\bkike\b/,/\bkikes\b/,
+    /\bretard(ed|s)?\b/,/\br3tard\b/,/ret@rd/,
+    /\bcoon\b/,/\bcoons\b/,
+    /\bwetback\b/,/\bwetbacks\b/,
+    /\bbeaner\b/,/\bbeaners\b/,
+    /\bpakis?\b/,/\btowelhead\b/,/\bsandnigger\b/,/\bcamel\s*jockey\b/,
+    /\btranny\b/,/\btrans.?bashing\b/,
+    /\bjigaboo\b/,/\bcrimp\b.*black/,
+    // Hard profanity (bypass-resistant)
+    /f[u*][c(k][k*]/,/f[u*]ck/,/fu+c+k+/,/ph[u*]ck/,/fvck/,/f\.u\.c\.k/,
+    /[s5][h#][i1!][t7]/,/5h1t/,/sh!t/,
+    /[b8][i1][t7][c(][h#]/,/b1tch/,/b!tch/,/bytch/,
+    /[a@][s5][s5]/,/a\$\$/,
+    /[d][i1][c(][k]/,/\bdick\b/,
+    /c[o0][c(][k]/,/\bcock\b/,
+    // Targeted hate
+    /\bracis(t|m)/,/\bwhite\s*suprema/,/\bnazi\b/,/\bheil\b/,
+    /gas\s*the\s*/,/\bgenocide\b/,/ethnic\s*clean/,
+    // Sexual harassment
+    /send\s*(nudes|pics|photos)/,/\bsext(ing)?\b/,/\bgrooming\b/,
+    /dm\s*me\s*(nudes|pics)/,/show\s*(me|ur|your)\s*(body|pp|tits|ass)/,
+    /wanna\s*(f[u*]ck|hook\s*up|cyber)/,
+    // Death/violence
+    /\bdie\b/,/go\s*to\s*hell/,/i\s*hate\s*you/,/kill\s*you/,
+    /i\s*(hope|wish)\s*you\s*(die|get\s*(hurt|hit|shot|stabbed|cancer|aids))/,
+    /\byou'?re\s*(worthless|pathetic|trash|garbage|nothing|a\s*waste)/,
+    /nobody\s*(likes?|wants?|cares?\s*about)\s*you/,
+  ];
+
+  // ── MEDIUM ────────────────────────────────────────────────────────────────
+  const medium=[
+    // Scams
+    /free\s*robux/,/free\s*vbucks/,/free\s*nitro/,
+    /click\s*(this|the|here|my)?\s*link/,/visit\s*this\s*(site|link|url)/,
+    /discord\.gg\//,/\.com\/(free|hack|cheat|exploit)/,
+    /account\s*(hacked|stolen|compromised)/,/give\s*(me|us)\s*your\s*(password|pass|info)/,
+    /\bphish(ing)?\b/,/\bscam(ming|mer)?\b/,/\bbot\s*farm\b/,
+    /limited\s*(time|offer)\s*(free|deal)/,/claim\s*your\s*(free|prize)/,
+    // Drugs
+    /\bweed\b/,/\bweed\s*(dealer|plug)\b/,/\bcoke\b.*buy/,/\bcocaine\b/,
+    /\bheroin\b/,/\bmeth(amphetamine)?\b/,/\bdrugs?\s*(for\s*sale|plug|deal)/,
+    /\bxanax\b/,/\bpercs?\b/,/\bfentanyl\b/,
+    // Inappropriate
+    /\bporn\b/,/\bpornhub\b/,/nude(s)?\b/,/\bsex\s*(tape|video|chat)\b/,
+    /\bonlyfans\b/,/\bnsfw\b/,
+    // Moderate profanity
+    /\bdamn\b/,/\bhell\b.*you/,/\bcrap\b/,/\basshole\b/,/\bdumbass\b/,
+    /\bmoron\b/,/\bidiot\b/,/\bstupid\b.*you/,/\bloser\b/,/\bprick\b/,
+    /\btwat\b/,/\bwanker\b/,/\bdipshit\b/,/\bdouchebag?\b/,/\bjackass\b/,
+    // Gambling
+    /\bcasino\b/,/\bgamble\b/,/\bbet\s*(on|with)\b.*robux/,
+    // Account trading/selling
+    /sell(ing)?\s*(my|this)?\s*(account|acc)\b/,/buy(ing)?\s*(accounts?|accs?)\b/,
+    /acc\s*(for\s*sale|trade|swap)\b/,
+  ];
+
+  // ── LOW ───────────────────────────────────────────────────────────────────
+  const low=[
+    /\bnoob\b/,/\bn00b\b/,/\bsuck(s|er)?\b/,/\btrash\b/,
+    /\bcringe\b/,/\bstfu\b/,/\bstfup\b/,/\bwtf\b/,/\bwth\b/,
+    /\bkms\b/,  // kill myself (ambiguous - flag for review)
+    /\bngl\b.*bad/,/\btbh.*hate/,
+    /\breport\s+(you|him|her|them)\b/,/\bban\s+(you|him|her)\b/,
+    /\bgit\s*gud\b/,/\bget\s*good\b/,/\bskill\s*issue\b/,
+    /\bkek\b/,/\blmao\s*(kys|die)\b/,/ratio\b/,
+  ];
+
   let severity='None',verdict='No Action',reason='Message appears acceptable.',suggested='';
-  if(hit(critical,m)||hit(critical,l33t)){ severity='Critical'; verdict='Immediate Action'; reason='Threats, exploits, doxxing, or CSAM detected.'; suggested='Suspend or ban immediately. Escalate if real-world threat.'; }
-  else if(hit(high,m)||hit(high,l33t)){ severity='High'; verdict='Moderation Action'; reason='Severe profanity, slurs, or targeted harassment detected.'; suggested='Warn or ban based on context and history.'; }
-  else if(hit(medium,m)){ severity='Medium'; verdict='Warning Recommended'; reason='Moderate profanity, scam, or inappropriate content detected.'; suggested='Issue a formal warning.'; }
-  else if(hit(low,m)){ severity='Low'; verdict='Monitor'; reason='Mildly inappropriate language detected.'; suggested='No immediate action. Monitor.'; }
-  if(msg.length>8&&msg===msg.toUpperCase()&&/[A-Z]{3}/.test(msg)){ flags.push('all-caps'); if(severity==='None'){severity='Low';verdict='Monitor';reason='Message in all caps.';} }
-  if(/(.)\1{4,}/.test(msg)){ flags.push('repetition'); }
-  if(/https?:\/\/|discord\.gg\//.test(msg)){ flags.push('link'); if(severity==='None'){severity='Low';verdict='Monitor';reason='External link detected.';} }
-  return {verdict,severity,reason,suggested_action:suggested,flags:[...new Set(flags)],source:'Local rule engine',checked:['profanity','slurs','threats','exploits','scams','harassment','l33tspeak','links']};
+  if(hit(critical)){
+    severity='Critical'; verdict='Immediate Action';
+    reason='Severe threat, CSAM, doxxing, or suicide-related content detected.';
+    suggested='Suspend/ban immediately. Escalate real-world threats to authorities.';
+  } else if(hit(high)){
+    severity='High'; verdict='Moderation Action';
+    reason='Slurs, targeted harassment, or severe profanity detected.';
+    suggested='Warn or ban. Check prior history.';
+  } else if(hit(medium)){
+    severity='Medium'; verdict='Warning Recommended';
+    reason='Scam content, drugs, inappropriate content, or moderate profanity detected.';
+    suggested='Issue a formal warning.';
+  } else if(hit(low)){
+    severity='Low'; verdict='Monitor';
+    reason='Mildly inappropriate language or borderline content.';
+    suggested='No immediate action. Monitor behaviour.';
+  }
+
+  // ── Extra checks ──────────────────────────────────────────────────────────
+  if(msg.length>6&&msg===msg.toUpperCase()&&/[A-Z]{3}/.test(msg)){
+    matches.push('all-caps');
+    if(severity==='None'){ severity='Low'; verdict='Monitor'; reason='Message in all caps.'; }
+  }
+  if(/(.)\1{5,}/.test(msg)){ matches.push('spam-repetition'); }
+  if(/https?:\/\/|discord\.gg\/|\.gg\//.test(m)){
+    matches.push('external-link');
+    if(severity==='None'){ severity='Low'; verdict='Monitor'; reason='External link detected.'; }
+  }
+  // Bypass detection: spaces/symbols between letters (e.g. "f u c k", "f.u.c.k")
+  if(/[a-z][^a-z\d\s]{0,2}[a-z][^a-z\d\s]{0,2}[a-z][^a-z\d\s]{0,2}[a-z]/.test(m)){
+    const dsp=despaced(m);
+    if(hit(high.concat(critical))){ matches.push('bypass-detected'); }
+  }
+
+  return {
+    verdict, severity, reason, suggested_action:suggested,
+    flags:[...new Set(matches)],
+    matches:[...new Set(matches)],
+    source:'Local rule engine v2',
+    checked:['threats','slurs','profanity','bypasses','l33tspeak','scams','drugs','harassment','links','NSFW']
+  };
 }
 
 function renderMsgAnalyze(c){
@@ -16230,7 +15708,7 @@ function renderMsgAnalyze(c){
       ${flagHtml}
       <div style="margin-bottom:8px;">
         <div style="font-size:10px;font-weight:700;color:var(--c-text2);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px;">Message Preview</div>
-        <div style="font-size:11px;font-family:monospace;background:var(--bg-topinfo);border:1px solid var(--c-border);border-radius:4px;padding:6px 8px;word-break:break-word;">${highlighted}${msg.length>300?'<span style="color:var(--c-text2);">…</span>':''}</div>
+        <div style="font-size:11px;font-family:monospace;background:var(--bg-topinfo);border:1px solid var(--c-border);border-radius:4px;padding:6px 8px;word-break:break-word;color:var(--c-text);">${highlighted}${msg.length>300?'<span style="color:var(--c-text2);">…</span>':''}</div>
       </div>
       <div style="font-size:9px;color:var(--c-text2);border-top:1px solid var(--c-border);padding-top:4px;">Engine: ${parsed.source||'local'} · Severity: ${parsed.severity||'N/A'}</div>
       ${canDo('canModerateUsers')&&!isOk?`<div style="margin-top:8px;display:flex;gap:4px;"><button class="btn small" onclick="nav('moderate')">→ Moderate User</button><button class="btn small" onclick="nav('useradmin')">→ User Admin</button></div>`:''}`;
