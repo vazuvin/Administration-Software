@@ -1022,6 +1022,43 @@ body.gh-dark .topinfo{ background:rgba(9,13,22,0.95); border-bottom-color:rgba(8
   50% { background:#700000; box-shadow: 0 2px 36px rgba(248,81,73,1), 0 0 48px rgba(248,81,73,0.6); }
 }
 
+
+/* Fingerprint watermark - uses CSS custom property set per user */
+#content::before {
+  content: var(--fp-wm, '');
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-30deg);
+  font-size: 11px;
+  font-family: monospace;
+  color: var(--c-text2);
+  opacity: 0.04;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+  z-index: 0;
+  letter-spacing: 8px;
+  font-weight: 400;
+}
+/* Second watermark instance - offset position */
+#content::after {
+  content: var(--fp-bid, '');
+  position: fixed;
+  bottom: 30%;
+  right: 10%;
+  transform: rotate(-20deg);
+  font-size: 9px;
+  font-family: monospace;
+  color: var(--c-text2);
+  opacity: 0.035;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+  z-index: 0;
+  letter-spacing: 4px;
+}
+
 </style>
 </head>
 <body>
@@ -3257,11 +3294,28 @@ function nav(p){
     var _fpEl2=document.getElementById('__fp_node2');
     if(!_fpEl2){ _fpEl2=document.createElement('span'); _fpEl2.id='__fp_node2'; _fpEl2.setAttribute('aria-hidden','true'); _fpEl2.style.cssText='font-size:1px;opacity:0.003;color:transparent;pointer-events:none;user-select:none;position:absolute;bottom:2px;right:2px;'; var _sb=document.querySelector('.sidebar'); if(_sb) _sb.appendChild(_fpEl2); }
     _fpEl2.textContent=_fp.buildId;
-    // Node 3: in topinfo bar
+    // Node 3: in topinfo date area - looks like part of the date string
+    var _ti=document.getElementById('topinfo-date');
     var _fpEl3=document.getElementById('__fp_node3');
-    var _topinfo=document.getElementById('topinfo');
-    if(!_fpEl3&&_topinfo){ _fpEl3=document.createElement('span'); _fpEl3.id='__fp_node3'; _fpEl3.setAttribute('aria-hidden','true'); _fpEl3.style.cssText='font-size:1px;opacity:0.003;color:transparent;pointer-events:none;user-select:none;'; _topinfo.appendChild(_fpEl3); }
+    if(!_fpEl3&&_ti){ _fpEl3=document.createElement('span'); _fpEl3.id='__fp_node3'; _fpEl3.setAttribute('aria-hidden','true'); _fpEl3.style.cssText='font-size:7px;opacity:0.18;color:var(--c-text2);pointer-events:none;user-select:none;margin-left:4px;font-family:monospace;letter-spacing:0px;'; _ti.appendChild(_fpEl3); }
     if(_fpEl3) _fpEl3.textContent=_fp.tag;
+
+    // Node 4: watermark in page content - scattered faint text
+    // Inject/update a CSS custom property on :root so a pseudo-element can show it
+    document.documentElement.style.setProperty('--fp-wm', '"'+_fp.tag+' '+_fp.sessionSalt+'"');
+    document.documentElement.style.setProperty('--fp-bid', '"'+_fp.buildId+'"');
+
+    // Node 5: faint ref code at bottom of main content area
+    var _fpEl5=document.getElementById('__fp_node5');
+    var _shell=document.querySelector('#content');
+    if(!_fpEl5&&_shell){ _fpEl5=document.createElement('div'); _fpEl5.id='__fp_node5'; _fpEl5.setAttribute('aria-hidden','true'); _fpEl5.style.cssText='position:fixed;bottom:3px;right:8px;font-size:8px;opacity:0.12;color:var(--c-text2);pointer-events:none;user-select:none;font-family:monospace;z-index:1;letter-spacing:0.5px;'; document.body.appendChild(_fpEl5); }
+    if(_fpEl5) _fpEl5.textContent=_fp.tag+' '+_fp.sessionSalt;
+
+    // Node 6: tiny label under the dashboard stat numbers (looks like a unit label)
+    var _fpEl6=document.getElementById('__fp_node6');
+    var _topinfoEl=document.getElementById('topinfo');
+    if(!_fpEl6&&_topinfoEl){ _fpEl6=document.createElement('span'); _fpEl6.id='__fp_node6'; _fpEl6.setAttribute('aria-hidden','true'); _fpEl6.style.cssText='font-size:7px;opacity:0.15;color:var(--c-text2);pointer-events:none;user-select:none;font-family:monospace;margin-left:6px;'; _topinfoEl.appendChild(_fpEl6); }
+    if(_fpEl6) _fpEl6.textContent=_fp.buildId;
   }
   pushScreenSnapshot(true);
   if(!document.getElementById('monitor-tiles-wrap')&&window._monitorCleanup){
@@ -8471,20 +8525,7 @@ function renderLeakIdentifier(c){
     </div>
   </div>`;
 
-  // ── Fingerprint generator - deterministic per staff member ──
-  function generateStaffFingerprint(sid, s){
-    // Generate deterministic values from the staff UID - same every time for the same staff
-    var hash=0;
-    for(var ci=0;ci<sid.length;ci++) hash=(hash*31+sid.charCodeAt(ci))&0xfffffff;
-    var tags=['Δ7','Ξ3','Φ9','Ψ1','Ω4','Λ6','Σ2','Θ8','Γ5','Π0'];
-    var variants=['α','β','γ','δ','ε'];
-    return {
-      tag: tags[hash%tags.length]+(((hash>>4)%90)+10),
-      statOffset: (hash%7)+1,
-      playerCount: 1000+((hash>>8)%500),
-      titleVariant: variants[hash%variants.length],
-    };
-  }
+  // Uses global generateStaffFingerprint (has buildId + sessionSalt)
 
   document.getElementById('btn-leak-clear').onclick=function(){
     ['lk-user','lk-level','lk-page','lk-time','lk-theme','lk-stats','lk-other'].forEach(function(id){
