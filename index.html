@@ -1082,8 +1082,8 @@ body.gh-dark .topinfo{ background:rgba(9,13,22,0.95); border-bottom-color:rgba(8
 
 
 /* ── User Profile Tabs (Bloxcord-style) ── */
-.up-header{background:linear-gradient(135deg,rgba(20,20,35,0.95) 0%,rgba(15,15,25,0.98) 100%);border-bottom:1px solid rgba(255,255,255,0.06);padding:20px 20px 0;position:relative;overflow:hidden;}
-.up-header::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%,rgba(248,81,73,0.08) 0%,transparent 60%);pointer-events:none;}
+.up-header{background:linear-gradient(180deg,rgba(13,17,23,0.98) 0%,rgba(9,13,22,1) 100%);border-bottom:1px solid rgba(88,166,255,0.15);padding:20px 20px 0;position:relative;overflow:hidden;}
+.up-header::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 20% 60%,rgba(88,166,255,0.06) 0%,transparent 50%),radial-gradient(ellipse at 80% 30%,color-mix(in srgb,var(--rep-glow,#3fb950) 8%,transparent) 0%,transparent 50%);pointer-events:none;}
 .up-avatar-row{display:flex;align-items:flex-end;gap:14px;margin-bottom:12px;position:relative;z-index:1;}
 .up-avatar-img{width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.15);box-shadow:0 4px 16px rgba(0,0,0,0.5);}
 .up-avatar-placeholder{width:72px;height:72px;border-radius:50%;background:rgba(88,166,255,0.15);border:3px solid rgba(88,166,255,0.3);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#58a6ff;}
@@ -1093,7 +1093,7 @@ body.gh-dark .topinfo{ background:rgba(9,13,22,0.95); border-bottom-color:rgba(8
 .up-tabs{display:flex;gap:0;position:relative;z-index:1;}
 .up-tab{padding:8px 16px;font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:0.8px;text-transform:uppercase;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;user-select:none;}
 .up-tab:hover{color:rgba(255,255,255,0.7);}
-.up-tab.active{color:#fff;border-bottom-color:#f85149;}
+.up-tab.active{color:#fff;border-bottom-color:#58a6ff;}
 .up-tab-body{padding:16px;}
 /* Logbook */
 .up-log-entry{border:1px solid var(--c-border);border-radius:8px;margin-bottom:6px;overflow:hidden;background:var(--bg-tbl-odd);transition:border-color 0.15s;}
@@ -1106,10 +1106,17 @@ body.gh-dark .topinfo{ background:rgba(9,13,22,0.95); border-bottom-color:rgba(8
 .up-action-chip{font-size:9px;font-weight:700;padding:3px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:0.3px;}
 .up-log-actions{display:flex;gap:4px;margin-top:8px;}
 /* Stats grid */
-.up-stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;}
-.up-stat-card{background:var(--bg-tbl-odd);border:1px solid var(--c-border);border-radius:8px;padding:12px;text-align:center;}
-.up-stat-num{font-size:22px;font-weight:800;color:var(--c-text);}
-.up-stat-label{font-size:10px;color:var(--c-text2);margin-top:2px;text-transform:uppercase;letter-spacing:0.5px;}
+.up-stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;}
+.up-stat-card{background:var(--bg-tbl-odd);border:1px solid var(--c-border);border-radius:10px;padding:16px;text-align:center;position:relative;overflow:hidden;transition:transform 0.15s,box-shadow 0.15s;}
+.up-stat-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.3);}
+.up-stat-card::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,var(--card-glow,rgba(88,166,255,0.08)) 0%,transparent 70%);pointer-events:none;}
+.up-stat-num{font-size:32px;font-weight:900;color:var(--c-text);line-height:1;margin-bottom:4px;position:relative;}
+.up-stat-label{font-size:9px;color:var(--c-text2);text-transform:uppercase;letter-spacing:0.8px;position:relative;}
+.up-stat-bar{height:3px;border-radius:2px;margin-top:8px;background:var(--c-border);position:relative;overflow:hidden;}
+.up-stat-bar-fill{height:100%;border-radius:2px;transition:width 0.6s ease;}
+.up-stat-timeline{margin-top:14px;}
+.up-stat-timeline-item{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--c-border);font-size:11px;}
+.up-stat-timeline-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px;}
 
 </style>
 </head>
@@ -4692,22 +4699,26 @@ async function fireDiscordWebhook(eventKey, embedData){
 }
 
 // Build a Discord embed in the Watchcat style (matches image)
-function buildModEmbed(staffName, action, targetUser, reason, expiryStr, expiryTs){
-  var isBan=action.startsWith('Ban');
-  var isSusp=action==='Suspend';
-  var isTemp=expiryTs>0;
-  var actionVerb=isBan?'banned':isSusp?'suspended':action.toLowerCase()+'d';
-  var desc=staffName+' has **'+actionVerb+'** '+targetUser+' for reason '+reason;
-  if(isTemp&&expiryStr){
-    desc+='.\nThis punishment lasts until **'+expiryStr+'**!';
-  }
+function buildModEmbed(staffName, action, targetUser, reason, expiryStr, expiryTs, isClassified){
+  var isBan=action.toLowerCase().includes('ban');
+  var isSusp=action.toLowerCase().includes('suspend');
+  var isWarn=action.toLowerCase().includes('warn');
+  var displayReason=isClassified?'Classified':reason;
+  var actionVerbs={
+    'Verbal Warning':'has verbally warned','Formal Warning':'has formally warned',
+    'Suspension':'has suspended','Ban':'has banned',
+    'Rank Lock':'has rank locked','Comment':'has noted',
+    'Staff Warning':'has issued a staff warning to','Manager Note':'has added a manager note on'
+  };
+  var verb=actionVerbs[action]||('has applied '+ action.toLowerCase()+' to');
   var now=new Date();
   var tsStr='Time || '+now.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'})+' '+now.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit',hour12:true});
+  var desc=staffName+' '+verb+' '+targetUser+' for reason **'+displayReason+'**';
+  if(!isClassified&&expiryStr&&expiryTs>0) desc+='.\nExpires: **'+expiryStr+'**';
   desc+='\n'+tsStr;
-  return {
-    description:desc,
-    color:isBan?0xcf222e:isSusp?0x9a6700:0x0969da,
-  };
+  var colors={ban:0xcf222e,suspend:0x9a6700,warn:0xe3b341,note:0x0969da};
+  var color=isBan?colors.ban:isSusp?colors.suspend:isWarn?colors.warn:colors.note;
+  return {description:desc,color:color};
 }
 window.fireDiscordWebhook=fireDiscordWebhook;
 window.buildModEmbed=buildModEmbed;
@@ -5979,7 +5990,7 @@ function renderUA(c){
   const akaList=u.robloxId?Object.values(USERS).filter(u2=>u2&&u2.username!==u.username&&u2.robloxId===u.robloxId).map(u2=>u2.username):[];
 
   // Action color map
-  const ACTION_COLORS={'Verbal Warning':'#e3b341','Formal Warning':'#e3b341','Suspension':'#f85149','Ban':'#f85149','Permanent Ban':'#8b0000','Rank Lock':'#a371f7','Comment':'#58a6ff','Staff Warning':'#e3b341','SHR Note':'#a371f7'};
+  const ACTION_COLORS={'Verbal Warning':'#e3b341','Formal Warning':'#e3b341','Suspension':'#f85149','Ban':'#f85149','Permanent Ban':'#8b0000','Rank Lock':'#a371f7','Comment':'#58a6ff','Staff Warning':'#e3b341','Manager Note':'#a371f7'};
 
   function getChipStyle(action, reverted){
     if(reverted) return 'background:rgba(88,166,255,0.1);color:#58a6ff;border:1px solid rgba(88,166,255,0.3);';
@@ -5992,16 +6003,16 @@ function renderUA(c){
       {type:'Verbal Warning',icon:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L14.5 13H1.5L8 1.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><line x1="8" y1="6" x2="8" y2="10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="12" r="0.7" fill="currentColor"/></svg>',col:'#e3b341'},
       {type:'Formal Warning',icon:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3"/><line x1="5" y1="6" x2="11" y2="6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="5" y1="9" x2="9" y2="9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',col:'#e3b341'},
       {type:'Suspension',icon:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><line x1="6" y1="5.5" x2="6" y2="10.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="10" y1="5.5" x2="10" y2="10.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',col:'#f85149'},
-      {type:'Ban',icon:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 4.5L12 14M3 4.5C3 4.5 6 1 8 1c2.5 0 5 2.5 5 5s-2.5 5-5 5c-1 0-3-1.5-5-6.5z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',col:'#f85149'},
+      {type:'Ban',icon:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/><line x1="3.5" y1="3.5" x2="12.5" y2="12.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',col:'#f85149'},
       {type:'Rank Lock',icon:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="3.5" y="7.5" width="9" height="7" rx="1.2" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 7.5V5a2.5 2.5 0 0 1 5 0v2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="8" cy="11" r="1" fill="currentColor"/></svg>',col:'#a371f7'},
       {type:'Comment',icon:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 2h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H5.5L2 14V3a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>',col:'#58a6ff'},
       {type:'Staff Warning',icon:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L14.5 13H1.5L8 1.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><line x1="8" y1="6" x2="8" y2="10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="12" r="0.7" fill="currentColor"/></svg>',col:'#e3b341'},
-      {type:'SHR Note',icon:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="1.5" width="10" height="13" rx="1.2" stroke="currentColor" stroke-width="1.3"/><line x1="4.5" y1="5" x2="9.5" y2="5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="4.5" y1="7.5" x2="9.5" y2="7.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="4.5" y1="10" x2="7" y2="10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><polygon points="12,9 15,12 12,15" fill="currentColor" stroke="none"/></svg>',col:'#a371f7'},
+      {type:'Manager Note',icon:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="1.5" width="10" height="13" rx="1.2" stroke="currentColor" stroke-width="1.3"/><line x1="4.5" y1="5" x2="9.5" y2="5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="4.5" y1="7.5" x2="9.5" y2="7.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="4.5" y1="10" x2="7" y2="10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><polygon points="12,9 15,12 12,15" fill="currentColor" stroke="none"/></svg>',col:'#a371f7'},
     ];
     const tileHtml=tiles.map(t=>`
       <div class="punish-tile" onclick="openPunishPanel('${uid}','${t.type}')" style="border-color:${t.col}22;">
-        <div style="color:${t.col};display:flex;align-items:center;justify-content:center;width:28px;height:28px;">${t.icon}</div>
-        <div style="color:${t.col};font-size:10px;">${t.type}</div>
+        <div style="color:${t.col};display:flex;align-items:center;justify-content:center;width:36px;height:36px;">${t.icon.replace('width="14" height="14"','width="22" height="22"')}</div>
+        <div style="color:${t.col};font-size:10px;font-weight:700;">${t.type}</div>
       </div>`).join('');
 
     const logHtml=punishments.length===0
@@ -6030,11 +6041,16 @@ function renderUA(c){
           </div>
           <div class="up-log-body">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-              ${tinyAvatarOnly(avatarUrlFor(p.mod||''),p.mod||'',20)}
-              <span style="font-size:11px;color:var(--c-text2);">${p.mod||'Unknown'}</span>
-              <span style="font-size:9px;color:var(--c-text2);">→</span>
-              ${tinyAvatarOnly(u.avatarUrl||'',u.username,20)}
-              <span style="font-size:11px;color:var(--c-text);">${u.username}</span>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+                ${tinyAvatarOnly(avatarUrlFor(p.mod||''),p.mod||'',24)}
+                <span style="font-size:9px;color:var(--c-text2);">${p.mod||'Unknown'}</span>
+                ${(()=>{ const ms=Object.values(STAFF).find(s=>s.username===p.mod); const rl={'CONTENT REVIEWER':'Reviewer','CONTENT MODERATOR':'Moderator','CONTENT ADMINISTRATOR':'Admin','SENIOR CONTENT ADMINISTRATOR':'Sr. Admin','CONTENT MANAGER':'C. Manager','SOFTWARE MANAGER':'SW Manager'}; return ms?'<span style="font-size:8px;color:var(--c-link);font-weight:700;">'+(rl[ms.level]||ms.level||'')+'</span>':''; })()}
+              </div>
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="color:var(--c-text2);flex-shrink:0;"><path d="M4 8h8M9 5l3 3-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+                ${tinyAvatarOnly(u.avatarUrl||'',u.username,24)}
+                <span style="font-size:9px;color:var(--c-text);">${u.username}</span>
+              </div>
             </div>
             <div style="font-size:12px;color:var(--c-text);margin-bottom:8px;padding:8px 10px;background:var(--bg-tbl-odd);border-radius:6px;border-left:3px solid ${ACTION_COLORS[p.action]||'#888'};">${displayReason}</div>
             ${p.expiresAt&&p.expiresAt>0?`<div style="font-size:10px;color:var(--c-text2);margin-bottom:8px;">Expires: <b>${new Date(p.expiresAt).toLocaleString()}</b>${Date.now()>p.expiresAt?' <span style="color:var(--c-ok);">(expired)</span>':''}</div>`:''}
@@ -6085,18 +6101,76 @@ function renderUA(c){
     const byType={};
     allPunish.forEach(p=>{ byType[p.action]=(byType[p.action]||0)+1; });
     const active=allPunish.filter(p=>!p.reverted&&!(p.expiresAt&&p.expiresAt>0&&Date.now()>p.expiresAt)).length;
-    return `<div class="up-stat-grid">
-      <div class="up-stat-card"><div class="up-stat-num">${allPunish.length}</div><div class="up-stat-label">Total Logs</div></div>
-      <div class="up-stat-card"><div class="up-stat-num" style="color:var(--c-ban);">${active}</div><div class="up-stat-label">Active</div></div>
-      <div class="up-stat-card"><div class="up-stat-num">${allPunish.filter(p=>p.reverted).length}</div><div class="up-stat-label">Reverted</div></div>
-      <div class="up-stat-card"><div class="up-stat-num">${repScore}</div><div class="up-stat-label">Rep Score</div></div>
-      ${Object.entries(byType).map(([type,count])=>`<div class="up-stat-card"><div class="up-stat-num" style="color:${ACTION_COLORS[type]||'#888'};">${count}</div><div class="up-stat-label">${type}</div></div>`).join('')}
+    const reverted=allPunish.filter(p=>p.reverted).length;
+    const classified=allPunish.filter(p=>p.classified).length;
+    const totalPossible=Math.max(allPunish.length,1);
+    const repColor=repScore>=0?'#3fb950':repScore>=-3?'#e3b341':repScore>=-10?'#f0883e':'#f85149';
+    // Punishment timeline (last 10)
+    const recent=allPunish.slice().sort((a,b)=>b.created>a.created?1:-1).slice(0,8);
+    const timelineHtml=recent.map(p=>{
+      const col=ACTION_COLORS[p.action]||'#888';
+      return `<div class="up-stat-timeline-item">
+        <div class="up-stat-timeline-dot" style="background:${col};box-shadow:0 0 6px ${col}66;"></div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;color:${p.reverted?'var(--c-text2)':col};${p.reverted?'text-decoration:line-through;opacity:0.6;':''}">${p.action}</div>
+          <div style="color:var(--c-text2);font-size:10px;">${p.reason?p.reason.substring(0,50)+(p.reason.length>50?'…':''):'No reason'}</div>
+        </div>
+        <div style="font-size:9px;color:var(--c-text2);white-space:nowrap;">${(p.created||'').substring(0,10)}</div>
+      </div>`;
+    }).join('');
+    return `<div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:260px;">
+        <div class="up-stat-grid" style="margin-bottom:12px;">
+          <div class="up-stat-card" style="--card-glow:rgba(88,166,255,0.12);">
+            <div class="up-stat-num">${allPunish.length}</div>
+            <div class="up-stat-label">Total Logs</div>
+            <div class="up-stat-bar"><div class="up-stat-bar-fill" style="width:100%;background:#58a6ff;"></div></div>
+          </div>
+          <div class="up-stat-card" style="--card-glow:rgba(248,81,73,0.12);">
+            <div class="up-stat-num" style="color:var(--c-ban);">${active}</div>
+            <div class="up-stat-label">Active</div>
+            <div class="up-stat-bar"><div class="up-stat-bar-fill" style="width:${Math.round(active/totalPossible*100)}%;background:var(--c-ban);"></div></div>
+          </div>
+          <div class="up-stat-card" style="--card-glow:rgba(63,185,80,0.12);">
+            <div class="up-stat-num" style="color:${repColor};">${repScore}</div>
+            <div class="up-stat-label">Rep Score</div>
+            <div class="up-stat-bar"><div class="up-stat-bar-fill" style="width:${Math.min(100,Math.abs(repScore)*10)}%;background:${repColor};"></div></div>
+          </div>
+          <div class="up-stat-card" style="--card-glow:rgba(88,166,255,0.08);">
+            <div class="up-stat-num">${reverted}</div>
+            <div class="up-stat-label">Reverted</div>
+            <div class="up-stat-bar"><div class="up-stat-bar-fill" style="width:${Math.round(reverted/totalPossible*100)}%;background:#58a6ff66;"></div></div>
+          </div>
+          ${classified?`<div class="up-stat-card" style="--card-glow:rgba(163,113,247,0.12);">
+            <div class="up-stat-num" style="color:#a371f7;">${classified}</div>
+            <div class="up-stat-label">Classified</div>
+          </div>`:''}
+          ${Object.entries(byType).map(([type,count])=>`<div class="up-stat-card" style="--card-glow:${ACTION_COLORS[type]||'#888'}22;">
+            <div class="up-stat-num" style="color:${ACTION_COLORS[type]||'#888'};">${count}</div>
+            <div class="up-stat-label">${type}</div>
+            <div class="up-stat-bar"><div class="up-stat-bar-fill" style="width:${Math.round(count/totalPossible*100)}%;background:${ACTION_COLORS[type]||'#888'};"></div></div>
+          </div>`).join('')}
+        </div>
+      </div>
+      <div style="flex:1;min-width:220px;">
+        <div class="sbox"><div class="stitle">Recent Activity</div><div class="sbody" style="padding:0;">
+          <div class="up-stat-timeline">${timelineHtml||'<div style="padding:12px;color:var(--c-text2);font-style:italic;font-size:11px;">No activity.</div>'}</div>
+        </div></div>
+      </div>
     </div>`;
   }
 
-  const avatarEl=u.avatarUrl?`<img class="up-avatar-img" src="${u.avatarUrl}">`:`<div class="up-avatar-placeholder">${(u.username||'?').charAt(0).toUpperCase()}</div>`;
+  // Avatar glow based on reputation
+  const repGlow=(function(){
+    if(repScore>=0) return '#3fb950'; // green - clean
+    if(repScore>=-3) return '#e3b341'; // yellow - minor
+    if(repScore>=-10) return '#f0883e'; // orange - moderate
+    return '#f85149'; // red - severe
+  })();
+  const avatarEl=u.avatarUrl?`<img class="up-avatar-img" src="${u.avatarUrl}" style="border-color:${repGlow};box-shadow:0 0 12px ${repGlow}44,0 0 24px ${repGlow}22;">`:`<div class="up-avatar-placeholder" style="border-color:${repGlow};box-shadow:0 0 12px ${repGlow}44;">${(u.username||'?').charAt(0).toUpperCase()}</div>`;
 
-  c.innerHTML=`<div class="up-header">
+  const headerGrad=`linear-gradient(135deg,rgba(20,20,35,0.97) 0%,rgba(15,15,25,0.99) 100%)`;
+  c.innerHTML=`<div class="up-header" style="--rep-glow:${repGlow};">
     <div style="position:relative;z-index:1;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
       <div style="display:flex;align-items:flex-end;gap:14px;">
         ${avatarEl}
@@ -6122,6 +6196,7 @@ function renderUA(c){
 
   // Tab switching
   function switchTab(name){
+    _currentUATab=name; // save globally so re-renders restore it
     c.querySelectorAll('.up-tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
     const body=document.getElementById('up-tab-content');
     if(!body) return;
@@ -6149,28 +6224,28 @@ function renderUA(c){
       if(u.robloxId){
         (async()=>{
           try{
-            // Use existing robloxGet helper (handles CORS via roproxy)
-            const ud=await tryGet('https://users.roproxy.com/v1/users/'+u.robloxId).catch(()=>null);
-            const fd=await tryGet('https://friends.roproxy.com/v1/users/'+u.robloxId+'/friends/count').catch(()=>null);
+            // Use fetchRobloxInfo which has multi-proxy fallback
+            const rblxInfo=await fetchRobloxInfo(u.robloxUsername||u.username).catch(()=>null);
             const el=document.getElementById('rblx-data-content-'+uid);
             if(el){
-              if(ud&&ud.name){
-                const created=ud.created?new Date(ud.created):null;
+              if(rblxInfo&&rblxInfo.robloxId){
+                const created=rblxInfo.accountCreated?new Date(rblxInfo.accountCreated):null;
                 const ageDays=created?Math.floor((Date.now()-created.getTime())/86400000):null;
+                const ageStr=ageDays!=null?(ageDays>=365?Math.floor(ageDays/365)+'y '+Math.floor((ageDays%365)/30)+'m':ageDays+'d'):'-';
                 const rows=[
-                  ['Username',ud.name||u.username],
-                  ['Display Name',ud.displayName||'—'],
-                  ['Friends',fd&&fd.count!=null?fd.count:'—'],
-                  ['Account Age',ageDays!=null?ageDays+' days':'—'],
-                  ['Created',created?created.toLocaleDateString():'—'],
-                  ['Description',ud.description?ud.description.substring(0,60)+(ud.description.length>60?'…':''):'—'],
+                  ['Username',rblxInfo.username||u.username],
+                  ['Display Name',rblxInfo.displayName||'-'],
+                  ['Roblox ID',rblxInfo.robloxId||'-'],
+                  ['Account Age',ageStr],
+                  ['Created',created?created.toLocaleDateString():'-'],
+                  ['Avatar',rblxInfo.avatarUrl?'<img src="'+rblxInfo.avatarUrl+'" width="32" height="32" style="border-radius:50%;vertical-align:middle;">':'—'],
                 ];
-                el.innerHTML=rows.map(([k,v])=>`<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:4px 0;border-bottom:1px solid var(--c-border);font-size:11px;gap:8px;"><span style="color:var(--c-text2);flex-shrink:0;">${k}</span><b style="text-align:right;word-break:break-word;">${v}</b></div>`).join('');
+                el.innerHTML=rows.map(function(rv){ return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--c-border);font-size:11px;gap:8px;"><span style="color:var(--c-text2);flex-shrink:0;">'+rv[0]+'</span><span style="text-align:right;word-break:break-word;color:var(--c-text);font-weight:600;">'+rv[1]+'</span></div>'; }).join('');
               } else {
-                el.innerHTML='<span style="color:var(--c-text2);font-size:11px;">Could not load Roblox data — API unavailable.</span>';
+                el.innerHTML='<span style="color:var(--c-text2);font-size:11px;">Roblox data unavailable — try Refresh button.</span>';
               }
             }
-          }catch(e){ const el=document.getElementById('rblx-data-content-'+uid); if(el) el.innerHTML='<span style="color:var(--c-ban);font-size:11px;">Error fetching Roblox data.</span>'; }
+          }catch(e){ const el=document.getElementById('rblx-data-content-'+uid); if(el) el.innerHTML='<span style="color:var(--c-text2);font-size:11px;">Could not fetch Roblox data.</span>'; }
         })();
       }
     }
@@ -6199,12 +6274,11 @@ function renderUA(c){
           _searchRes.style.display='none';
           var newUser=_searchBox.value.trim();
           if(!newUser) return;
-          var info=await fetchRobloxInfo(newUser).catch(()=>null);
-          var nid='uid_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);
-          await update(ref(db,'users/'+nid),{username:newUser,status:'active',created:nowStr(),robloxId:info&&info.robloxId||'',avatarUrl:info&&info.avatarUrl||ROBLOX_DEFAULT_AVATAR,rep:0,punishments:{}});
-          currentUserId=nid;
-          showToast('Player added: '+newUser,'success');
-          renderUA(c);
+          // Use proper addUser flow to get correct playerId
+          var _addInput=document.getElementById('nuUser');
+          if(_addInput) _addInput.value=newUser;
+          nav('accounts');
+          setTimeout(function(){ addUser().then(function(){ showToast('Player added: '+newUser+'. Switch to User Admin to view.','success'); }); },100);
         };
       } else {
         _searchRes.style.display='block';
@@ -6214,18 +6288,15 @@ function renderUA(c){
           _searchRes.style.display='none';
           var newUser2=_searchBox.value.trim();
           if(!newUser2) return;
-          var info2=await fetchRobloxInfo(newUser2).catch(()=>null);
-          var nid2='uid_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);
-          await update(ref(db,'users/'+nid2),{username:newUser2,status:'active',created:nowStr(),robloxId:info2&&info2.robloxId||'',avatarUrl:info2&&info2.avatarUrl||ROBLOX_DEFAULT_AVATAR,rep:0,punishments:{}});
-          currentUserId=nid2;
-          showToast('Player added: '+newUser2,'success');
-          renderUA(c);
+          var _ai2=document.getElementById('nuUser'); if(_ai2) _ai2.value=newUser2;
+          nav('accounts');
+          setTimeout(function(){ addUser().then(function(){ showToast('Player added: '+newUser2+'. Switch to User Admin to view.','success'); }); },100);
         };
       }
     };
     document.addEventListener('click',function(e){ if(!_searchBox.contains(e.target)&&!_searchRes.contains(e.target)) _searchRes.style.display='none'; });
   }
-  switchTab('details');
+  switchTab(_currentUATab||'details');
 }
 
 function filterLogSearch(q){
@@ -6271,11 +6342,17 @@ function openPunishOptions(uid, pid){
   var p=u.punishments[pid];
   var overlay=document.createElement('div');
   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99990;display:flex;align-items:center;justify-content:center;';
-  overlay.innerHTML=`<div style="background:var(--bg-dialog);border:1px solid var(--c-border);border-radius:12px;padding:20px;max-width:340px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+  overlay.innerHTML=`<div style="background:var(--bg-dialog);border:1px solid var(--c-border);border-radius:12px;padding:20px;max-width:360px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
     <div style="font-size:14px;font-weight:800;color:var(--c-text);margin-bottom:12px;">${p.action||'Punishment'} Options</div>
-    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
-      <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;"><input type="checkbox" id="popt-classified" ${p.classified?'checked':''}> Make Classified (hides reason from lower ranks)</label>
-      <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;"><input type="checkbox" id="popt-locked" ${p.locked?'checked':''}> Make Locked (prevents reverting)</label>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--c-text);cursor:pointer;"><input type="checkbox" id="popt-classified" ${p.classified?'checked':''}> <span>Make Classified</span></label>
+      <div id="popt-classified-opts" style="${p.classified?'':'display:none;'}margin-left:22px;display:flex;flex-direction:column;gap:6px;">
+        <div><label style="font-size:10px;color:var(--c-text2);display:block;margin-bottom:3px;">Minimum rank to view</label>
+        <select id="popt-min-rank" style="width:100%;font-size:11px;"><option value="">Everyone (just hides reason)</option><option value="CONTENT MODERATOR">Content Moderator+</option><option value="CONTENT ADMINISTRATOR">Content Administrator+</option><option value="SENIOR CONTENT ADMINISTRATOR">Senior Admin+</option><option value="CONTENT MANAGER">Content Manager+</option><option value="SOFTWARE MANAGER">Software Manager only</option></select></div>
+        <div><label style="font-size:10px;color:var(--c-text2);display:block;margin-bottom:3px;">Message shown to users below rank</label>
+        <input type="text" id="popt-classified-msg" value="${p.classifiedMsg||'[CLASSIFIED]'}" style="width:100%;font-size:11px;"/></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--c-text);cursor:pointer;"><input type="checkbox" id="popt-locked" ${p.locked?'checked':''}> <span>Make Locked (prevents reverting)</span></label>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
       <button id="popt-save" class="btn" style="flex:1;">Save Options</button>
@@ -6286,6 +6363,7 @@ function openPunishOptions(uid, pid){
   </div>`;
   document.body.appendChild(overlay);
   document.getElementById('popt-close').onclick=function(){ document.body.removeChild(overlay); };
+  document.getElementById('popt-classified').onchange=function(){ document.getElementById('popt-classified-opts').style.display=this.checked?'flex':'none'; };
   document.getElementById('popt-raw').onclick=function(){
     var pre=document.createElement('div');
     pre.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:99991;display:flex;align-items:center;justify-content:center;';
@@ -6296,7 +6374,9 @@ function openPunishOptions(uid, pid){
   document.getElementById('popt-save').onclick=async function(){
     var classified=document.getElementById('popt-classified').checked;
     var locked=document.getElementById('popt-locked').checked;
-    await update(ref(db,'users/'+uid+'/punishments/'+pid),{classified:classified,locked:locked});
+    var minRank=(document.getElementById('popt-min-rank')||{value:''}).value||'';
+    var classifiedMsg=(document.getElementById('popt-classified-msg')||{value:'[CLASSIFIED]'}).value||'[CLASSIFIED]';
+    await update(ref(db,'users/'+uid+'/punishments/'+pid),{classified:classified,locked:locked,minRank:minRank,classifiedMsg:classifiedMsg});
     if(USERS[uid]&&USERS[uid].punishments&&USERS[uid].punishments[pid]){
       USERS[uid].punishments[pid].classified=classified;
       USERS[uid].punishments[pid].locked=locked;
@@ -6317,7 +6397,7 @@ function renderTwoFactorConfig(c){
   c.innerHTML='<div class="ptitle">Two-Factor Authorization Config</div><div style="text-align:center;padding:20px;color:var(--c-text2);">Loading…</div>';
   get(ref(db,'meta/twoFactorConfig')).then(function(snap){
     var cfg=snap.exists()?snap.val():{enabled:false,requiredFor:[]};
-    var actions=['Verbal Warning','Formal Warning','Suspension','Ban','Rank Lock','Comment','Staff Warning','SHR Note','Wipe Account','Staff Terminate'];
+    var actions=['Verbal Warning','Formal Warning','Suspension','Ban','Rank Lock','Comment','Staff Warning','Manager Note','Wipe Account','Staff Terminate'];
     c.innerHTML='<div class="ptitle" style="display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="7" width="12" height="8" rx="1.3" stroke="currentColor" stroke-width="1.3"/><path d="M5 7V5a3 3 0 0 1 6 0v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> Two-Factor Authorization Config</div>'
       +'<div class="sbox" style="border-color:rgba(88,166,255,0.2);">'
       +'<div class="stitle">Authorization Settings</div>'
@@ -16837,6 +16917,7 @@ function tinyAvatarOnly(avatarUrl, username, sz){
 // ── Punishment panel system ──
 var _punishTargetUid=null;
 var _punishTargetUser=null;
+var _currentUATab='details'; // persists tab across re-renders
 
 function closePunishPanel(){
   document.getElementById('punish-side-panel').classList.remove('open');
@@ -16861,7 +16942,7 @@ function openPunishPanel(uid, punishType){
     'Rank Lock':{color:'#a371f7',icon:'🔒',fields:['reason','locked'],desc:'Rank Lock — restricts custom field management'},
     'Comment':{color:'#58a6ff',icon:'💬',fields:['reason','classified'],desc:'Internal note/comment'},
     'Staff Warning':{color:'#e3b341',icon:'⚠',fields:['reason'],desc:'Warning to moderating staff'},
-    'SHR Note':{color:'#a371f7',icon:'📝',fields:['reason','classified','locked'],desc:'Senior record note'},
+    'Manager Note':{color:'#a371f7',icon:'📝',fields:['reason','classified','locked'],desc:'Senior record note'},
   };
   var cfg=configs[punishType]||{color:'#58a6ff',icon:'📋',fields:['reason'],desc:punishType};
   titleEl.textContent='Issue '+punishType;
@@ -16881,10 +16962,10 @@ function openPunishPanel(uid, punishType){
   }
   html+='<div style="margin-bottom:12px;"><label style="font-size:11px;font-weight:700;color:var(--c-text);display:block;margin-bottom:6px;">Options</label>';
   if(cfg.fields.includes('classified')){
-    html+='<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--c-text);margin-bottom:4px;cursor:pointer;"><input type="checkbox" id="psp-classified"> Make Classified <span style="font-size:9px;color:var(--c-text2);">(hidden from rank and below)</span></label>';
+    html+='<div style="margin-bottom:6px;"><label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--c-text);cursor:pointer;"><input type="checkbox" id="psp-classified"> <span>Make Classified</span></label></div>';
   }
   if(cfg.fields.includes('locked')){
-    html+='<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--c-text);margin-bottom:4px;cursor:pointer;"><input type="checkbox" id="psp-locked"> Make Locked <span style="font-size:9px;color:var(--c-text2);">(cannot be reverted)</span></label>';
+    html+='<div style="margin-bottom:6px;"><label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--c-text);cursor:pointer;"><input type="checkbox" id="psp-locked"> <span>Make Locked</span></label></div>';
   }
   html+='</div>';
   html+='<button class="btn" id="psp-apply-btn" style="width:100%;background:'+cfg.color+';border-color:'+cfg.color+';color:#fff;font-weight:700;">Apply '+punishType+'</button>';
@@ -16904,7 +16985,8 @@ function openPunishPanel(uid, punishType){
     await update(ref(db,'users/'+uid+'/punishments/'+pid),entry);
     await push(ref(db,'logs/moderation'),{user:u.username,action:punishType,mod:ME,date:nowStr(),reason:reason,classified:classified||false,locked:locked||false});
     auditLog(punishType+' issued','Against '+u.username+' by '+ME+': '+reason);
-    fireDiscordWebhook('mod_actions',{title:punishType,description:'**Player:** '+u.username+'\n**Moderator:** '+ME+'\n**Reason:** '+reason+(classified?'\n*[Classified]*':''),color:parseInt(cfg.color.replace('#',''),16)||0xe3b341});
+    var _embed=buildModEmbed(ME,punishType,u.username,reason,expiresMs>0?new Date(Date.now()+expiresMs).toLocaleString():'',expiresMs>0?Date.now()+expiresMs:0,classified);
+    fireDiscordWebhook('mod_actions',_embed);
     document.getElementById('psp-msg').style.color='var(--c-ok)';
     document.getElementById('psp-msg').textContent='Applied!';
     setTimeout(closePunishPanel,600);
@@ -17080,7 +17162,7 @@ function blindAudit(eventType, detail){
 window.blindAudit=blindAudit;
 
 // Two-factor confirmation for severe actions
-var _2faConfig={enabled:false,requiredFor:['Permanent Ban','Suspension','Rank Lock','SHR Note'],secondApprover:null};
+var _2faConfig={enabled:false,requiredFor:['Permanent Ban','Suspension','Rank Lock','Manager Note'],secondApprover:null};
 
 function loadTwoFactorConfig(){
   get(ref(db,'meta/twoFactorConfig')).then(function(snap){
