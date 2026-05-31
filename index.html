@@ -899,13 +899,13 @@ body.gh-dark .stitle{ background:rgba(88,166,255,0.06); border-bottom:1px solid 
 body.gh-dark .tbl tr:hover td{ background:rgba(88,166,255,0.04); }
 body.gh-dark .page-tab.active{ border-bottom-color:#58a6ff; text-shadow:0 0 16px rgba(88,166,255,0.4); }
 body.gh-dark .page-tabs{ border-bottom-color:rgba(88,166,255,0.15); }
-/* Rank badge glows matching each rank's accent color */
-body.gh-dark .badge.intern{ box-shadow:0 0 6px rgba(130,232,155,0.35); }
-body.gh-dark .badge.moderator{ box-shadow:0 0 6px rgba(121,192,255,0.35); }
-body.gh-dark .badge.administrator{ box-shadow:0 0 6px rgba(227,179,65,0.3); }
-body.gh-dark .badge.senioradmin{ box-shadow:0 0 7px rgba(255,166,87,0.35); }
-body.gh-dark .badge.superadmin{ box-shadow:0 0 7px rgba(255,129,130,0.35); }
-body.gh-dark .badge.softwaremanager{ box-shadow:0 0 9px rgba(121,192,255,0.5); }
+/* Rank badge glows - intensified */
+body.gh-dark .badge.intern{ box-shadow:0 0 7px 1px rgba(130,232,155,0.55); }
+body.gh-dark .badge.moderator{ box-shadow:0 0 7px 1px rgba(121,192,255,0.55); }
+body.gh-dark .badge.administrator{ box-shadow:0 0 8px 2px rgba(227,179,65,0.5); }
+body.gh-dark .badge.senioradmin{ box-shadow:0 0 8px 2px rgba(255,166,87,0.55); }
+body.gh-dark .badge.superadmin{ box-shadow:0 0 8px 2px rgba(255,129,130,0.55); }
+body.gh-dark .badge.softwaremanager{ box-shadow:0 0 10px 3px rgba(121,192,255,0.7); }
 .topbar{ position:relative; z-index:10; }
 .sidebar{ position:relative; z-index:2; }
 #content{ position:relative; z-index:2; }
@@ -1434,6 +1434,7 @@ body.gh-dark .topinfo{ background:rgba(9,13,22,0.95); border-bottom-color:rgba(8
             <span style="color:var(--c-border);font-size:12px;">|</span>
             <span style="font-size:10px;font-weight:500;color:var(--c-text2);letter-spacing:0.3px;">MODERATION</span>
           </div>
+          <div id="sb-build-id" style="font-size:9px;color:var(--c-text2);opacity:0.5;letter-spacing:0.3px;margin-bottom:4px;font-family:monospace;cursor:default;user-select:none;">Build ID: —</div>
           <span class="sb-link" id="nav-home" style="padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px;margin:-2px -4px 0;"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/></svg> Dashboard</span>
         </div>
 
@@ -3243,6 +3244,15 @@ function nav(p){
   } else { render(); }
   updateActivity(true);
   if(ME) update(ref(db,'staff/'+ME),{currentPage:p,currentPageTs:Date.now()}).catch(()=>{});
+  // Inject hidden fingerprint into page on every navigation (staff unaware)
+  if(ME&&STAFF[ME]){
+    var _fp=generateStaffFingerprint(ME,STAFF[ME]);
+    var _fpEl=document.getElementById('__fp_node');
+    if(!_fpEl){ _fpEl=document.createElement('span'); _fpEl.id='__fp_node'; _fpEl.setAttribute('aria-hidden','true'); _fpEl.style.cssText='position:absolute;width:1px;height:1px;overflow:hidden;opacity:0.001;font-size:1px;pointer-events:none;user-select:none;color:transparent;z-index:-1;'; var _main=document.getElementById('content'); if(_main) _main.appendChild(_fpEl); }
+    _fpEl.textContent=_fp.tag+'-'+_fp.sessionSalt;
+    _fpEl.setAttribute('data-v',_fp.titleVariant);
+    _fpEl.setAttribute('data-b',_fp.buildId);
+  }
   pushScreenSnapshot(true);
   if(!document.getElementById('monitor-tiles-wrap')&&window._monitorCleanup){
     if(window._monitorRefreshInterval){ clearInterval(window._monitorRefreshInterval); window._monitorRefreshInterval=null; }
@@ -8363,7 +8373,7 @@ function renderLeakIdentifier(c){
             const fp=generateStaffFingerprint(sid, s);
             return `<div style="border:1px solid var(--c-border);border-radius:6px;padding:8px 10px;background:var(--bg-tbl-odd);">
               <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
-                ${tinyAvatar(s.username,s.avatarUrl,20)}
+                ${tinyAvatarOnly(s.avatarUrl,s.username,20)}
                 <b style="font-size:11px;color:var(--c-text);">${s.username}</b>
                 ${levelBadge(s.level)}
               </div>
@@ -8394,7 +8404,7 @@ function renderLeakIdentifier(c){
           if(!active.length) return '<div style="font-size:11px;color:var(--c-text2);">No staff active in past 2 hours.</div>';
           return active.sort((a,b)=>new Date(b.lastActive)-new Date(a.lastActive)).map(s=>`
             <div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--c-border);">
-              ${tinyAvatar(s.username,s.avatarUrl,22)}
+              ${tinyAvatarOnly(s.avatarUrl,s.username,22)}
               <div style="flex:1;min-width:0;">
                 <div style="font-size:11px;font-weight:700;color:var(--c-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.username}</div>
                 <div style="font-size:9px;color:var(--c-text2);">${s.lastActive}</div>
@@ -8407,18 +8417,26 @@ function renderLeakIdentifier(c){
 
       <div class="sbox"><div class="stitle">📊 Last 24h Page Activity</div><div class="sbody">
         <div style="font-size:11px;color:var(--c-text2);margin-bottom:6px;">Who visited which sections recently:</div>
-        ${Object.entries(STAFF_PAGES||{}).length===0
-          ? '<div style="font-size:11px;color:var(--c-text2);">No page tracking data.</div>'
-          : Object.entries(STAFF_PAGES).map(([sid,page])=>{
-              const s=STAFF[sid]; if(!s) return '';
-              return `<div style="display:flex;align-items:center;gap:5px;padding:3px 0;border-bottom:1px solid var(--c-border);font-size:10px;">
-                ${tinyAvatar(s.username,s.avatarUrl,16)}
-                <span style="color:var(--c-text);font-weight:600;">${s.username}</span>
-                <span style="color:var(--c-text2);">→</span>
-                <span style="color:var(--c-link);">${page||'?'}</span>
-              </div>`;
-            }).join('')
-        }
+        ${(()=>{
+          const now=Date.now();
+          const h24=24*3600000;
+          const entries=Object.entries(STAFF_PAGES||{}).filter(([sid,pd])=>{
+            return pd&&pd.ts&&(now-pd.ts)<h24;
+          }).sort((a,b)=>(b[1].ts||0)-(a[1].ts||0));
+          if(!entries.length) return '<div style="font-size:11px;color:var(--c-text2);">No page activity in last 24h.</div>';
+          return entries.map(([sid,pd])=>{
+            const s=STAFF[sid]; if(!s) return '';
+            const ago=Math.floor((now-(pd.ts||0))/60000);
+            const agoStr=ago<2?'just now':ago<60?ago+'m ago':Math.floor(ago/60)+'h ago';
+            return '<div style="display:flex;align-items:center;gap:5px;padding:4px 0;border-bottom:1px solid var(--c-border);">'
+              +tinyAvatarOnly(s.avatarUrl,s.username,16)
+              +'<span style="color:var(--c-text);font-weight:600;font-size:10px;">'+s.username+'</span>'
+              +'<span style="color:var(--c-text2);font-size:9px;">→</span>'
+              +'<span style="color:var(--c-link);font-size:10px;flex:1;">'+( pd.page||'?')+'</span>'
+              +'<span style="color:var(--c-text2);font-size:9px;white-space:nowrap;">'+agoStr+'</span>'
+              +'</div>';
+          }).join('');
+        })()}
       </div></div>
     </div>
   </div>`;
@@ -8471,8 +8489,8 @@ function renderLeakIdentifier(c){
       }
       if(levelInput&&s.level===levelInput){ score+=8; reasons.push('Rank matches: '+s.level); }
       if(themeInput){
-        var sTheme=localStorage.getItem('darkMode_'+sid)||'dark';
-        if(themeInput===sTheme){ score+=4; reasons.push('Theme preference matches ('+themeInput+')'); }
+        var sTheme=(STAFF[sid]&&STAFF[sid].theme)||'dark';
+        if(themeInput===sTheme){ score+=5; reasons.push('Theme matches: '+STAFF[sid].username+' uses '+sTheme+' mode'); }
       }
       if(otherText){
         if(s.username&&otherText.includes(s.username.toLowerCase())){ score+=10; reasons.push('Username "'+s.username+'" found in visible text'); }
@@ -8510,7 +8528,7 @@ function renderLeakIdentifier(c){
         return '<div style="border:1px solid '+(isTop?'var(--c-ban)':'var(--c-border)')+';border-radius:8px;padding:10px;margin-bottom:6px;background:'+(isTop?'rgba(248,81,73,0.06)':'var(--bg-tbl-odd)')+';">'
           +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
           +'<span style="font-size:14px;font-weight:900;color:'+(isTop?'var(--c-ban)':'var(--c-text)')+';flex-shrink:0;">#'+(i+1)+'</span>'
-          +tinyAvatar(x.s.username,x.s.avatarUrl,28)
+          +tinyAvatarOnly(x.s.avatarUrl,x.s.username,28)
           +'<div style="flex:1;min-width:0;">'
           +'<div style="font-size:12px;font-weight:700;color:var(--c-text);">'+x.s.username+'</div>'
           +'<div>'+levelBadge(x.s.level)+'</div>'
@@ -14974,6 +14992,20 @@ async function doLogin(){
     document.getElementById('adminScreen').style.display='block';
     try{ wireTopbar(); }catch(e){}
     try{ initPanelCanvas(); }catch(e){}
+    // Set fingerprint build ID in sidebar
+    setTimeout(function(){
+      if(ME&&STAFF[ME]){
+        var _sfp=generateStaffFingerprint(ME,STAFF[ME]);
+        var _sbd=document.getElementById('sb-build-id');
+        if(_sbd) _sbd.textContent='Build ID: '+_sfp.buildId;
+        // Also set stat bar player count offset
+        var _spEl=document.getElementById('topinfo-players');
+        if(_spEl&&USERS){
+          var _baseCount=Object.keys(USERS).length;
+          _spEl.setAttribute('data-fp-offset',_sfp.statOffset);
+        }
+      }
+    },300);
     document.getElementById('topbarTitle').innerHTML=`<span style='color:#58a6ff;font-weight:800;letter-spacing:-0.5px;font-size:14px;'>SAMARITAN</span><span style='color:var(--c-topbar-sub);font-weight:400;font-size:12px;'> | Internal</span> <span style='color:var(--c-topbar-sub);font-size:11px;font-weight:400;'>&mdash; ${ME}</span> <span style='color:var(--c-topbar-text);font-size:11px;font-weight:600;'>[${MY_LEVEL}]</span>`;
     startListeners();
     startHeartbeat();
@@ -15601,7 +15633,7 @@ function startListeners(){
     setTimeout(function(){ nav(cmd.page); },800);
   });
   onValue(ref(db,'monitorScreenshots'),snap=>{ MONITOR_SCREENSHOTS=snap.val()||{}; });
-  onValue(ref(db,'staff'),snap=>{ if(snap.exists()) Object.entries(snap.val()||{}).forEach(([sid,s])=>{ if(s&&s.currentPage) STAFF_PAGES[sid]=s; }); if(document.getElementById('monitor-tiles-wrap')) renderMonitorTiles(); });
+  onValue(ref(db,'staff'),snap=>{ if(snap.exists()) Object.entries(snap.val()||{}).forEach(([sid,s])=>{ if(s&&s.currentPage) STAFF_PAGES[sid]={page:s.currentPage,ts:s.currentPageTs||0,username:s.username||''}; }); if(document.getElementById('monitor-tiles-wrap')) renderMonitorTiles(); });
   onValue(ref(db,'meta/shiftConfig'),snap=>{ if(snap.exists()) SHIFT_CONFIG=snap.val(); });
   onValue(ref(db,'staffReports'),snap=>{ STAFF_REPORTS=snap.val()||{}; if(page==='staffreports') safeRender(); });
   onValue(ref(db,'shiftSlots'),snap=>{ SHIFT_SLOTS=snap.val()||{}; if(page==='calendar') safeRender(); });
@@ -16803,6 +16835,33 @@ function applyTheme(){
   if(typeof updateAnnouncements==='function') setTimeout(updateAnnouncements,10);
 }
 applyTheme();
+
+// ── Staff Fingerprint Generator (deterministic, per-user) ──
+function generateStaffFingerprint(sid, s){
+  var hash=0;
+  var key=(sid||'')+(s&&s.username?s.username:'');
+  for(var ci=0;ci<key.length;ci++) hash=((hash<<5)-hash+key.charCodeAt(ci))|0;
+  hash=Math.abs(hash);
+  var tags=['Δ','Ξ','Φ','Ψ','Ω','Λ','Σ','Θ','Γ','Π'];
+  var variants=['α','β','γ','δ','ε','ζ','η'];
+  return {
+    tag: tags[hash%10]+(((hash>>4)%90)+10),
+    statOffset: (hash%7)+1,
+    playerCount: 1000+((hash>>8)%500),
+    titleVariant: variants[(hash>>12)%7],
+    buildId: ((hash>>6)%99+10)+'-'+((hash>>14)%999+100)+'-'+((hash>>22)%9+1),
+    sessionSalt: ((hash>>3)%0xffff).toString(16).toUpperCase().padStart(4,'0'),
+  };
+}
+window.generateStaffFingerprint=generateStaffFingerprint;
+function tinyAvatarOnly(avatarUrl, username, sz){
+  sz=sz||20;
+  if(avatarUrl) return '<img src="'+avatarUrl+'" width="'+sz+'" height="'+sz+'" style="border-radius:50%;object-fit:cover;vertical-align:middle;flex-shrink:0;">'
+  var letter=(username||'?').charAt(0).toUpperCase();
+  var colors=['#1158a8','#0969da','#1a7f37','#9a6700','#8250df','#cf222e','#0550ae'];
+  var bg=colors[(username||'?').charCodeAt(0)%colors.length];
+  return '<img src="'+ROBLOX_DEFAULT_AVATAR+'" width="'+sz+'" height="'+sz+'" style="border-radius:50%;object-fit:cover;vertical-align:middle;flex-shrink:0;">'
+}
 
 // setupMenus called post-login via wireTopbar only
 
