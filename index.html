@@ -58,10 +58,10 @@ body.gh-dark {
 
 /* ── BASE ── */
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;background:var(--bg-page);min-height:100vh;display:block;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;background:var(--bg-page);min-height:100vh;display:block;overflow-x:hidden;}html{overflow-x:hidden;}
 
 /* ── LOGIN ── */
-#loginScreen{display:flex;align-items:center;justify-content:center;width:100%;min-height:100vh;background:#080c14;overflow:hidden;}
+#loginScreen{display:flex;align-items:center;justify-content:center;width:100%;height:100vh;background:#080c14;overflow:hidden;position:fixed;inset:0;}
 .login-popup{background:var(--bg-dialog);border:1px solid var(--c-border);width:340px;border-radius:6px;box-shadow:0 8px 24px rgba(1,4,9,0.2);overflow:hidden;}
 .titlebar{background:var(--bg-topbar);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-radius:6px 6px 0 0;}
 .titlebar-title{color:var(--c-topbar-text);font-size:13px;font-weight:600;}
@@ -1024,40 +1024,62 @@ body.gh-dark .topinfo{ background:rgba(9,13,22,0.95); border-bottom-color:rgba(8
 
 
 /* Fingerprint watermark - uses CSS custom property set per user */
+/* Fingerprint markers - look like UI grid coordinates or debug refs */
 #content::before {
   content: var(--fp-wm, '');
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) rotate(-28deg);
-  font-size: 13px;
+  top: 42%;
+  left: 8%;
+  font-size: 9px;
   font-family: monospace;
   color: var(--c-text2);
-  opacity: 0.055;
+  opacity: 0.08;
   pointer-events: none;
   user-select: none;
   white-space: nowrap;
   z-index: 99999;
-  letter-spacing: 10px;
-  font-weight: 400;
+  letter-spacing: 3px;
+  writing-mode: vertical-lr;
+  transform: rotate(180deg);
 }
-/* Second watermark instance - offset position */
 #content::after {
   content: var(--fp-bid, '');
   position: fixed;
-  bottom: 28%;
-  right: 8%;
-  transform: rotate(-18deg);
-  font-size: 10px;
+  top: 15%;
+  right: 6%;
+  font-size: 9px;
   font-family: monospace;
   color: var(--c-text2);
-  opacity: 0.05;
+  opacity: 0.08;
   pointer-events: none;
   user-select: none;
   white-space: nowrap;
   z-index: 99999;
-  letter-spacing: 5px;
+  letter-spacing: 2px;
 }
+
+
+/* ── Punishment tile grid ── */
+.punish-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:16px;}
+.punish-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:14px 8px;background:var(--bg-tbl-odd);border:1px solid var(--c-border);border-radius:8px;cursor:pointer;transition:all 0.15s;font-size:11px;font-weight:600;color:var(--c-text);text-align:center;user-select:none;}
+.punish-tile:hover{background:var(--bg-sb-hdr-hover);border-color:var(--c-link);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,0.3);}
+.punish-tile svg{opacity:0.8;}
+/* Side panel */
+#punish-side-panel{position:fixed;right:0;top:0;height:100%;width:320px;background:var(--bg-dialog);border-left:1px solid var(--c-border);z-index:9000;transform:translateX(100%);transition:transform 0.2s ease;box-shadow:-4px 0 24px rgba(0,0,0,0.4);display:flex;flex-direction:column;}
+#punish-side-panel.open{transform:translateX(0);}
+#punish-side-panel-header{padding:16px;border-bottom:1px solid var(--c-border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+#punish-side-panel-body{padding:16px;flex:1;overflow-y:auto;}
+.psp-close{background:none;border:none;color:var(--c-text2);cursor:pointer;font-size:16px;padding:4px;line-height:1;}
+.psp-close:hover{color:var(--c-text);}
+/* Log entry expanded */
+.mod-log-entry{border:1px solid var(--c-border);border-radius:6px;margin-bottom:6px;overflow:hidden;cursor:pointer;transition:border-color 0.15s;}
+.mod-log-entry:hover{border-color:var(--c-link);}
+.mod-log-entry-header{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg-tbl-odd);}
+.mod-log-entry-body{display:none;padding:10px 12px;border-top:1px solid var(--c-border);background:var(--bg-content);}
+.mod-log-entry.expanded .mod-log-entry-body{display:block;}
+.log-action-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;}
+.log-revert-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:rgba(88,166,255,0.15);color:#58a6ff;border:1px solid rgba(88,166,255,0.3);}
+.log-locked-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:rgba(248,81,73,0.15);color:var(--c-ban);border:1px solid rgba(248,81,73,0.3);}
 
 </style>
 </head>
@@ -1368,15 +1390,24 @@ body.gh-dark .topinfo{ background:rgba(9,13,22,0.95); border-bottom-color:rgba(8
   </div>
 </div>
 
-      <svg width="80" height="80" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="50" cy="50" r="46" stroke="#333" stroke-width="3"/>
-        <path d="M50 18 L50 82 M18 50 L82 50" stroke="#333" stroke-width="2.5"/>
-        <circle cx="50" cy="50" r="18" stroke="#333" stroke-width="2.5"/>
-        <path d="M50 18 Q68 34 82 50 Q68 66 50 82 Q32 66 18 50 Q32 34 50 18Z" stroke="#333" stroke-width="1.5" fill="none"/>
-      </svg>
-      <div style="font-size:9px;letter-spacing:4px;color:#333;text-transform:uppercase;margin-top:8px;text-align:center;">INTERNAL ADMINISTRATION</div>
     </div>
   </div>
+
+
+<!-- Punishment Side Panel -->
+<div id="punish-side-panel">
+  <div id="punish-side-panel-header">
+    <div>
+      <div id="psp-title" style="font-size:13px;font-weight:700;color:var(--c-text);"></div>
+      <div id="psp-subtitle" style="font-size:10px;color:var(--c-text2);margin-top:1px;"></div>
+    </div>
+    <button class="psp-close" onclick="closePunishPanel()">✕</button>
+  </div>
+  <div id="punish-side-panel-body">
+    <div id="psp-content"></div>
+  </div>
+</div>
+<div id="punish-panel-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:8999;" onclick="closePunishPanel()"></div>
 
 <div id="adminScreen" style="position:relative;">
 <canvas id="panelBgCanvas" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0.8;"></canvas>
@@ -6395,15 +6426,27 @@ function renderAccounts(c){
     if(!msgEl) return;
     massRefreshBtn.disabled=true;
     massRefreshBtn.textContent='Refreshing…';
-    msgEl.style.color='var(--c-link)'; msgEl.textContent='Starting mass refresh…';
+    // Live-updating persistent toast
+    var liveToast=document.getElementById('live-refresh-toast');
+    if(!liveToast){
+      liveToast=document.createElement('div');
+      liveToast.id='live-refresh-toast';
+      liveToast.style.cssText='position:fixed;bottom:20px;right:20px;background:var(--bg-dialog);border:1px solid var(--c-link);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--c-text);z-index:99999;min-width:280px;box-shadow:0 4px 16px rgba(0,0,0,0.4);';
+      document.body.appendChild(liveToast);
+    }
+    liveToast.style.display='block';
+    liveToast.innerHTML='<div style="font-weight:700;color:var(--c-link);margin-bottom:4px;">↻ Mass Roblox Refresh</div><div id="live-refresh-detail">Starting...</div><div id="live-refresh-bar" style="height:3px;background:var(--c-border);border-radius:2px;margin-top:8px;"><div id="live-refresh-fill" style="height:100%;background:var(--c-link);border-radius:2px;width:0%;transition:width 0.3s;"></div></div>';
     const result=await massRefreshRoblox(function(i,total,username){
-      msgEl.textContent='Processing '+i+'/'+total+': '+username+'…';
+      var pct=Math.round(i/total*100);
+      var det=document.getElementById('live-refresh-detail');
+      var fill=document.getElementById('live-refresh-fill');
+      if(det) det.innerHTML='Processing <b>'+i+'/'+total+'</b>: '+username;
+      if(fill) fill.style.width=pct+'%';
     });
     massRefreshBtn.disabled=false; massRefreshBtn.textContent='↻ Refresh All Roblox Data';
-    msgEl.style.color='var(--c-ok)';
-    msgEl.textContent='Done - '+result.updated+' updated, '+result.skipped+' unchanged, '+result.failed+' failed ('+result.total+' total).';
+    if(liveToast) liveToast.innerHTML='<div style="font-weight:700;color:var(--c-ok);margin-bottom:4px;">✓ Refresh Complete</div><div>'+result.updated+' updated · '+result.skipped+' unchanged · '+result.failed+' failed</div>';
+    setTimeout(function(){ if(liveToast) liveToast.style.display='none'; }, 5000);
     logRobloxChange('refresh_complete','[MASS REFRESH]',{updated:result.updated,skipped:result.skipped,failed:result.failed,total:result.total});
-    showToast('Mass Roblox refresh complete: '+result.updated+' updated.','success');
     auditLog('Mass Roblox Refresh','By '+ME+' - '+result.updated+' updated, '+result.failed+' failed');
   };
   document.getElementById('nuUser').onkeydown=e=>{ if(e.key==='Enter') addUser(); };
@@ -12685,12 +12728,16 @@ function renderCustomFieldLog(c){
 }
 
 async function logCustomFieldChange(player, field, action, oldValue, newValue){
+  // Debug: log to console to verify function is called
+  console.log('[CFLog] Logging change:', player, field, action, oldValue, '->', newValue);
   try{
-    await push(ref(db,'logs/customFields'),{
+    var _cfEntry={
       player:player, field:field, action:action,
       oldValue:oldValue||'', newValue:newValue||'',
       staff:ME, date:nowStr(), ts:Date.now()
-    });
+    };
+    var _cfRef=await push(ref(db,'logs/customFields'),_cfEntry).catch(()=>null);
+    if(_cfRef) CUSTOM_FIELD_LOG[_cfRef.key]=_cfEntry;
   }catch(e){}
 }
 window.logCustomFieldChange=logCustomFieldChange;
@@ -14548,6 +14595,7 @@ async function doLogin(){
     try{ wireTopbar(); }catch(e){}
     try{ initPanelCanvas(); }catch(e){}
     window._loginTimestamp=Date.now();
+    lockSession();
     // Set fingerprint build ID - retry until STAFF[ME] is populated
     (function trySetBuildId(attempts){
       setTimeout(function(){
@@ -16434,6 +16482,192 @@ function tinyAvatarOnly(avatarUrl, username, sz){
 
 // setupMenus called post-login via wireTopbar only
 
+
+
+// ── Punishment panel system ──
+var _punishTargetUid=null;
+var _punishTargetUser=null;
+
+function closePunishPanel(){
+  document.getElementById('punish-side-panel').classList.remove('open');
+  document.getElementById('punish-panel-overlay').style.display='none';
+}
+
+function openPunishPanel(uid, punishType){
+  var u=USERS[uid]; if(!u) return;
+  _punishTargetUid=uid; _punishTargetUser=u;
+  var panel=document.getElementById('punish-side-panel');
+  var overlay=document.getElementById('punish-panel-overlay');
+  var titleEl=document.getElementById('psp-title');
+  var subEl=document.getElementById('psp-subtitle');
+  var bodyEl=document.getElementById('psp-content');
+  // Punishment configs
+  var configs={
+    'Verbal Warning':{color:'#e3b341',icon:'⚠',fields:['reason'],desc:'Verbal Warning'},
+    'Formal Warning':{color:'#e3b341',icon:'📋',fields:['reason','expires'],desc:'Formal Warning'},
+    'Suspension':{color:'#f85149',icon:'⏸',fields:['reason','expires','classified','locked'],desc:'Suspension'},
+    'Ban':{color:'#f85149',icon:'🔨',fields:['reason','expires','classified','locked'],desc:'Ban'},
+    'Permanent Ban':{color:'#8b0000',icon:'⛔',fields:['reason','classified','locked'],desc:'Permanent Ban'},
+    'Rank Lock':{color:'#a371f7',icon:'🔒',fields:['reason','locked'],desc:'Rank Lock — restricts custom field management'},
+    'Comment':{color:'#58a6ff',icon:'💬',fields:['reason','classified'],desc:'Internal note/comment'},
+    'Staff Warning':{color:'#e3b341',icon:'⚠',fields:['reason'],desc:'Warning to moderating staff'},
+    'SHR Note':{color:'#a371f7',icon:'📝',fields:['reason','classified','locked'],desc:'Senior record note'},
+  };
+  var cfg=configs[punishType]||{color:'#58a6ff',icon:'📋',fields:['reason'],desc:punishType};
+  titleEl.textContent='Issue '+punishType;
+  titleEl.style.color=cfg.color;
+  subEl.textContent='Target: '+u.username;
+
+  var html='<div style="margin-bottom:12px;">';
+  html+='<label style="font-size:11px;font-weight:700;color:var(--c-text);display:block;margin-bottom:4px;">Reason <span style="color:var(--c-ban);">*</span></label>';
+  html+='<textarea id="psp-reason" style="width:100%;height:70px;font-size:11px;" placeholder="Describe the reason..."></textarea>';
+  html+='</div>';
+  if(cfg.fields.includes('expires')){
+    html+='<div style="margin-bottom:12px;"><label style="font-size:11px;font-weight:700;color:var(--c-text);display:block;margin-bottom:4px;">Expiry</label>';
+    html+='<select id="psp-expires" style="width:100%;">';
+    html+='<option value="0">Permanent</option><option value="3600000">1 Hour</option><option value="21600000">6 Hours</option>';
+    html+='<option value="86400000">24 Hours</option><option value="259200000">3 Days</option><option value="604800000">1 Week</option>';
+    html+='<option value="2592000000">30 Days</option></select></div>';
+  }
+  html+='<div style="margin-bottom:12px;"><label style="font-size:11px;font-weight:700;color:var(--c-text);display:block;margin-bottom:6px;">Options</label>';
+  if(cfg.fields.includes('classified')){
+    html+='<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--c-text);margin-bottom:4px;cursor:pointer;"><input type="checkbox" id="psp-classified"> Make Classified <span style="font-size:9px;color:var(--c-text2);">(hidden from rank and below)</span></label>';
+  }
+  if(cfg.fields.includes('locked')){
+    html+='<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--c-text);margin-bottom:4px;cursor:pointer;"><input type="checkbox" id="psp-locked"> Make Locked <span style="font-size:9px;color:var(--c-text2);">(cannot be reverted)</span></label>';
+  }
+  html+='</div>';
+  html+='<button class="btn" id="psp-apply-btn" style="width:100%;background:'+cfg.color+';border-color:'+cfg.color+';color:#fff;font-weight:700;">Apply '+punishType+'</button>';
+  html+='<div id="psp-msg" style="font-size:11px;margin-top:6px;min-height:14px;text-align:center;"></div>';
+  bodyEl.innerHTML=html;
+
+  document.getElementById('psp-apply-btn').onclick=async function(){
+    var reason=(document.getElementById('psp-reason').value||'').trim();
+    if(!reason){ document.getElementById('psp-msg').textContent='Reason is required.'; document.getElementById('psp-msg').style.color='var(--c-ban)'; return; }
+    var classified=document.getElementById('psp-classified')&&document.getElementById('psp-classified').checked;
+    var locked=document.getElementById('psp-locked')&&document.getElementById('psp-locked').checked;
+    var expiresEl=document.getElementById('psp-expires');
+    var expiresMs=expiresEl?parseInt(expiresEl.value)||0:0;
+    var expiresAt=expiresMs>0?Date.now()+expiresMs:0;
+    var pid='p_'+Date.now();
+    var entry={action:punishType,reason:reason,mod:ME,created:nowStr(),classified:classified||false,locked:locked||false,expiresAt:expiresAt,reverted:false};
+    await update(ref(db,'users/'+uid+'/punishments/'+pid),entry);
+    await push(ref(db,'logs/moderation'),{user:u.username,action:punishType,mod:ME,date:nowStr(),reason:reason,classified:classified||false,locked:locked||false});
+    auditLog(punishType+' issued','Against '+u.username+' by '+ME+': '+reason);
+    fireDiscordWebhook('mod_actions',{title:punishType,description:'**Player:** '+u.username+'\n**Moderator:** '+ME+'\n**Reason:** '+reason+(classified?'\n*[Classified]*':''),color:parseInt(cfg.color.replace('#',''),16)||0xe3b341});
+    document.getElementById('psp-msg').style.color='var(--c-ok)';
+    document.getElementById('psp-msg').textContent='Applied!';
+    setTimeout(closePunishPanel,600);
+    if(USERS[uid]) USERS[uid].punishments=USERS[uid].punishments||{};
+    if(USERS[uid]) USERS[uid].punishments[pid]=entry;
+    safeRender();
+  };
+
+  overlay.style.display='block';
+  panel.classList.add('open');
+}
+
+function revertPunishment(uid, pid){
+  var u=USERS[uid]; if(!u) return;
+  var p=u.punishments&&u.punishments[pid]; if(!p) return;
+  if(p.locked){ showToast('This punishment is locked and cannot be reverted.','error'); return; }
+  openDialog('Revert Punishment','Are you sure you want to revert this '+p.action+' on <b>'+u.username+'</b>? The entry will remain in the log marked as Reverted.','Revert',async function(){
+    await update(ref(db,'users/'+uid+'/punishments/'+pid),{reverted:true,revertedBy:ME,revertedAt:nowStr()});
+    await push(ref(db,'logs/revoke'),{user:u.username,action:'Reverted: '+p.action,mod:ME,date:nowStr(),reason:'Reverted by '+ME});
+    auditLog('Punishment Reverted',u.username+': '+p.action);
+    showToast('Punishment reverted.','success');
+    safeRender();
+  });
+}
+window.openPunishPanel=openPunishPanel;
+
+function renderMachineLogs(c){
+  get(ref(db,'logs/machine')).then(function(snap){
+    var entries=snap.exists()?Object.entries(snap.val()).sort((a,b)=>(b[1].ts||0)-(a[1].ts||0)).slice(0,500):[];
+    var typeColors={SESSION_LOCK:'#f85149',SCREENSHOT:'#e3b341',RATE_LIMIT:'#f85149',LOGIN_ATTEMPT:'#a371f7',MACHINE_ACCESS:'#58a6ff',BLIND_AUDIT:'rgba(88,166,255,0.6)',TWO_FACTOR:'#3fb950',ACTION_RATE:'#e3b341'};
+    var typeIcons={SESSION_LOCK:'🔒',SCREENSHOT:'📸',RATE_LIMIT:'⚡',LOGIN_ATTEMPT:'🔑',MACHINE_ACCESS:'⚙',BLIND_AUDIT:'👁',TWO_FACTOR:'🔐',ACTION_RATE:'⚠'};
+    c.innerHTML=`<div class="ptitle" style="display:flex;align-items:center;gap:8px;">⚡ Machine Logs <span style="font-size:11px;font-weight:400;color:var(--c-text2);">— Real-time security event log</span></div>`
+    +`<div class="sbox" style="border-color:rgba(248,81,73,0.3);background:rgba(248,81,73,0.02);">`
+    +`<div class="stitle" style="background:rgba(248,81,73,0.08);color:var(--c-ban);">⚡ Security Event Stream</div>`
+    +`<div class="sbody" style="padding:0;">`
+    +(entries.length===0?'<div style="padding:20px;text-align:center;color:var(--c-text2);font-size:11px;font-style:italic;">No machine log entries yet.</div>'
+    :entries.map(([lid,r])=>{
+      var col=typeColors[r.type]||'#58a6ff';
+      var icon=typeIcons[r.type]||'⚙';
+      return '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.04);position:relative;">'
+        +'<div style="flex-shrink:0;width:32px;height:32px;border-radius:50%;background:'+col+'18;border:1px solid '+col+'44;display:flex;align-items:center;justify-content:center;font-size:14px;margin-top:1px;">'+icon+'</div>'
+        +'<div style="flex:1;min-width:0;">'
+        +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
+        +'<span style="font-size:11px;font-weight:700;color:'+col+';">'+( r.type||'EVENT')+'</span>'
+        +(r.staff?tinyAvatar(r.staff,avatarUrlFor(r.staff),16):'')
+        +(r.staff?'<span style="font-size:10px;color:var(--c-text);">'+r.staff+'</span>':'')
+        +'<span style="font-size:9px;color:var(--c-text2);margin-left:auto;">'+( r.date||'')+'</span>'
+        +'</div>'
+        +'<div style="font-size:11px;color:var(--c-text);margin-top:3px;">'+( r.detail||'')+'</div>'
+        +(r.extra?'<div style="font-size:10px;color:var(--c-text2);margin-top:2px;font-family:monospace;">'+r.extra+'</div>':'')
+        +'</div>'
+        +'</div>';
+    }).join(''))
+    +'</div></div>';
+  }).catch(function(){ c.innerHTML='<div class="ptitle">Machine Logs</div><div style="padding:20px;color:var(--c-ban);">Error loading logs.</div>'; });
+}
+
+async function machineLog(type, detail, extra){
+  var entry={type:type,staff:ME,date:nowStr(),ts:Date.now(),detail:detail||'',extra:extra||''};
+  await push(ref(db,'logs/machine'),entry).catch(()=>{});
+}
+window.machineLog=machineLog;
+
+window.closePunishPanel=closePunishPanel;
+window.revertPunishment=revertPunishment;
+
+
+// Screenshot detection
+document.addEventListener('keydown',function(e){
+  if(!ME) return;
+  var isScreenshot = e.key==='PrintScreen' || (e.ctrlKey&&e.shiftKey&&e.key==='S') || (e.metaKey&&e.shiftKey&&(e.key==='3'||e.key==='4'||e.key==='5'));
+  if(isScreenshot){
+    machineLog('SCREENSHOT','Screenshot key detected on page: '+(page||'unknown'),'Key: '+e.key+' | Time: '+nowStr());
+    var _fpLocal=ME&&STAFF[ME]?generateStaffFingerprint(ME,STAFF[ME]):null;
+    if(_fpLocal) machineLog('SCREENSHOT_FP','Fingerprint at capture time','BuildID:'+_fpLocal.buildId+' Tag:'+_fpLocal.tag+'-'+_fpLocal.sessionSalt);
+  }
+});
+
+// Session locking - store session fingerprint on login, verify on each action
+function getSessionFingerprint(){
+  return [navigator.userAgent.slice(0,80),Intl.DateTimeFormat().resolvedOptions().timeZone,screen.width+'x'+screen.height].join('|');
+}
+var _sessionFingerprintStored=null;
+function lockSession(){
+  _sessionFingerprintStored=getSessionFingerprint();
+  update(ref(db,'staff/'+ME),{sessionFp:_sessionFingerprintStored.split('|').pop()}).catch(()=>{});
+}
+function checkSessionLock(){
+  if(!ME||!_sessionFingerprintStored) return;
+  var current=getSessionFingerprint();
+  if(current!==_sessionFingerprintStored){
+    machineLog('SESSION_LOCK','Session fingerprint mismatch - possible session sharing detected','Expected: '+_sessionFingerprintStored.split('|').pop()+' | Got: '+current.split('|').pop());
+    showToast('⚠ Session anomaly detected. Your session has been flagged.','error');
+    _sessionFingerprintStored=current; // update to prevent repeat
+  }
+}
+setInterval(checkSessionLock, 30000); // check every 30s
+
+// Action rate limiting
+var _actionTimestamps=[];
+var _actionRateLimitWarned=false;
+function trackAction(actionName){
+  var now=Date.now();
+  _actionTimestamps=_actionTimestamps.filter(function(t){ return now-t<300000; }); // 5 min window
+  _actionTimestamps.push(now);
+  if(_actionTimestamps.length>20&&!_actionRateLimitWarned){
+    _actionRateLimitWarned=true;
+    machineLog('ACTION_RATE','Unusual action rate: '+_actionTimestamps.length+' actions in 5 minutes by '+ME,'Last action: '+actionName);
+    showToast('⚠ High action rate detected and logged.','warning');
+    setTimeout(function(){ _actionRateLimitWarned=false; },300000);
+  }
+}
+window.trackAction=trackAction;
 
 // ── Panel background canvas (subtle ambient effect) ──
 var _panelAnimId=null;
