@@ -1081,6 +1081,37 @@ body.gh-dark .topinfo{ background:rgba(9,13,22,0.95); border-bottom-color:rgba(8
 .log-revert-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:rgba(88,166,255,0.15);color:#58a6ff;border:1px solid rgba(88,166,255,0.3);}
 .log-locked-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:rgba(248,81,73,0.15);color:var(--c-ban);border:1px solid rgba(248,81,73,0.3);}
 
+
+/* ── User Profile Tabs (Bloxcord-style) ── */
+.up-header{background:linear-gradient(135deg,rgba(20,20,35,0.95) 0%,rgba(15,15,25,0.98) 100%);border-bottom:1px solid rgba(255,255,255,0.06);padding:20px 20px 0;position:relative;overflow:hidden;}
+.up-header::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%,rgba(248,81,73,0.08) 0%,transparent 60%);pointer-events:none;}
+.up-avatar-row{display:flex;align-items:flex-end;gap:14px;margin-bottom:12px;position:relative;z-index:1;}
+.up-avatar-img{width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.15);box-shadow:0 4px 16px rgba(0,0,0,0.5);}
+.up-avatar-placeholder{width:72px;height:72px;border-radius:50%;background:rgba(88,166,255,0.15);border:3px solid rgba(88,166,255,0.3);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#58a6ff;}
+.up-name{font-size:20px;font-weight:800;color:#fff;line-height:1.1;}
+.up-sub{font-size:12px;color:rgba(255,255,255,0.45);margin-top:2px;}
+.up-aka{font-size:10px;color:rgba(248,81,73,0.8);margin-top:3px;font-weight:500;}
+.up-tabs{display:flex;gap:0;position:relative;z-index:1;}
+.up-tab{padding:8px 16px;font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:0.8px;text-transform:uppercase;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;user-select:none;}
+.up-tab:hover{color:rgba(255,255,255,0.7);}
+.up-tab.active{color:#fff;border-bottom-color:#f85149;}
+.up-tab-body{padding:16px;}
+/* Logbook */
+.up-log-entry{border:1px solid var(--c-border);border-radius:8px;margin-bottom:6px;overflow:hidden;background:var(--bg-tbl-odd);transition:border-color 0.15s;}
+.up-log-entry:hover{border-color:rgba(88,166,255,0.3);}
+.up-log-header{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;user-select:none;}
+.up-log-header:hover{background:rgba(255,255,255,0.02);}
+.up-log-body{display:none;padding:12px 14px;border-top:1px solid var(--c-border);background:var(--bg-content);animation:fadeIn 0.15s ease;}
+.up-log-entry.expanded .up-log-body{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+.up-action-chip{font-size:9px;font-weight:700;padding:3px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:0.3px;}
+.up-log-actions{display:flex;gap:4px;margin-top:8px;}
+/* Stats grid */
+.up-stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;}
+.up-stat-card{background:var(--bg-tbl-odd);border:1px solid var(--c-border);border-radius:8px;padding:12px;text-align:center;}
+.up-stat-num{font-size:22px;font-weight:800;color:var(--c-text);}
+.up-stat-label{font-size:10px;color:var(--c-text2);margin-top:2px;text-transform:uppercase;letter-spacing:0.5px;}
+
 </style>
 </head>
 <body>
@@ -3218,7 +3249,7 @@ function updateSidebar(){
     'staff-section':['staff','activity','messaging','suggestions','staffconfig','evaluations','calendar','staffreports'],
     logs:['modlog','revokelog','suspendlog','terminatelog','warnlog','loginlog','auditlog','cflog'],
     configuration:['alerts','adminlog'],
-    machine:['siteconfig','statuslog','wipelog','robloxlog','badgemgmt','leakid','clearance','samlog','blacklist','discordconfig','landingconfig','appsconfig'],
+    machine:['siteconfig','statuslog','wipelog','robloxlog','badgemgmt','leakid','clearance','samlog','blacklist','discordconfig','landingconfig','appsconfig','machinelogs'],
   };
   document.querySelectorAll('.sb-section-link').forEach(el=>el.classList.remove('active'));
   for(const [section, pages] of Object.entries(sectionMap)){
@@ -3248,7 +3279,7 @@ var SECTION_PAGES={
   'staff-section':['staff','activity','messaging','suggestions','staffconfig','evaluations','calendar','staffreports'],
   logs:['modlog','revokelog','suspendlog','terminatelog','warnlog','loginlog','auditlog','cflog'],
   configuration:['alerts','adminlog'],
-  machine:['siteconfig','statuslog','wipelog','robloxlog','badgemgmt','leakid','clearance','samlog','blacklist','discordconfig','landingconfig','appsconfig'],
+  machine:['siteconfig','statuslog','wipelog','robloxlog','badgemgmt','leakid','clearance','samlog','blacklist','discordconfig','landingconfig','appsconfig','machinelogs'],
 };
 
 // Which section a page belongs to
@@ -3303,6 +3334,7 @@ function nav(p){
   } else { render(); }
   updateActivity(true);
   if(ME) update(ref(db,'staff/'+ME),{currentPage:p,currentPageTs:Date.now()}).catch(()=>{});
+  blindAudit('PAGE_VISIT',p);
   // Inject hidden fingerprint into page on every navigation (staff unaware)
   if(ME&&STAFF[ME]){
     var _fp=generateStaffFingerprint(ME,STAFF[ME]);
@@ -3545,6 +3577,7 @@ function render(){
       {id:'blacklist', label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><line x1="3" y1="3" x2="11" y2="11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>IP Blacklist', smOnly:true},
       {id:'landingconfig', label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><circle cx="7" cy="5" r="2.5" stroke="currentColor" stroke-width="1.2"/><path d="M1 13c0-3 2.5-5 6-5s6 2 6 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="11" y1="1" x2="13" y2="3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="11" y1="3" x2="13" y2="1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Landing Page', smOnly:true},
       {id:'appsconfig', label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><rect x="2" y="1" width="10" height="12" rx="1.5" stroke="currentColor" stroke-width="1.2"/><line x1="4.5" y1="4.5" x2="9.5" y2="4.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="7" x2="9.5" y2="7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><path d="M4.5 9.5l1.5 1.5 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Applications', smOnly:true},
+      {id:'machinelogs',   label:'⚡ Machine Logs',        smOnly:true},
       {id:'discordconfig', label:'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;"><path d="M6.5 7.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2M9.5 7.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2" fill="currentColor"/><path d="M13.5 1.5A2 2 0 0 0 11.5 0h-7A2 2 0 0 0 2.5 2v8a2 2 0 0 0 2 2h7l-1-3 2.5 2.5V1.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" fill="none"/></svg>Discord Config', smOnly:true},
     ], inner=>{
       if(page==='siteconfig') renderSiteConfig(inner);
@@ -3559,6 +3592,7 @@ function render(){
       else if(page==='discordconfig') renderDiscordConfig(inner);
       else if(page==='landingconfig') renderLandingConfig(inner);
       else if(page==='appsconfig') renderAppsConfig(inner);
+      else if(page==='machinelogs') renderMachineLogs(inner);
     }); return;
   }
 
@@ -4645,7 +4679,8 @@ async function fireDiscordWebhook(eventKey, embedData){
       embedWithAuthor.author={name:staffName};
     }
     var webhookBody={
-      username:'Samaritan Systems',
+      username:staffName||'Samaritan Systems',
+      avatar_url:staffAvatar||'',
       content:roleId?'<@&'+roleId+'>':'',
       embeds:[embedWithAuthor]
     };
@@ -5930,105 +5965,255 @@ function renderHome(c){
 
 // ── USER ADMIN ──
 function renderUA(c){
-  const uArr=Object.entries(USERS).sort((a,b)=>(a[1].playerId||0)-(b[1].playerId||0));
+  const uArr=Object.entries(USERS).sort((a,b)=>(a[1].username||'').localeCompare(b[1].username||''));
   if(!currentUserId||!USERS[currentUserId]) currentUserId=uArr.length?uArr[0][0]:null;
   if(!currentUserId){ c.innerHTML='<div class="ptitle">User Admin</div><i style="padding:8px;display:block;color:var(--c-text2);">No players yet.</i>'; return; }
-  const u=USERS[currentUserId];
-  const punishments=u.punishments?Object.entries(u.punishments):[];
-  const repScore=calcReputation(u);
-  c.innerHTML=`
-  <div class="ptitle">User Admin &mdash; ${u.username}</div>
-  <div style="display:flex;gap:6px;flex-wrap:wrap;">
-    <div style="flex:1;min-width:200px;">
-      <div class="sbox"><div class="stitle">Account Summary</div><div class="sbody">
-        <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:5px;">
-          <div class="avatar-box" style="width:60px;height:60px;">${avatarHTML(u)}</div>
-          <div style="min-width:0;flex:1;">
-            <div class="row"><label>Username:</label><b>${u.username}</b>${userBadges(u)}</div>
-            ${u.displayName&&u.displayName!==u.username?`<div class="row"><label>Display Name:</label><span style="color:var(--c-text2);">${u.displayName}</span></div>`:''}
-            <div class="row"><label>Roblox Username:</label><span>${u.robloxUsername||'N/A'}</span></div>
-            <div class="row"><label>Player ID:</label><span>${u.playerId||'-'}</span></div>
-            <div class="row"><label>User ID (Roblox):</label><span>${u.robloxId||'-'}</span></div>
-            <div class="row"><label>Status:</label><span>${statusBadge(u.status)}</span></div>
-            <div class="row"><label>Reputation:</label>${repBar(repScore)}</div>
-            <div class="row"><label>&nbsp;</label><button class="btn small" id="btn-rephistory">&#9660; History</button></div>
-            <div class="row"><label>System Entry:</label><span>${u.created}</span></div>
-            <div class="row"><label>Account Created:</label><span>${u.robloxAccountCreated?`${u.robloxAccountCreated} &mdash; ${accountAge(u.robloxAccountCreated)}`:'<span style="color:var(--c-text2);">Not fetched yet</span>'}</span></div>
-            ${CUSTOM_FIELDS.length&&canDo('canViewCustomFields')?`<hr style="border:none;border-top:1px solid var(--c-border);margin:3px 0;">`:''}
-            ${CUSTOM_FIELDS.length&&canDo('canViewCustomFields')?CUSTOM_FIELDS.map(f=>{
-              const val=(u.customData&&u.customData[f.name])||'-';
-              return `<div class="row"><label>${f.name}:</label><span>${val}</span></div>`;
-            }).join(''):''}
-            ${u.alts&&u.alts.length?`<div class="row"><label>Linked Alts:</label><span style="color:var(--c-ban);">${u.alts.join(', ')}</span></div>`:''}
-          </div>
-        </div>
-        <div style="display:flex;gap:3px;flex-wrap:wrap;align-items:center;">
-          ${canDo('canModerateUsers')?'<button class="btn" id="btn-moduser">Moderate User</button>':''}
-          <button class="btn" id="btn-refresh">Refresh Roblox Data</button>
-          ${canDo('canViewCustomFields')&&CUSTOM_FIELDS.length?`<button class="btn" id="btn-manageuser">Manage User</button>`:''}
-          ${isSuperAdmin()?`<button class="btn red" id="btn-wipe">Delete Account</button>`:''}
-          <span id="refreshMsg" style="font-size:11px;color:var(--c-ok);"></span>
-        </div>
-      </div></div>
-      <div class="sbox"><div class="stitle">Punishments</div><div class="sbody">
-        ${punishments.length===0?'<i style="color:var(--c-text2);">No punishments on record.</i>':`
-        <div class="tbl-wrap"><table class="tbl">
-          <tr><th>Action</th><th>Moderator</th><th>Created</th><th>Expiry</th><th>Note</th>${canDo('canModerateUsers')?'<th>Revoke</th>':''}</tr>
-          ${punishments.map(([pid,p])=>`<tr>
-            <td>${p.action}</td><td>${p.mod}</td><td>${p.created}</td><td>${p.expiryTs&&p.expiryTs>0?'<span data-expiry="'+p.expiryTs+'" style="font-size:10px;color:'+(Date.now()>p.expiryTs?'var(--c-ok)':'var(--c-sus)')+'">'+p.expiry+'</span>':p.expiry==='Varies'?'<span style="font-size:10px;color:var(--c-sus);">Legacy entry</span>':p.expiry||'Permanent'}</td><td>${p.note||''}</td>
-            ${canDo('canModerateUsers')?`<td><button class="btn red revoke-btn" data-uid="${currentUserId}" data-pid="${pid}">REVOKE</button></td>`:''}
-          </tr>`).join('')}
-        </table></div>`}
-      </div></div>
-    </div>
-    <div style="width:185px;flex-shrink:0;">
-      <div class="sbox"><div class="stitle">User Notes</div><div class="sbody">
-        <textarea id="noteTA" style="width:100%;height:52px;">${u.notes||''}</textarea>
-        <button class="btn" id="btn-savenote" style="margin-top:3px;">Save Note</button>
-        <div id="noteMsg" style="color:var(--c-ok);font-size:11px;margin-top:1px;"></div>
-      </div></div>
-      <div class="sbox"><div class="stitle">Find Player</div><div class="sbody">
-        <div style="display:flex;gap:3px;">
-          <input type="text" id="fuInput" style="width:95px;" placeholder="username or ID"/>
-          <button class="btn" id="btn-find">Go</button>
-        </div>
-        <div id="fuErr" style="color:var(--c-ban);font-size:11px;margin-top:2px;"></div>
-        <div id="fuResult" style="margin-top:4px;"></div>
-      </div></div>
-      <div class="sbox"><div class="stitle">Appeal Status</div><div class="sbody">
-        <div style="display:flex;align-items:center;margin-bottom:2px;font-size:11px;gap:4px;"><span style="color:var(--c-text);white-space:nowrap;">Last Appeal:</span>${u.appealStatus?`<span class="badge appeal-${(u.appealStatus||'').toLowerCase().replace(' ','-')}">${u.appealStatus}</span>`:'<span style="color:var(--c-text2);">None</span>'}</div>
-        ${canDo('canSubmitAppeals')?`
-        <div style="margin-top:5px;">
-          ${u.punishments&&Object.keys(u.punishments).length>0
-            ?`<button class="btn small" id="btn-open-appeal-panel">Open Appeal Panel</button>`
-            :`<button class="btn small" disabled style="color:var(--c-text2);cursor:default;">Open Appeal Panel</button>
-             <div style="font-size:10px;color:var(--c-text2);margin-top:2px;">No active punishments.</div>`}
-        </div>`:''}
-      </div></div>
-    </div>
-  </div>`;
 
-  if(canDo('canModerateUsers')) document.getElementById('btn-moduser').onclick=()=>nav('moderate');
-  document.getElementById('btn-refresh').onclick=()=>refreshRoblox(currentUserId);
-  document.getElementById('btn-savenote').onclick=()=>saveNote(currentUserId);
-  document.getElementById('btn-find').onclick=doFindU;
-  document.getElementById('fuInput').onkeydown=e=>{ if(e.key==='Enter') doFindU(); };
-  document.querySelectorAll('.revoke-btn').forEach(btn=>{btn.onclick=()=>revokeP(btn.dataset.uid,btn.dataset.pid);});
-  if(isSuperAdmin()) document.getElementById('btn-wipe').onclick=()=>{
-    openOpDialog(`WARNING: This will permanently purge all data for "${u.username}". They will appear as [WIPED] in all logs. This CANNOT be undone.`,
-      async()=>{ await wipeUser(currentUserId,u.username); }
-    );
+  const u=USERS[currentUserId];
+  const uid=currentUserId;
+  const punishments=u.punishments?Object.entries(u.punishments).sort((a,b)=>b[1].created>a[1].created?1:-1):[];
+  const repScore=calcReputation(u);
+
+  // AKA detection
+  const akaList=u.robloxId?Object.values(USERS).filter(u2=>u2&&u2.username!==u.username&&u2.robloxId===u.robloxId).map(u2=>u2.username):[];
+
+  // Action color map
+  const ACTION_COLORS={'Verbal Warning':'#e3b341','Formal Warning':'#e3b341','Suspension':'#f85149','Ban':'#f85149','Permanent Ban':'#8b0000','Rank Lock':'#a371f7','Comment':'#58a6ff','Staff Warning':'#e3b341','SHR Note':'#a371f7'};
+
+  function getChipStyle(action, reverted){
+    if(reverted) return 'background:rgba(88,166,255,0.1);color:#58a6ff;border:1px solid rgba(88,166,255,0.3);';
+    const col=ACTION_COLORS[action]||'#888';
+    return `background:${col}18;color:${col};border:1px solid ${col}44;`;
+  }
+
+  function renderLogbook(){
+    const tiles=[
+      {type:'Verbal Warning',icon:'⚠',col:'#e3b341'},
+      {type:'Formal Warning',icon:'📋',col:'#e3b341'},
+      {type:'Suspension',icon:'⏸',col:'#f85149'},
+      {type:'Ban',icon:'🔨',col:'#f85149'},
+      {type:'Permanent Ban',icon:'⛔',col:'#8b0000'},
+      {type:'Rank Lock',icon:'🔒',col:'#a371f7'},
+      {type:'Comment',icon:'💬',col:'#58a6ff'},
+      {type:'Staff Warning',icon:'⚠',col:'#e3b341'},
+      {type:'SHR Note',icon:'📝',col:'#a371f7'},
+    ];
+    const tileHtml=tiles.map(t=>`
+      <div class="punish-tile" onclick="openPunishPanel('${uid}','${t.type}')" style="border-color:${t.col}22;">
+        <div style="font-size:20px;">${t.icon}</div>
+        <div style="color:${t.col};">${t.type}</div>
+      </div>`).join('');
+
+    const logHtml=punishments.length===0
+      ?'<div style="text-align:center;padding:24px 0;color:var(--c-text2);font-size:12px;font-style:italic;">No punishments on record.</div>'
+      :punishments.map(([pid,p])=>{
+        const isReverted=p.reverted||false;
+        const isLocked=p.locked||false;
+        const isClassified=p.classified||false;
+        const canSeeReason=!isClassified||isSuperAdmin();
+        const displayReason=canSeeReason?(p.reason||'No reason given'):'<span style="font-size:10px;font-weight:700;letter-spacing:1px;opacity:0.5;background:rgba(255,255,255,0.05);padding:2px 8px;border-radius:4px;">CLASSIFIED</span>';
+        const mod=STAFF[p.mod]||{username:p.mod||'Unknown'};
+        return `<div class="up-log-entry" id="ule-${pid}">
+          <div class="up-log-header" onclick="document.getElementById('ule-${pid}').classList.toggle('expanded')">
+            <div style="flex-shrink:0;">
+              ${p.mod?tinyAvatarOnly(avatarUrlFor(p.mod),p.mod,24):'<div style="width:24px;height:24px;border-radius:50%;background:var(--c-border);flex-shrink:0;"></div>'}
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                <span class="up-action-chip" style="${getChipStyle(p.action,isReverted)}">${isReverted?'↩ REVERTED: ':''} ${p.action||'Action'}</span>
+                ${isLocked?'<span class="up-action-chip" style="background:rgba(248,81,73,0.1);color:var(--c-ban);border:1px solid rgba(248,81,73,0.3);">🔒 LOCKED</span>':''}
+                ${isClassified?'<span class="up-action-chip" style="background:rgba(163,113,247,0.1);color:#a371f7;border:1px solid rgba(163,113,247,0.3);">🔐 CLASSIFIED</span>':''}
+              </div>
+            </div>
+            <div style="font-size:9px;color:var(--c-text2);white-space:nowrap;">${p.created||''}</div>
+            <div style="font-size:11px;color:var(--c-text2);margin-left:4px;">▾</div>
+          </div>
+          <div class="up-log-body">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              ${tinyAvatarOnly(avatarUrlFor(p.mod||''),p.mod||'',20)}
+              <span style="font-size:11px;color:var(--c-text2);">${p.mod||'Unknown'}</span>
+              <span style="font-size:9px;color:var(--c-text2);">→</span>
+              ${tinyAvatarOnly(u.avatarUrl||'',u.username,20)}
+              <span style="font-size:11px;color:var(--c-text);">${u.username}</span>
+            </div>
+            <div style="font-size:12px;color:var(--c-text);margin-bottom:8px;padding:8px 10px;background:var(--bg-tbl-odd);border-radius:6px;border-left:3px solid ${ACTION_COLORS[p.action]||'#888'};">${displayReason}</div>
+            ${p.expiresAt&&p.expiresAt>0?`<div style="font-size:10px;color:var(--c-text2);margin-bottom:8px;">Expires: <b>${new Date(p.expiresAt).toLocaleString()}</b>${Date.now()>p.expiresAt?' <span style="color:var(--c-ok);">(expired)</span>':''}</div>`:''}
+            <div class="up-log-actions">
+              ${!isReverted&&!isLocked&&canDo('canModerateUsers')?`<button class="btn small" onclick="revertPunishment('${uid}','${pid}')" style="font-size:10px;">↩ Revert</button>`:''}
+              ${isSuperAdmin()?`<button class="btn small" onclick="showRawPunishment('${pid}',${JSON.stringify(p).replace(/</g,'&lt;')})" style="font-size:10px;">📊 Raw Data</button>`:''}
+              ${isSuperAdmin()&&!isLocked?`<button class="btn small" onclick="deletePunishmentWithCode('${uid}','${pid}')" style="font-size:10px;background:rgba(248,81,73,0.08);border-color:var(--c-ban);color:var(--c-ban);">🗑 Delete</button>`:''}
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+
+    return `<div style="margin-bottom:12px;"><div style="font-size:12px;font-weight:700;color:var(--c-text);margin-bottom:8px;">New Punishment or Log</div><div class="punish-grid">${tileHtml}</div></div>
+      <div><div style="font-size:12px;font-weight:700;color:var(--c-text);margin-bottom:8px;">Existing Logs <span style="font-size:11px;font-weight:400;color:var(--c-text2);">(${punishments.length})</span>
+        <input type="text" id="log-search-input" placeholder="Search logs…" style="float:right;font-size:10px;width:140px;padding:2px 6px;" oninput="filterLogSearch(this.value)"/>
+      </div>${logHtml}</div>`;
+  }
+
+  function renderDetails(){
+    return `<div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:200px;">
+        <div class="sbox"><div class="stitle">Account Info</div><div class="sbody">
+          <div class="row"><label>Username:</label><b>${u.username}</b>${userBadges(u)}</div>
+          ${u.displayName&&u.displayName!==u.username?`<div class="row"><label>Display Name:</label><span>${u.displayName}</span></div>`:''}
+          <div class="row"><label>Roblox ID:</label><span>${u.robloxId||'-'}</span></div>
+          <div class="row"><label>Status:</label>${statusBadge(u.status)}</div>
+          <div class="row"><label>System Entry:</label><span>${u.created||'-'}</span></div>
+          <div class="row"><label>Account Age:</label><span>${u.robloxAccountCreated?accountAge(u.robloxAccountCreated):'—'}</span></div>
+          ${CUSTOM_FIELDS.length&&canDo('canViewCustomFields')?'<hr style="border:none;border-top:1px solid var(--c-border);margin:4px 0;">':'' }
+          ${CUSTOM_FIELDS.length&&canDo('canViewCustomFields')?CUSTOM_FIELDS.map(f=>`<div class="row"><label>${f.name}:</label><span>${(u.customData&&u.customData[f.name])||'-'}</span></div>`).join(''):''}
+        </div></div>
+      </div>
+      <div style="flex:1;min-width:200px;">
+        <div class="sbox" id="rblx-data-box-${uid}"><div class="stitle">Roblox Data</div><div class="sbody"><div id="rblx-data-content-${uid}" style="color:var(--c-text2);font-size:11px;font-style:italic;">Loading…</div></div></div>
+        <div class="sbox"><div class="stitle">Reputation</div><div class="sbody">${repBar(repScore)}<button class="btn small" style="margin-top:4px;" onclick="openRepHistory('${uid}')">View History</button></div></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;">
+      ${canDo('canModerateUsers')?'<button class="btn" onclick="document.querySelector(\'.up-tab[data-tab=logbook]\').click()">📋 Add Log Entry</button>':''}
+      <button class="btn" id="btn-refresh-rblx-${uid}">↻ Refresh Roblox</button>
+      ${canDo('canViewCustomFields')&&CUSTOM_FIELDS.length?`<button class="btn" onclick="openUserConfigDialog('${uid}')">⚙ Manage Fields</button>`:''}
+      ${isSuperAdmin()?`<button class="btn red" onclick="wipeUser('${uid}')">Delete Account</button>`:''}
+    </div>`;
+  }
+
+  function renderStats(){
+    const allPunish=Object.values(u.punishments||{});
+    const byType={};
+    allPunish.forEach(p=>{ byType[p.action]=(byType[p.action]||0)+1; });
+    const active=allPunish.filter(p=>!p.reverted&&!(p.expiresAt&&p.expiresAt>0&&Date.now()>p.expiresAt)).length;
+    return `<div class="up-stat-grid">
+      <div class="up-stat-card"><div class="up-stat-num">${allPunish.length}</div><div class="up-stat-label">Total Logs</div></div>
+      <div class="up-stat-card"><div class="up-stat-num" style="color:var(--c-ban);">${active}</div><div class="up-stat-label">Active</div></div>
+      <div class="up-stat-card"><div class="up-stat-num">${allPunish.filter(p=>p.reverted).length}</div><div class="up-stat-label">Reverted</div></div>
+      <div class="up-stat-card"><div class="up-stat-num">${repScore}</div><div class="up-stat-label">Rep Score</div></div>
+      ${Object.entries(byType).map(([type,count])=>`<div class="up-stat-card"><div class="up-stat-num" style="color:${ACTION_COLORS[type]||'#888'};">${count}</div><div class="up-stat-label">${type}</div></div>`).join('')}
+    </div>`;
+  }
+
+  const avatarEl=u.avatarUrl?`<img class="up-avatar-img" src="${u.avatarUrl}">`:`<div class="up-avatar-placeholder">${(u.username||'?').charAt(0).toUpperCase()}</div>`;
+
+  c.innerHTML=`<div class="up-header">
+    <div style="position:relative;z-index:1;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+      <div style="display:flex;align-items:flex-end;gap:14px;">
+        ${avatarEl}
+        <div>
+          <div class="up-name">${u.username}</div>
+          <div class="up-sub">@${u.username}${u.robloxId?' · '+u.robloxId:''}</div>
+          ${akaList.length?`<div class="up-aka">AKA: ${akaList.join(', ')}</div>`:''}
+          ${userBadges(u)}
+        </div>
+      </div>
+      <select id="ua-user-select" style="font-size:11px;max-width:150px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--c-text);border-radius:6px;padding:4px 8px;">
+        ${uArr.map(([id2,u2])=>`<option value="${id2}"${id2===uid?' selected':''}>${u2.username||'?'}</option>`).join('')}
+      </select>
+    </div>
+    <div class="up-tabs">
+      <div class="up-tab active" data-tab="details">DETAILS</div>
+      <div class="up-tab" data-tab="logbook">LOGBOOK</div>
+      <div class="up-tab" data-tab="statistics">STATISTICS</div>
+    </div>
+  </div>
+  <div class="up-tab-body" id="up-tab-content"></div>`;
+
+  // Tab switching
+  function switchTab(name){
+    c.querySelectorAll('.up-tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
+    const body=document.getElementById('up-tab-content');
+    if(!body) return;
+    if(name==='details') body.innerHTML=renderDetails();
+    else if(name==='logbook') body.innerHTML=renderLogbook();
+    else if(name==='statistics') body.innerHTML=renderStats();
+    wireTabButtons(name);
+  }
+
+  function wireTabButtons(tab){
+    if(tab==='details'){
+      const rfBtn=document.getElementById('btn-refresh-rblx-'+uid);
+      if(rfBtn) rfBtn.onclick=async()=>{
+        rfBtn.disabled=true; rfBtn.textContent='Refreshing…';
+        const info=await fetchRobloxInfo(u.username).catch(()=>null);
+        if(info){
+          const upd={avatarUrl:info.avatarUrl||u.avatarUrl,robloxId:info.robloxId||u.robloxId,displayName:info.displayName||u.displayName};
+          await update(ref(db,'users/'+uid),upd);
+          Object.assign(u,upd);
+          showToast('Roblox data refreshed.','success');
+          switchTab('details');
+        } else { showToast('Could not fetch Roblox data.','error'); rfBtn.disabled=false; rfBtn.textContent='↻ Refresh Roblox'; }
+      };
+      // Fetch Roblox stats
+      if(u.robloxId){
+        (async()=>{
+          try{
+            const [ur,fr]=await Promise.all([
+              fetch('https://users.roblox.com/v1/users/'+u.robloxId).catch(()=>null),
+              fetch('https://friends.roblox.com/v1/users/'+u.robloxId+'/friends/count').catch(()=>null),
+            ]);
+            const ud=ur&&ur.ok?await ur.json():null;
+            const fd=fr&&fr.ok?await fr.json():null;
+            const el=document.getElementById('rblx-data-content-'+uid);
+            if(el&&ud){
+              const created=ud.created?new Date(ud.created):null;
+              const ageDays=created?Math.floor((Date.now()-created.getTime())/86400000):null;
+              el.innerHTML=['Friends','Followers','Following','Account Age','Display Name','Created'].map((k,i)=>{
+                const vals=[fd&&fd.count!=null?fd.count:'—','—','—',ageDays!=null?ageDays+' days':'—',ud.displayName||u.username,created?created.toLocaleDateString():'—'];
+                return `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--c-border);font-size:11px;"><span style="color:var(--c-text2);">${k}</span><b>${vals[i]}</b></div>`;
+              }).join('');
+            }
+          }catch(e){}
+        })();
+      }
+    }
+  }
+
+  c.querySelectorAll('.up-tab').forEach(t=>{ t.onclick=()=>switchTab(t.dataset.tab); });
+  document.getElementById('ua-user-select').onchange=function(){
+    currentUserId=this.value; renderUA(c);
   };
-  if(canDo('canSubmitAppeals')){
-    const apBtn=document.getElementById('btn-open-appeal-panel');
-    if(apBtn) apBtn.onclick=()=>openAppealPanel(currentUserId);
-  }
-  if(canDo('canViewCustomFields')&&CUSTOM_FIELDS.length){
-    const muBtn=document.getElementById('btn-manageuser');
-    if(muBtn) muBtn.onclick=()=>openManageUser(currentUserId);
-  }
-  document.getElementById('btn-rephistory').onclick=()=>openRepHistoryDialog(currentUserId);
+  switchTab('details');
 }
+
+function filterLogSearch(q){
+  q=q.toLowerCase();
+  document.querySelectorAll('.up-log-entry').forEach(function(el){
+    const txt=(el.textContent||'').toLowerCase();
+    el.style.display=q&&!txt.includes(q)?'none':'';
+  });
+}
+
+function showRawPunishment(pid, p){
+  openDialog('Raw Punishment Data - '+pid,'',`<pre style="font-size:10px;overflow:auto;max-height:300px;white-space:pre-wrap;color:var(--c-text);">${JSON.stringify(p,null,2)}</pre>`,null);
+}
+
+async function deletePunishmentWithCode(uid, pid){
+  const code=prompt('Enter operator code to permanently delete this log entry:');
+  if(!code) return;
+  const cfg=await get(ref(db,'meta/operatorCode')).catch(()=>null);
+  const validCode=cfg&&cfg.exists()?cfg.val():'SAMARITAN_DELETE';
+  if(code!==validCode){ showToast('Invalid operator code.','error'); machineLog('DELETE_ATTEMPT','Failed delete attempt on punishment '+pid+' for user '+uid,'Code was wrong'); return; }
+  await remove(ref(db,'users/'+uid+'/punishments/'+pid)).catch(()=>{});
+  auditLog('Punishment Deleted',uid+': '+pid+' by '+ME);
+  machineLog('PUNISH_DELETE','Punishment permanently deleted','uid:'+uid+' pid:'+pid+' by:'+ME);
+  showToast('Punishment deleted.','success');
+  if(USERS[uid]&&USERS[uid].punishments) delete USERS[uid].punishments[pid];
+  safeRender();
+}
+
+function openRepHistory(uid){
+  const u=USERS[uid]; if(!u) return;
+  const punishments=u.punishments?Object.values(u.punishments):[];
+  if(!punishments.length){ openDialog('Reputation History','No punishments on record for <b>'+u.username+'</b>.','',null); return; }
+  const sorted=punishments.slice().sort((a,b)=>a.created<b.created?-1:1);
+  openDialog('Rep History - '+u.username,'',`<div style="max-height:300px;overflow-y:auto;font-size:11px;">`+sorted.map(p=>`<div style="display:flex;gap:8px;padding:4px 0;border-bottom:1px solid var(--c-border);"><span style="color:var(--c-text2);white-space:nowrap;">${p.created||''}</span><span style="color:${p.reverted?'#58a6ff':'var(--c-text)'};">${p.reverted?'↩ ':''} ${p.action}</span><span style="color:var(--c-text2);flex:1;">${p.reason||''}</span></div>`).join('')+'</div>',null);
+}
+window.filterLogSearch=filterLogSearch;
+window.showRawPunishment=showRawPunishment;
+window.deletePunishmentWithCode=deletePunishmentWithCode;
+window.openRepHistory=openRepHistory;
+
 
 function openRepHistoryDialog(uid){
   const u=USERS[uid]; if(!u) return;
@@ -14596,6 +14781,7 @@ async function doLogin(){
     try{ initPanelCanvas(); }catch(e){}
     window._loginTimestamp=Date.now();
     lockSession();
+    loadTwoFactorConfig();
     // Set fingerprint build ID - retry until STAFF[ME] is populated
     (function trySetBuildId(attempts){
       setTimeout(function(){
@@ -16669,6 +16855,69 @@ function trackAction(actionName){
 }
 window.trackAction=trackAction;
 
+// Blind audit log - tracks every page visit and significant action
+var _blindAuditEnabled=false;
+get(ref(db,'meta/blindAuditEnabled')).then(function(s){ _blindAuditEnabled=s.exists()&&s.val()===true; }).catch(()=>{});
+
+function blindAudit(eventType, detail){
+  if(!ME||!_blindAuditEnabled) return;
+  var entry={type:'BLIND_AUDIT',event:eventType,staff:ME,page:page||'',detail:detail||'',ts:Date.now(),date:nowStr()};
+  push(ref(db,'logs/machine'),entry).catch(()=>{});
+}
+window.blindAudit=blindAudit;
+
+// Two-factor confirmation for severe actions
+var _2faConfig={enabled:false,requiredFor:['Permanent Ban','Suspension','Rank Lock','SHR Note'],secondApprover:null};
+
+function loadTwoFactorConfig(){
+  get(ref(db,'meta/twoFactorConfig')).then(function(snap){
+    if(snap.exists()) Object.assign(_2faConfig,snap.val());
+  }).catch(()=>{});
+}
+window.loadTwoFactorConfig=loadTwoFactorConfig;
+
+function requiresTwoFactor(actionType){
+  return _2faConfig.enabled && _2faConfig.requiredFor && _2faConfig.requiredFor.includes(actionType);
+}
+
+function requestTwoFactorApproval(actionType, targetUser, onApproved){
+  if(!requiresTwoFactor(actionType)){ onApproved(); return; }
+  // Show approval modal
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:99999;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML=`<div style="background:var(--bg-dialog);border:1px solid var(--c-ban);border-radius:12px;padding:24px;max-width:360px;width:90%;box-shadow:0 8px 32px rgba(248,81,73,0.2);">
+    <div style="font-size:14px;font-weight:800;color:var(--c-ban);margin-bottom:4px;">🔐 Two-Person Authorization Required</div>
+    <div style="font-size:11px;color:var(--c-text2);margin-bottom:14px;">Action: <b style="color:var(--c-text);">${actionType}</b> on <b style="color:var(--c-text);">${targetUser}</b></div>
+    <div style="margin-bottom:8px;"><label style="font-size:11px;font-weight:700;color:var(--c-text);">Approving Staff Username</label><input id="twofa-approver" style="width:100%;margin-top:4px;" placeholder="Must be different from you"/></div>
+    <div style="margin-bottom:12px;"><label style="font-size:11px;font-weight:700;color:var(--c-text);">Approver Password</label><input id="twofa-pass" type="password" style="width:100%;margin-top:4px;"/></div>
+    <div id="twofa-err" style="font-size:11px;color:var(--c-ban);min-height:14px;margin-bottom:8px;"></div>
+    <div style="display:flex;gap:6px;">
+      <button class="btn" id="twofa-confirm" style="flex:1;background:var(--c-ban);border-color:var(--c-ban);color:#fff;">Authorize</button>
+      <button class="btn" id="twofa-cancel" style="flex:1;">Cancel</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('twofa-cancel').onclick=function(){ document.body.removeChild(overlay); };
+  document.getElementById('twofa-confirm').onclick=async function(){
+    const approver=document.getElementById('twofa-approver').value.trim();
+    const pass=document.getElementById('twofa-pass').value;
+    const errEl=document.getElementById('twofa-err');
+    if(approver===ME){ errEl.textContent='Approver must be a different staff member.'; return; }
+    // Verify approver credentials
+    const staffEntry=Object.values(STAFF).find(s=>s.username===approver);
+    if(!staffEntry){ errEl.textContent='Staff member not found.'; return; }
+    const hashedPass=await hashPassword(pass);
+    const snap=await get(ref(db,'staff/'+staffEntry.uid||Object.keys(STAFF).find(k=>STAFF[k].username===approver))).catch(()=>null);
+    const storedHash=snap&&snap.exists()?snap.val().passwordHash:'';
+    if(storedHash&&hashedPass!==storedHash){ errEl.textContent='Invalid password.'; return; }
+    machineLog('TWO_FACTOR','Two-factor auth granted for '+actionType+' on '+targetUser,'Approver: '+approver+' | Requester: '+ME);
+    document.body.removeChild(overlay);
+    onApproved();
+  };
+}
+window.requestTwoFactorApproval=requestTwoFactorApproval;
+
+
 // ── Panel background canvas (subtle ambient effect) ──
 var _panelAnimId=null;
 function initPanelCanvas(){
@@ -17615,7 +17864,7 @@ showLanding();
 
 })();
 
-['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','warnlog','loginlog','auditlog','alerts','adminlog','home','messaging','requests','userconfig','siteconfig','suggestions','staffconfig','msganalyze','statuslog','badgemgmt','wipelog','robloxlog','cflog','customfieldlog','information','leakid','clearance','samaritan','samlog','evaluations','blacklist','people','moderation','logs','configuration','machine','calendar','discordconfig','staffreports','landingconfig','appsconfig'].forEach(p=>{
+['useradmin','moderate','accounts','reputation','appeals','altdetect','staff','activity','modlog','revokelog','suspendlog','terminatelog','warnlog','loginlog','auditlog','alerts','adminlog','home','messaging','requests','userconfig','siteconfig','suggestions','staffconfig','msganalyze','statuslog','badgemgmt','wipelog','robloxlog','cflog','customfieldlog','information','leakid','clearance','samaritan','samlog','evaluations','blacklist','people','moderation','logs','configuration','machine','calendar','discordconfig','staffreports','landingconfig','appsconfig','machinelogs'].forEach(p=>{
   const el=document.getElementById('nav-'+p);
   if(el) el.onclick=()=>nav(p);
 });
