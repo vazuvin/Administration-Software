@@ -992,37 +992,34 @@ body.gh-dark .topinfo{ background:rgba(9,13,22,0.95); border-bottom-color:rgba(8
 .ln-strip-by{ font-size:10px; opacity:0.6; font-weight:400; flex-shrink:0; }
 
 
-/* Beehive persistent glow */
-@keyframes beehive-glow-pulse {
-  0%,100% { opacity: 0.7; transform: scaleX(1); }
-  50% { opacity: 1; transform: scaleX(1.005); }
+/* Beehive glow - animates the bar background-color to pulse */
+@keyframes bh-glow-amber {
+  0%,100% { background:#4a2e00; box-shadow: none; }
+  50% { background:#5a3800; box-shadow: 0 2px 20px rgba(227,179,65,0.6); }
 }
-@keyframes beehive-glow-pulse-urgent {
-  0%,100% { opacity: 0.6; }
-  50% { opacity: 1; }
+@keyframes bh-glow-red {
+  0%,100% { background:#4a0000; box-shadow: none; }
+  50% { background:#5e0000; box-shadow: 0 2px 24px rgba(248,81,73,0.7); }
 }
-/* Use ::after for glow so it can't be killed by inline styles */
-.beehive-active { position: relative !important; }
-.beehive-active::after {
-  content: '';
-  position: absolute;
-  inset: -3px;
-  border-radius: 4px;
-  box-shadow: 0 0 16px 4px rgba(227,179,65,0.8), 0 0 32px 8px rgba(227,179,65,0.4);
-  animation: beehive-glow-pulse 1.4s ease-in-out infinite;
-  pointer-events: none;
-  z-index: 1;
+@keyframes bh-glow-blue {
+  0%,100% { background:#002244; box-shadow: none; }
+  50% { background:#003366; box-shadow: 0 2px 20px rgba(88,166,255,0.6); }
 }
-.beehive-active-urgent { position: relative !important; }
-.beehive-active-urgent::after {
-  content: '';
-  position: absolute;
-  inset: -3px;
-  border-radius: 4px;
-  box-shadow: 0 0 20px 6px rgba(248,81,73,0.9), 0 0 40px 10px rgba(248,81,73,0.5);
-  animation: beehive-glow-pulse-urgent 0.7s ease-in-out infinite;
-  pointer-events: none;
-  z-index: 1;
+@keyframes bh-glow-green {
+  0%,100% { background:#003d14; box-shadow: none; }
+  50% { background:#004d1a; box-shadow: 0 2px 20px rgba(46,160,67,0.6); }
+}
+@keyframes bh-glow-purple {
+  0%,100% { background:#1a0038; box-shadow: none; }
+  50% { background:#220050; box-shadow: 0 2px 20px rgba(163,113,247,0.6); }
+}
+@keyframes bh-glow-amber-fast {
+  0%,100% { background:#4a2e00; box-shadow: none; }
+  50% { background:#6a4000; box-shadow: 0 2px 32px rgba(227,179,65,0.9), 0 0 40px rgba(227,179,65,0.5); }
+}
+@keyframes bh-glow-red-fast {
+  0%,100% { background:#4a0000; box-shadow: none; }
+  50% { background:#700000; box-shadow: 0 2px 36px rgba(248,81,73,1), 0 0 48px rgba(248,81,73,0.6); }
 }
 
 </style>
@@ -2486,15 +2483,10 @@ function showBeehiveOverlay(alertData){
           +'<span style="font-size:12px;font-weight:600;color:'+p.text+';flex:1;">'+msg+'</span>'
           +(isUrgent?'<span style="font-size:9px;font-weight:900;letter-spacing:2px;color:'+p.text+';animation:beeSirenL 0.4s ease-in-out infinite;">&#9888; URGENT</span>':'');
         window._beehiveBarActive=true;
-        if(isUrgent){
-          window._beehiveBarFlash=setInterval(function(){
-            bar.style.boxShadow=bar.style.boxShadow===glowIntense?glowNorm:glowIntense;
-          },400);
-        } else {
-          window._beehiveBarFlash=setInterval(function(){
-            bar.style.boxShadow=bar.style.boxShadow===glowIntense?glowNorm:glowIntense;
-          },900);
-        }
+        if(window._beehiveBarFlash){ clearInterval(window._beehiveBarFlash); window._beehiveBarFlash=null; }
+        // Use CSS animation on bar.style.animation - immune to box-shadow inline style conflicts
+        var _glowAnims={info:'bh-glow-blue 1.6s ease-in-out infinite',warning:'bh-glow-amber 1.4s ease-in-out infinite',critical:'bh-glow-red-fast 0.6s ease-in-out infinite',emergency:'bh-glow-red-fast 0.5s ease-in-out infinite',lockdown:'bh-glow-purple 0.8s ease-in-out infinite',standby:'bh-glow-amber 2s ease-in-out infinite',allclear:'bh-glow-green 1.8s ease-in-out infinite'};
+        bar.style.animation=_glowAnims[level]||'bh-glow-amber 1.4s ease-in-out infinite';
       }
     },580);
   },2400);
@@ -2531,7 +2523,6 @@ function restoreBeehiveBar(a){
   var svgIcon=icons[level]||icons.warning;
   bar.style.background=p.bg;
   bar.style.borderBottom='2px solid '+p.border;
-  bar.removeAttribute('style'); bar.style.background=p.bg; bar.style.borderBottom='2px solid '+p.border;
   bar.style.display='flex'; bar.style.alignItems='center'; bar.style.padding='5px 16px';
   bar.innerHTML='<div style="flex-shrink:0;width:18px;height:18px;margin-right:8px;">'+svgIcon+'</div>'
     +'<span style="font-size:9px;font-weight:800;letter-spacing:3px;color:'+p.text+';opacity:0.65;margin-right:8px;">'+p.label+'</span>'
@@ -2539,9 +2530,9 @@ function restoreBeehiveBar(a){
     +(isUrgent?'<span style="font-size:9px;font-weight:900;letter-spacing:2px;color:'+p.text+';">&#9888; URGENT</span>':'');
   window._beehiveBarActive=true;
   if(window._beehiveBarFlash){ clearInterval(window._beehiveBarFlash); window._beehiveBarFlash=null; }
-  // Use CSS animation for reliable persistent glow
-  bar.classList.remove('beehive-active','beehive-active-urgent');
-  bar.classList.add(isUrgent?'beehive-active-urgent':'beehive-active');
+  // CSS animation on style.animation - unaffected by inline box-shadow
+  var _rGlowAnims={info:'bh-glow-blue 1.6s ease-in-out infinite',warning:'bh-glow-amber 1.4s ease-in-out infinite',critical:'bh-glow-red-fast 0.6s ease-in-out infinite',emergency:'bh-glow-red-fast 0.5s ease-in-out infinite',lockdown:'bh-glow-purple 0.8s ease-in-out infinite',standby:'bh-glow-amber 2s ease-in-out infinite',allclear:'bh-glow-green 1.8s ease-in-out infinite'};
+  bar.style.animation=_rGlowAnims[level]||'bh-glow-amber 1.4s ease-in-out infinite';
 }
 window.restoreBeehiveBar=restoreBeehiveBar;
 
@@ -15471,14 +15462,14 @@ function startListeners(){
     if(!snap.exists()){ 
       // Beehive deactivated - clear the bar
       var bar=document.getElementById('announceBar');
-      if(bar&&window._beehiveBarActive){ bar.classList.remove('beehive-active','beehive-active-urgent'); bar.style.boxShadow=''; bar.style.background=''; bar.style.borderBottom=''; bar.innerHTML=''; bar.style.display='none'; window._beehiveBarActive=false; if(window._beehiveBarFlash){clearInterval(window._beehiveBarFlash);window._beehiveBarFlash=null;} }
+      if(bar&&window._beehiveBarActive){ bar.classList.remove('beehive-active','beehive-active-urgent'); bar.style.animation=''; bar.style.boxShadow=''; bar.style.background=''; bar.style.borderBottom=''; bar.innerHTML=''; bar.style.display='none'; window._beehiveBarActive=false; if(window._beehiveBarFlash){clearInterval(window._beehiveBarFlash);window._beehiveBarFlash=null;} }
       return;
     }
     var a=snap.val();
     if(!a||!a.active) {
       // Deactivated
       var bar=document.getElementById('announceBar');
-      if(bar&&window._beehiveBarActive){ bar.classList.remove('beehive-active','beehive-active-urgent'); bar.style.boxShadow=''; bar.style.background=''; bar.style.borderBottom=''; bar.innerHTML=''; bar.style.display='none'; window._beehiveBarActive=false; if(window._beehiveBarFlash){clearInterval(window._beehiveBarFlash);window._beehiveBarFlash=null;} }
+      if(bar&&window._beehiveBarActive){ bar.classList.remove('beehive-active','beehive-active-urgent'); bar.style.animation=''; bar.style.boxShadow=''; bar.style.background=''; bar.style.borderBottom=''; bar.innerHTML=''; bar.style.display='none'; window._beehiveBarActive=false; if(window._beehiveBarFlash){clearInterval(window._beehiveBarFlash);window._beehiveBarFlash=null;} }
       return;
     }
     // Active beehive
@@ -16773,8 +16764,8 @@ window._returnToLanding=function(){
   var land=document.getElementById('landingScreen'); if(land) land.style.display='flex';
   // 5. Start fresh canvas after a tick
   setTimeout(function(){
-    if(typeof startLandingCanvas==='function') startLandingCanvas();
-    if(typeof loadLandingData==='function') loadLandingData();
+    if(typeof window.startLandingCanvas==='function') window.startLandingCanvas();
+    if(typeof window.loadLandingData==='function') window.loadLandingData();
     var c=document.getElementById('landingScreen');
     if(c){
       c.removeEventListener('scroll',window.revealLandingSections);
@@ -17305,7 +17296,7 @@ function renderLandingCareers(){
 
 // ── Stats loader + counter animation ──
 var _statsLoaded=false;
-function loadLandingData(){
+window.loadLandingData=function loadLandingData(){
   // External alert/beehive strip
   function checkExternalStrip(){
     var strip=document.getElementById('ln-external-strip');
@@ -17467,7 +17458,7 @@ function animateCounters(){
 
 // ── Hero canvas (rich animated background) ──
 window._lnAnimId=null;
-function startLandingCanvas(){
+window.startLandingCanvas=function startLandingCanvas(){
   if(window._lnAnimId){ cancelAnimationFrame(window._lnAnimId); window._lnAnimId=null; }
   var canvas=document.getElementById('ln-hero-canvas');
   if(!canvas) return;
