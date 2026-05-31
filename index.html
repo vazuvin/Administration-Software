@@ -1114,9 +1114,10 @@ body.gh-dark .topinfo{ background:rgba(9,13,22,0.95); border-bottom-color:rgba(8
 .up-stat-label{font-size:9px;color:var(--c-text2);text-transform:uppercase;letter-spacing:0.8px;position:relative;}
 .up-stat-bar{height:3px;border-radius:2px;margin-top:8px;background:var(--c-border);position:relative;overflow:hidden;}
 .up-stat-bar-fill{height:100%;border-radius:2px;transition:width 0.6s ease;}
-.up-stat-timeline{margin-top:14px;}
-.up-stat-timeline-item{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--c-border);font-size:11px;}
-.up-stat-timeline-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px;}
+.up-stat-timeline{margin-top:4px;}
+.up-stat-timeline-item{display:flex;flex-direction:column;gap:4px;padding:8px 10px;margin-bottom:4px;border-radius:6px;border:1px solid var(--c-border);background:var(--bg-tbl-odd);position:relative;overflow:hidden;}
+.up-stat-timeline-item::before{content:'';position:absolute;inset:0;background:var(--tl-glow,transparent);pointer-events:none;}
+.up-stat-timeline-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:2px;}
 
 </style>
 </head>
@@ -1842,7 +1843,7 @@ const DEFAULT_PERMS = {
   canViewStaffConfig:'SENIOR CONTENT ADMINISTRATOR',
 };
 
-const DEFAULT_REP_POINTS = { 'Remind':1, 'Warn':2, 'Ban 1 Day':3, 'Ban 3 Days':3, 'Ban 7 Days':5, 'Ban 14 Days':5, 'Suspend':4, 'Ban Permanent':10 };
+const DEFAULT_REP_POINTS = { 'Remind':1, 'Warn':2, 'Ban 1 Day':3, 'Ban 3 Days':3, 'Ban 7 Days':5, 'Ban 14 Days':5, 'Suspend':4, 'Ban Permanent':10, 'Verbal Warning':1, 'Formal Warning':2, 'Suspension':4, 'Ban':5, 'Rank Lock':2, 'Comment':0, 'Staff Warning':1, 'Manager Note':0 };
 
 const DEFAULT_APPEAL_PRESETS = ['Hacked Account','False Ban','Misunderstanding','Exploited by Another','No Warning Given','Other'];
 const ROBLOX_DEFAULT_AVATAR='https://tr.rbxcdn.com/180DAY-53eb26c8de98a3c1ea34e2e22d69b82c/150/150/AvatarHeadshot/Webp/noFilter';
@@ -6083,7 +6084,7 @@ function renderUA(c){
       </div>
     </div>
     <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;">
-      ${canDo('canModerateUsers')?'<button class="btn" onclick="document.querySelector(\'.up-tab[data-tab=logbook]\').click()">📋 Add Log Entry</button>':''}
+      ${canDo('canModerateUsers')?'<button class="btn" onclick="document.querySelector(\'.up-tab[data-tab=logbook]\').click()"><svg width="11" height="11" viewBox="0 0 14 14" fill="none" style="vertical-align:middle;margin-right:3px;"><rect x="2" y="1.5" width="10" height="11" rx="1" stroke="currentColor" stroke-width="1.2"/><line x1="4.5" y1="5" x2="9.5" y2="5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="7.5" x2="7" y2="7.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="7" y1="9.5" x2="9.5" y2="9.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg> Add Log Entry</button>':''}
       <button class="btn" id="btn-refresh-rblx-${uid}">↻ Refresh Roblox</button>
       ${canDo('canViewCustomFields')&&CUSTOM_FIELDS.length?`<button class="btn" onclick="openUserConfigDialog('${uid}')">⚙ Manage Fields</button>`:''}
       ${isSuperAdmin()?`<button class="btn red" onclick="wipeUser('${uid}')">Delete Account</button>`:''}
@@ -6102,23 +6103,21 @@ function renderUA(c){
     // Punishment timeline (last 10)
     const recent=allPunish.slice().sort((a,b)=>b.created>a.created?1:-1).slice(0,8);
     const canSeeCl=isSuperAdmin();
+    const modRankShort={'CONTENT REVIEWER':'Reviewer','CONTENT MODERATOR':'Moderator','CONTENT ADMINISTRATOR':'Admin','SENIOR CONTENT ADMINISTRATOR':'Sr. Admin','CONTENT MANAGER':'Mgr','SOFTWARE MANAGER':'SM'};
     const timelineHtml=recent.map(p=>{
       const col=ACTION_COLORS[p.action]||'#888';
       const displayReason=p.classified&&!canSeeCl?'[CLASSIFIED]':(p.reason||'No reason');
       const modStaff=Object.values(STAFF).find(s=>s.username===p.mod);
-      const modRankShort={'CONTENT REVIEWER':'Reviewer','CONTENT MODERATOR':'Moderator','CONTENT ADMINISTRATOR':'Admin','SENIOR CONTENT ADMINISTRATOR':'Sr. Admin','CONTENT MANAGER':'Mgr','SOFTWARE MANAGER':'SM'};
-      return `<div class="up-stat-timeline-item" style="flex-direction:column;align-items:stretch;gap:4px;">
-        <div style="display:flex;align-items:center;gap:6px;">
-          <div class="up-stat-timeline-dot" style="background:${col};box-shadow:0 0 6px ${col}66;flex-shrink:0;"></div>
-          <span style="font-weight:700;font-size:11px;color:${p.reverted?'var(--c-text2)':col};${p.reverted?'text-decoration:line-through;opacity:0.6;':''}">${p.action}</span>
-          ${p.classified?'<span style="font-size:8px;background:rgba(163,113,247,0.15);color:#a371f7;padding:1px 5px;border-radius:8px;border:1px solid rgba(163,113,247,0.3);">CLASSIFIED</span>':''}
-          ${p.reverted?'<span style="font-size:8px;color:var(--c-text2);">REVERTED</span>':''}
-          <span style="font-size:9px;color:var(--c-text2);margin-left:auto;white-space:nowrap;">${(p.created||'').substring(0,10)}</span>
+      return `<div class="up-stat-timeline-item" style="--tl-glow:${col}0a;border-color:${col}33;">
+        <div style="display:flex;align-items:center;gap:6px;min-width:0;">
+          <div style="width:10px;height:10px;border-radius:50%;background:${col};box-shadow:0 0 8px ${col}88;flex-shrink:0;"></div>
+          <span style="font-weight:700;font-size:11px;color:${p.reverted?'var(--c-text2)':col};${p.reverted?'text-decoration:line-through;opacity:0.5;':''};white-space:nowrap;">${p.action}</span>
+          ${p.classified?`<span style="font-size:8px;background:rgba(163,113,247,0.15);color:#a371f7;padding:1px 5px;border-radius:8px;border:1px solid rgba(163,113,247,0.3);white-space:nowrap;flex-shrink:0;">CLASSIFIED</span>`:''}
+          ${p.reverted?`<span style="font-size:8px;background:rgba(88,166,255,0.1);color:#58a6ff;padding:1px 5px;border-radius:8px;border:1px solid rgba(88,166,255,0.3);white-space:nowrap;flex-shrink:0;">REVERTED</span>`:''}
+          <span style="font-size:9px;color:var(--c-text2);margin-left:auto;white-space:nowrap;flex-shrink:0;">${(p.created||'').substring(0,10)}</span>
         </div>
-        <div style="padding-left:14px;">
-          <div style="font-size:10px;color:var(--c-text);margin-bottom:2px;word-break:break-word;">${displayReason.substring(0,60)+(displayReason.length>60?'…':'')}</div>
-          ${p.mod?`<div style="display:flex;align-items:center;gap:4px;">${tinyAvatarOnly(avatarUrlFor(p.mod),p.mod,14)}<span style="font-size:9px;color:var(--c-text2);">${p.mod}${modStaff?(' · '+(modRankShort[modStaff.level]||'')):''}</span></div>`:''}
-        </div>
+        <div style="font-size:10px;color:var(--c-text);word-break:break-word;overflow:hidden;padding:0 2px;">${displayReason.substring(0,80)+(displayReason.length>80?'…':'')}</div>
+        ${p.mod?`<div style="display:flex;align-items:center;gap:4px;">${tinyAvatarOnly(avatarUrlFor(p.mod),p.mod,14)}<span style="font-size:9px;color:var(--c-text2);">${p.mod}${modStaff?(' · '+(modRankShort[modStaff.level]||'')):''}</span></div>`:''}
       </div>`;
     }).join('');
     return `<div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -6293,11 +6292,19 @@ function renderUA(c){
           _searchRes.style.display='none';
           var newUser=_searchBox.value.trim();
           if(!newUser) return;
-          // Use proper addUser flow to get correct playerId
-          var _addInput=document.getElementById('nuUser');
-          if(_addInput) _addInput.value=newUser;
-          nav('accounts');
-          setTimeout(function(){ addUser().then(function(){ showToast('Player added: '+newUser+'. Switch to User Admin to view.','success'); }); },100);
+          nav('useradmin');
+          setTimeout(async function(){
+            var _tgt=newUser;
+            showToast('Searching Roblox for '+_tgt+'...','info');
+            var _info=await fetchRobloxInfo(_tgt).catch(()=>null);
+            var _nid='uid_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);
+            var _pid=await getNextPlayerId().catch(()=>0);
+            var _entry={username:_tgt,robloxUsername:_tgt,robloxId:_info&&_info.robloxId||'',avatarUrl:_info&&_info.avatarUrl||ROBLOX_DEFAULT_AVATAR,displayName:_info&&_info.displayName||_tgt,robloxAccountCreated:_info&&_info.accountCreated||'',playerId:_pid,status:'active',created:nowStr(),notes:'',punishments:{}};
+            await update(ref(db,'users/'+_nid),_entry);
+            currentUserId=_nid;
+            showToast('Added '+_tgt+(_info?' with Roblox data':' (Roblox API unavailable - try Refresh later)'),_info?'success':'warning');
+            safeRender();
+          },200);
         };
       } else {
         _searchRes.style.display='block';
@@ -6307,9 +6314,19 @@ function renderUA(c){
           _searchRes.style.display='none';
           var newUser2=_searchBox.value.trim();
           if(!newUser2) return;
-          var _ai2=document.getElementById('nuUser'); if(_ai2) _ai2.value=newUser2;
-          nav('accounts');
-          setTimeout(function(){ addUser().then(function(){ showToast('Player added: '+newUser2+'. Switch to User Admin to view.','success'); }); },100);
+          nav('useradmin');
+          setTimeout(async function(){
+            var _tgt=newUser2;
+            showToast('Searching Roblox for '+_tgt+'...','info');
+            var _info=await fetchRobloxInfo(_tgt).catch(()=>null);
+            var _nid='uid_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);
+            var _pid=await getNextPlayerId().catch(()=>0);
+            var _entry={username:_tgt,robloxUsername:_tgt,robloxId:_info&&_info.robloxId||'',avatarUrl:_info&&_info.avatarUrl||ROBLOX_DEFAULT_AVATAR,displayName:_info&&_info.displayName||_tgt,robloxAccountCreated:_info&&_info.accountCreated||'',playerId:_pid,status:'active',created:nowStr(),notes:'',punishments:{}};
+            await update(ref(db,'users/'+_nid),_entry);
+            currentUserId=_nid;
+            showToast('Added '+_tgt+(_info?' with Roblox data':' (Roblox API unavailable - try Refresh later)'),_info?'success':'warning');
+            safeRender();
+          },200);
         };
       }
     };
@@ -6421,7 +6438,7 @@ function renderTwoFactorConfig(c){
       +'<div class="sbox" style="border-color:rgba(88,166,255,0.2);">'
       +'<div class="stitle">Authorization Settings</div>'
       +'<div class="sbody">'
-      +'<div style="margin-bottom:12px;"><label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;cursor:pointer;">'
+      +'<div style="margin-bottom:12px;"><label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--c-text);">'
       +'<input type="checkbox" id="2fa-enabled" style="width:14px;height:14px;"'+(cfg.enabled?' checked':'')+'>'
       +' Enable two-person authorization for sensitive actions</label>'
       +'<div style="font-size:10px;color:var(--c-text2);margin-top:4px;margin-left:22px;">When enabled, selected actions require a second staff member to enter their credentials before proceeding.</div>'
@@ -17027,7 +17044,7 @@ function revertPunishment(uid, pid){
   var u=USERS[uid]; if(!u) return;
   var p=u.punishments&&u.punishments[pid]; if(!p) return;
   if(p.locked){ showToast('This punishment is locked and cannot be reverted.','error'); return; }
-  openDialog('Revert Punishment','Are you sure you want to revert this '+p.action+' on <b>'+u.username+'</b>? The entry will remain in the log marked as Reverted.','Revert',async function(){
+  openDialog('Revert Punishment','Are you sure you want to revert this '+p.action+' on <b>'+u.username+'</b>? The entry will remain in the log marked as Reverted.','',async function(){
     await update(ref(db,'users/'+uid+'/punishments/'+pid),{reverted:true,revertedBy:ME,revertedAt:nowStr()});
     await push(ref(db,'logs/revoke'),{user:u.username,action:'Reverted: '+p.action,mod:ME,date:nowStr(),reason:'Reverted by '+ME});
     auditLog('Punishment Reverted',u.username+': '+p.action);
@@ -17127,15 +17144,24 @@ window.closePunishPanel=closePunishPanel;
 window.revertPunishment=revertPunishment;
 
 
-// Screenshot detection
-document.addEventListener('keydown',function(e){
+// Screenshot detection - check both keydown and keyup (PrintScreen fires on keyup in most browsers)
+function _detectScreenshotKey(e){
   if(!ME) return;
-  var isScreenshot = e.key==='PrintScreen' || (e.ctrlKey&&e.shiftKey&&e.key==='S') || (e.metaKey&&e.shiftKey&&(e.key==='3'||e.key==='4'||e.key==='5'));
+  var isScreenshot = e.key==='PrintScreen' || e.key==='Snapshot'
+    || (e.ctrlKey&&e.shiftKey&&(e.key==='S'||e.key==='s'))
+    || (e.metaKey&&e.shiftKey&&(e.key==='3'||e.key==='4'||e.key==='5'));
   if(isScreenshot){
-    machineLog('SCREENSHOT','Screenshot key detected on page: '+(page||'unknown'),'Key: '+e.key+' | Time: '+nowStr());
+    e.preventDefault&&e.preventDefault();
+    machineLog('SCREENSHOT','Screenshot key on page: '+(page||'unknown'),'Key: '+e.key+' | Time: '+nowStr());
     var _fpLocal=ME&&STAFF[ME]?generateStaffFingerprint(ME,STAFF[ME]):null;
-    if(_fpLocal) machineLog('SCREENSHOT_FP','Fingerprint at capture time','BuildID:'+_fpLocal.buildId+' Tag:'+_fpLocal.tag+'-'+_fpLocal.sessionSalt);
+    if(_fpLocal) machineLog('SCREENSHOT_FP','Fingerprint at capture','BuildID:'+_fpLocal.buildId+' Tag:'+_fpLocal.tag+'-'+_fpLocal.sessionSalt);
   }
+}
+document.addEventListener('keydown',_detectScreenshotKey);
+document.addEventListener('keyup',_detectScreenshotKey);
+// Also detect via visibilitychange (Windows Snipping Tool, etc.)
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden&&ME) machineLog('SCREENSHOT','Window focus lost (possible screenshot/screen capture)','Time: '+nowStr());
 });
 
 // Session locking - store session fingerprint on login, verify on each action
