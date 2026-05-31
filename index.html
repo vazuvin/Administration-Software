@@ -905,7 +905,7 @@ body.gh-dark .badge.moderator{ box-shadow:0 0 7px 1px rgba(121,192,255,0.55); }
 body.gh-dark .badge.administrator{ box-shadow:0 0 8px 2px rgba(227,179,65,0.5); }
 body.gh-dark .badge.senioradmin{ box-shadow:0 0 8px 2px rgba(255,166,87,0.55); }
 body.gh-dark .badge.superadmin{ box-shadow:0 0 8px 2px rgba(255,129,130,0.55); }
-body.gh-dark .badge.softwaremanager{ box-shadow:0 0 10px 3px rgba(121,192,255,0.7); }
+body.gh-dark .badge.softwaremanager{ box-shadow:0 0 8px 2px rgba(121,192,255,0.6); }
 .topbar{ position:relative; z-index:10; }
 .sidebar{ position:relative; z-index:2; }
 #content{ position:relative; z-index:2; }
@@ -3248,10 +3248,20 @@ function nav(p){
   if(ME&&STAFF[ME]){
     var _fp=generateStaffFingerprint(ME,STAFF[ME]);
     var _fpEl=document.getElementById('__fp_node');
-    if(!_fpEl){ _fpEl=document.createElement('span'); _fpEl.id='__fp_node'; _fpEl.setAttribute('aria-hidden','true'); _fpEl.style.cssText='position:absolute;width:1px;height:1px;overflow:hidden;opacity:0.001;font-size:1px;pointer-events:none;user-select:none;color:transparent;z-index:-1;'; var _main=document.getElementById('content'); if(_main) _main.appendChild(_fpEl); }
+    // Node 1: in content area
+    if(!_fpEl){ _fpEl=document.createElement('span'); _fpEl.id='__fp_node'; _fpEl.setAttribute('aria-hidden','true'); _fpEl.style.cssText='position:absolute;width:1px;height:1px;overflow:hidden;opacity:0.004;font-size:1px;pointer-events:none;user-select:none;color:var(--bg-page);z-index:-1;'; var _main=document.getElementById('content'); if(_main) _main.appendChild(_fpEl); }
     _fpEl.textContent=_fp.tag+'-'+_fp.sessionSalt;
     _fpEl.setAttribute('data-v',_fp.titleVariant);
     _fpEl.setAttribute('data-b',_fp.buildId);
+    // Node 2: in sidebar (extremely faint, looks like rendering artifact)
+    var _fpEl2=document.getElementById('__fp_node2');
+    if(!_fpEl2){ _fpEl2=document.createElement('span'); _fpEl2.id='__fp_node2'; _fpEl2.setAttribute('aria-hidden','true'); _fpEl2.style.cssText='font-size:1px;opacity:0.003;color:transparent;pointer-events:none;user-select:none;position:absolute;bottom:2px;right:2px;'; var _sb=document.querySelector('.sidebar'); if(_sb) _sb.appendChild(_fpEl2); }
+    _fpEl2.textContent=_fp.buildId;
+    // Node 3: in topinfo bar
+    var _fpEl3=document.getElementById('__fp_node3');
+    var _topinfo=document.getElementById('topinfo');
+    if(!_fpEl3&&_topinfo){ _fpEl3=document.createElement('span'); _fpEl3.id='__fp_node3'; _fpEl3.setAttribute('aria-hidden','true'); _fpEl3.style.cssText='font-size:1px;opacity:0.003;color:transparent;pointer-events:none;user-select:none;'; _topinfo.appendChild(_fpEl3); }
+    if(_fpEl3) _fpEl3.textContent=_fp.tag;
   }
   pushScreenSnapshot(true);
   if(!document.getElementById('monitor-tiles-wrap')&&window._monitorCleanup){
@@ -8353,6 +8363,10 @@ function renderLeakIdentifier(c){
           </div>
         </div>
         <div style="margin-bottom:8px;">
+          <label style="font-size:11px;font-weight:700;color:var(--c-text);display:block;margin-bottom:2px;">Build ID visible (e.g. 42-371-2)</label>
+          <input type="text" id="lk-buildid" style="width:100%;font-family:monospace;" placeholder="The Build ID shown under SAMARITAN|MODERATION"/>
+        </div>
+        <div style="margin-bottom:8px;">
           <label style="font-size:11px;font-weight:700;color:var(--c-text);display:block;margin-bottom:2px;">Other visible text, usernames, or IDs</label>
           <textarea id="lk-other" style="width:100%;height:55px;" placeholder="Any usernames, player IDs, chat messages, or text visible in the image…"></textarea>
         </div>
@@ -8377,11 +8391,27 @@ function renderLeakIdentifier(c){
                 <b style="font-size:11px;color:var(--c-text);">${s.username}</b>
                 ${levelBadge(s.level)}
               </div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                <span title="Invisible pixel tag in their dashboard" style="font-size:9px;background:rgba(88,166,255,0.1);border:1px solid rgba(88,166,255,0.25);padding:1px 6px;border-radius:10px;color:var(--c-link);">Tag: ${fp.tag}</span>
-                <span title="Subtle pattern visible in stat bar spacing" style="font-size:9px;background:rgba(163,113,247,0.1);border:1px solid rgba(163,113,247,0.25);padding:1px 6px;border-radius:10px;color:#a371f7;">Stat Offset: +${fp.statOffset}px</span>
-                <span title="Player count shown is slightly adjusted for each user" style="font-size:9px;background:rgba(46,160,67,0.1);border:1px solid rgba(46,160,67,0.25);padding:1px 6px;border-radius:10px;color:var(--c-ok);">Players: ${fp.playerCount}</span>
-                <span title="Topbar title has a subtle variation" style="font-size:9px;background:rgba(227,179,65,0.1);border:1px solid rgba(227,179,65,0.25);padding:1px 6px;border-radius:10px;color:var(--c-sus);">Title variant: ${fp.titleVariant}</span>
+              <div style="display:flex;flex-direction:column;gap:4px;margin-top:4px;">
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                  <span style="font-size:9px;font-weight:700;color:var(--c-text2);min-width:80px;">Build ID:</span>
+                  <code style="font-size:10px;background:rgba(88,166,255,0.1);border:1px solid rgba(88,166,255,0.3);padding:1px 7px;border-radius:4px;color:var(--c-link);">${fp.buildId}</code>
+                  <span style="font-size:9px;color:var(--c-text2);">→ sidebar under SAMARITAN|MODERATION</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                  <span style="font-size:9px;font-weight:700;color:var(--c-text2);min-width:80px;">Session Tag:</span>
+                  <code style="font-size:10px;background:rgba(163,113,247,0.1);border:1px solid rgba(163,113,247,0.3);padding:1px 7px;border-radius:4px;color:#a371f7;">${fp.tag}-${fp.sessionSalt}</code>
+                  <span style="font-size:9px;color:var(--c-text2);">→ hidden in page DOM (inspect element)</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                  <span style="font-size:9px;font-weight:700;color:var(--c-text2);min-width:80px;">Player count:</span>
+                  <code style="font-size:10px;background:rgba(46,160,67,0.1);border:1px solid rgba(46,160,67,0.3);padding:1px 7px;border-radius:4px;color:var(--c-ok);">${fp.playerCount}</code>
+                  <span style="font-size:9px;color:var(--c-text2);">→ visible in topinfo bar "Players X"</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                  <span style="font-size:9px;font-weight:700;color:var(--c-text2);min-width:80px;">Theme:</span>
+                  <code style="font-size:10px;background:rgba(227,179,65,0.1);border:1px solid rgba(227,179,65,0.3);padding:1px 7px;border-radius:4px;color:var(--c-sus);">${(STAFF[sid]&&STAFF[sid].theme)||'dark'}</code>
+                  <span style="font-size:9px;color:var(--c-text2);">→ dark/light background in screenshot</span>
+                </div>
               </div>
             </div>`;
           }).join('') || '<div style="font-size:11px;color:var(--c-text2);">No staff loaded.</div>'}
@@ -8469,10 +8499,11 @@ function renderLeakIdentifier(c){
     var pageInput=document.getElementById('lk-page').value||'';
     var themeInput=document.getElementById('lk-theme').value||'';
     var statsInput=(document.getElementById('lk-stats').value||'').toLowerCase();
+    var buildIdInput=(document.getElementById('lk-buildid').value||'').trim();
     var otherText=(document.getElementById('lk-other').value||'').toLowerCase();
     var results=document.getElementById('lk-results');
 
-    if(!uInput&&!levelInput&&!pageInput&&!themeInput&&!statsInput&&!otherText){
+    if(!uInput&&!levelInput&&!pageInput&&!themeInput&&!statsInput&&!otherText&&!buildIdInput){
       results.innerHTML='<div style="font-size:11px;color:var(--c-ban);text-align:center;padding:10px;">Enter at least one clue to search.</div>';
       return;
     }
@@ -8482,6 +8513,11 @@ function renderLeakIdentifier(c){
       var score=0; var reasons=[];
       var fp=generateStaffFingerprint(sid,s);
 
+      if(buildIdInput){
+        var bfp=generateStaffFingerprint(sid,s);
+        if(bfp.buildId===buildIdInput){ score+=25; reasons.push('🎯 BUILD ID EXACT MATCH: '+buildIdInput+' = '+s.username); }
+        else if(buildIdInput.length>3&&bfp.buildId.startsWith(buildIdInput)){ score+=12; reasons.push('Build ID partial match'); }
+      }
       if(uInput){
         if(s.username.toLowerCase()===uInput){ score+=15; reasons.push('Exact username match: '+s.username); }
         else if(s.username.toLowerCase().includes(uInput)){ score+=8; reasons.push('Partial username: '+s.username+' contains "'+uInput+'"'); }
@@ -8501,6 +8537,12 @@ function renderLeakIdentifier(c){
           var expectedCount=String(fp.playerCount);
           if(statsInput.includes(expectedCount)){ score+=12; reasons.push('🎯 FINGERPRINT MATCH: Player count '+expectedCount+' matches their session fingerprint'); }
         }
+      }
+      // Check player count fingerprint
+      if(statsInput){
+        var fpCheck=generateStaffFingerprint(sid,s);
+        var expectedPCount=String(Object.keys(USERS).length+fpCheck.statOffset);
+        if(statsInput.includes(expectedPCount)){ score+=15; reasons.push('🎯 FINGERPRINT: Player count '+expectedPCount+' matches '+s.username+'s unique offset'); }
       }
       if(statsInput&&s.username&&statsInput.includes(s.username.toLowerCase())){ score+=8; reasons.push('Username visible in stats area'); }
       // Page access check
@@ -9923,6 +9965,13 @@ function checkPoisonActive(){
   var p = POISON_DATA[ME]||{};
   if(!p.active) return;
   if(window._poisonRunning) return;
+  // Grace period: only trigger if logged in for at least 15 seconds
+  // Prevents stale/leftover Firebase data from triggering on login
+  if(!window._loginTimestamp||Date.now()-window._loginTimestamp<15000){
+    // Re-check after 15 seconds
+    setTimeout(function(){ if(ME&&!isSoftwareManager()) checkPoisonActive(); },15000);
+    return;
+  }
   startPoisonSequence(p.intensity||'severe');
 }
 
@@ -14992,6 +15041,7 @@ async function doLogin(){
     document.getElementById('adminScreen').style.display='block';
     try{ wireTopbar(); }catch(e){}
     try{ initPanelCanvas(); }catch(e){}
+    window._loginTimestamp=Date.now(); // for poison grace period
     // Set fingerprint build ID in sidebar
     setTimeout(function(){
       if(ME&&STAFF[ME]){
