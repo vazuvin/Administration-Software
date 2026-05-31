@@ -1083,7 +1083,7 @@ body.gh-dark .topinfo{ background:rgba(9,13,22,0.95); border-bottom-color:rgba(8
 
 /* ── User Profile Tabs (Bloxcord-style) ── */
 .up-header{background:linear-gradient(180deg,rgba(13,17,23,0.98) 0%,rgba(9,13,22,1) 100%);border-bottom:1px solid rgba(88,166,255,0.15);padding:20px 20px 0;position:relative;overflow:hidden;}
-.up-header::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 20% 60%,rgba(88,166,255,0.06) 0%,transparent 50%),radial-gradient(ellipse at 80% 30%,color-mix(in srgb,var(--rep-glow,#3fb950) 8%,transparent) 0%,transparent 50%);pointer-events:none;}
+.up-header::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 15% 50%,var(--rep-glow-soft,rgba(63,185,80,0.1)) 0%,transparent 55%);pointer-events:none;}
 .up-avatar-row{display:flex;align-items:flex-end;gap:14px;margin-bottom:12px;position:relative;z-index:1;}
 .up-avatar-img{width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.15);box-shadow:0 4px 16px rgba(0,0,0,0.5);}
 .up-avatar-placeholder{width:72px;height:72px;border-radius:50%;background:rgba(88,166,255,0.15);border:3px solid rgba(88,166,255,0.3);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#58a6ff;}
@@ -1100,7 +1100,7 @@ body.gh-dark .topinfo{ background:rgba(9,13,22,0.95); border-bottom-color:rgba(8
 .up-log-entry:hover{border-color:rgba(88,166,255,0.3);}
 .up-log-header{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;user-select:none;}
 .up-log-header:hover{background:rgba(255,255,255,0.02);}
-.up-log-body{display:none;padding:12px 14px;border-top:1px solid var(--c-border);background:var(--bg-content);animation:fadeIn 0.15s ease;}
+.up-log-body{display:none;padding:12px 14px;border-top:1px solid var(--c-border);background:var(--bg-dialog);color:var(--c-text);animation:fadeIn 0.15s ease;}
 .up-log-entry.expanded .up-log-body{display:block;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
 .up-action-chip{font-size:9px;font-weight:700;padding:3px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:0.3px;}
@@ -4679,18 +4679,12 @@ async function fireDiscordWebhook(eventKey, embedData){
     if(embeds.show_timestamp!==false) embed.timestamp=new Date().toISOString();
     if(embeds.footer_text) embed.footer={text:embeds.footer_text};
     // Use "Samaritan Systems" as the webhook bot name.
-    // Staff identity goes in the embed author field.
-    var embedWithAuthor={...embed};
-    if(embeds.show_avatar!==false&&staffAvatar){
-      embedWithAuthor.author={name:staffName,icon_url:staffAvatar};
-    } else {
-      embedWithAuthor.author={name:staffName};
-    }
+    // Sender name+pfp goes on the webhook itself, not inside the embed
     var webhookBody={
       username:staffName||'Samaritan Systems',
       avatar_url:staffAvatar||'',
       content:roleId?'<@&'+roleId+'>':'',
-      embeds:[embedWithAuthor]
+      embeds:[embed]
     };
     var resp=await fetch(wh,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(webhookBody)});
     var ok=resp.ok||resp.status===204;
@@ -6055,7 +6049,7 @@ function renderUA(c){
             <div style="font-size:12px;color:var(--c-text);margin-bottom:8px;padding:8px 10px;background:var(--bg-tbl-odd);border-radius:6px;border-left:3px solid ${ACTION_COLORS[p.action]||'#888'};">${displayReason}</div>
             ${p.expiresAt&&p.expiresAt>0?`<div style="font-size:10px;color:var(--c-text2);margin-bottom:8px;">Expires: <b>${new Date(p.expiresAt).toLocaleString()}</b>${Date.now()>p.expiresAt?' <span style="color:var(--c-ok);">(expired)</span>':''}</div>`:''}
             <div class="up-log-actions">
-              ${!isReverted&&!isLocked&&canDo('canModerateUsers')?`<button class="btn small" onclick="revertPunishment('${uid}','${pid}')"><span style="display:flex;align-items:center;gap:3px;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 5h7a5 5 0 0 1 0 10H6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2 2l3 3-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg> Revert</span></button>`:''}
+              ${!isReverted&&!isLocked&&canDo('canModerateUsers')?`<button class="btn small" onclick="revertPunishment('${uid}','${pid}')"><span style="display:flex;align-items:center;gap:3px;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 8a5 5 0 1 0 1-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><polyline points="1,3 3,8 8,6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>`:''}
               ${isSuperAdmin()?`<button class="btn small" onclick="openPunishOptions('${uid}','${pid}')"><span style="display:flex;align-items:center;gap:3px;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.1 3.1l1.4 1.4M11.5 11.5l1.4 1.4M3.1 12.9l1.4-1.4M11.5 4.5l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> Options</span></button>`:''}
 
             </div>
@@ -6107,15 +6101,24 @@ function renderUA(c){
     const repColor=repScore>=0?'#3fb950':repScore>=-3?'#e3b341':repScore>=-10?'#f0883e':'#f85149';
     // Punishment timeline (last 10)
     const recent=allPunish.slice().sort((a,b)=>b.created>a.created?1:-1).slice(0,8);
+    const canSeeCl=isSuperAdmin();
     const timelineHtml=recent.map(p=>{
       const col=ACTION_COLORS[p.action]||'#888';
-      return `<div class="up-stat-timeline-item">
-        <div class="up-stat-timeline-dot" style="background:${col};box-shadow:0 0 6px ${col}66;"></div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-weight:600;color:${p.reverted?'var(--c-text2)':col};${p.reverted?'text-decoration:line-through;opacity:0.6;':''}">${p.action}</div>
-          <div style="color:var(--c-text2);font-size:10px;">${p.reason?p.reason.substring(0,50)+(p.reason.length>50?'…':''):'No reason'}</div>
+      const displayReason=p.classified&&!canSeeCl?'[CLASSIFIED]':(p.reason||'No reason');
+      const modStaff=Object.values(STAFF).find(s=>s.username===p.mod);
+      const modRankShort={'CONTENT REVIEWER':'Reviewer','CONTENT MODERATOR':'Moderator','CONTENT ADMINISTRATOR':'Admin','SENIOR CONTENT ADMINISTRATOR':'Sr. Admin','CONTENT MANAGER':'Mgr','SOFTWARE MANAGER':'SM'};
+      return `<div class="up-stat-timeline-item" style="flex-direction:column;align-items:stretch;gap:4px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="up-stat-timeline-dot" style="background:${col};box-shadow:0 0 6px ${col}66;flex-shrink:0;"></div>
+          <span style="font-weight:700;font-size:11px;color:${p.reverted?'var(--c-text2)':col};${p.reverted?'text-decoration:line-through;opacity:0.6;':''}">${p.action}</span>
+          ${p.classified?'<span style="font-size:8px;background:rgba(163,113,247,0.15);color:#a371f7;padding:1px 5px;border-radius:8px;border:1px solid rgba(163,113,247,0.3);">CLASSIFIED</span>':''}
+          ${p.reverted?'<span style="font-size:8px;color:var(--c-text2);">REVERTED</span>':''}
+          <span style="font-size:9px;color:var(--c-text2);margin-left:auto;white-space:nowrap;">${(p.created||'').substring(0,10)}</span>
         </div>
-        <div style="font-size:9px;color:var(--c-text2);white-space:nowrap;">${(p.created||'').substring(0,10)}</div>
+        <div style="padding-left:14px;">
+          <div style="font-size:10px;color:var(--c-text);margin-bottom:2px;word-break:break-word;">${displayReason.substring(0,60)+(displayReason.length>60?'…':'')}</div>
+          ${p.mod?`<div style="display:flex;align-items:center;gap:4px;">${tinyAvatarOnly(avatarUrlFor(p.mod),p.mod,14)}<span style="font-size:9px;color:var(--c-text2);">${p.mod}${modStaff?(' · '+(modRankShort[modStaff.level]||'')):''}</span></div>`:''}
+        </div>
       </div>`;
     }).join('');
     return `<div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -6167,10 +6170,11 @@ function renderUA(c){
     if(repScore>=-10) return '#f0883e'; // orange - moderate
     return '#f85149'; // red - severe
   })();
-  const avatarEl=u.avatarUrl?`<img class="up-avatar-img" src="${u.avatarUrl}" style="border-color:${repGlow};box-shadow:0 0 12px ${repGlow}44,0 0 24px ${repGlow}22;">`:`<div class="up-avatar-placeholder" style="border-color:${repGlow};box-shadow:0 0 12px ${repGlow}44;">${(u.username||'?').charAt(0).toUpperCase()}</div>`;
+  const avatarEl=u.avatarUrl?`<img class="up-avatar-img" src="${u.avatarUrl}" style="border-color:${repGlow};box-shadow:0 0 16px ${repGlow}55,0 0 40px ${repGlow}22;">`:`<div class="up-avatar-placeholder" style="border-color:${repGlow};box-shadow:0 0 16px ${repGlow}55,0 0 40px ${repGlow}22;">${(u.username||'?').charAt(0).toUpperCase()}</div>`;
+  // Background radial matches glow color
+  const repGlowAlpha=repGlow.replace('#','');
 
-  const headerGrad=`linear-gradient(135deg,rgba(20,20,35,0.97) 0%,rgba(15,15,25,0.99) 100%)`;
-  c.innerHTML=`<div class="up-header" style="--rep-glow:${repGlow};">
+  c.innerHTML=`<div class="up-header" style="--rep-glow:${repGlow};--rep-glow-soft:${repGlow}1a;">
     <div style="position:relative;z-index:1;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
       <div style="display:flex;align-items:flex-end;gap:14px;">
         ${avatarEl}
@@ -6224,28 +6228,43 @@ function renderUA(c){
       if(u.robloxId){
         (async()=>{
           try{
-            // Use fetchRobloxInfo which has multi-proxy fallback
-            const rblxInfo=await fetchRobloxInfo(u.robloxUsername||u.username).catch(()=>null);
             const el=document.getElementById('rblx-data-content-'+uid);
-            if(el){
-              if(rblxInfo&&rblxInfo.robloxId){
-                const created=rblxInfo.accountCreated?new Date(rblxInfo.accountCreated):null;
-                const ageDays=created?Math.floor((Date.now()-created.getTime())/86400000):null;
-                const ageStr=ageDays!=null?(ageDays>=365?Math.floor(ageDays/365)+'y '+Math.floor((ageDays%365)/30)+'m':ageDays+'d'):'-';
-                const rows=[
-                  ['Username',rblxInfo.username||u.username],
-                  ['Display Name',rblxInfo.displayName||'-'],
-                  ['Roblox ID',rblxInfo.robloxId||'-'],
-                  ['Account Age',ageStr],
-                  ['Created',created?created.toLocaleDateString():'-'],
-                  ['Avatar',rblxInfo.avatarUrl?'<img src="'+rblxInfo.avatarUrl+'" width="32" height="32" style="border-radius:50%;vertical-align:middle;">':'—'],
-                ];
-                el.innerHTML=rows.map(function(rv){ return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--c-border);font-size:11px;gap:8px;"><span style="color:var(--c-text2);flex-shrink:0;">'+rv[0]+'</span><span style="text-align:right;word-break:break-word;color:var(--c-text);font-weight:600;">'+rv[1]+'</span></div>'; }).join('');
-              } else {
-                el.innerHTML='<span style="color:var(--c-text2);font-size:11px;">Roblox data unavailable — try Refresh button.</span>';
-              }
+            if(!el) return;
+            el.innerHTML='<div style="color:var(--c-text2);font-size:11px;">Fetching Roblox data…</div>';
+            const rblxInfo=await fetchRobloxInfo(u.robloxUsername||u.username).catch(()=>null);
+            if(!rblxInfo||!rblxInfo.robloxId){
+              el.innerHTML='<div style="color:var(--c-text2);font-size:11px;">Roblox API unavailable — try the Refresh button.</div>';
+              return;
             }
-          }catch(e){ const el=document.getElementById('rblx-data-content-'+uid); if(el) el.innerHTML='<span style="color:var(--c-text2);font-size:11px;">Could not fetch Roblox data.</span>'; }
+            const rid=rblxInfo.robloxId;
+            // Fetch additional unique data - badge count, game visits via roproxy
+            const [bdResp, presResp] = await Promise.all([
+              fetch('https://accountinformation.roproxy.com/v1/description?userId='+rid).catch(()=>null),
+              fetch('https://presence.roproxy.com/v1/presence/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userIds:[parseInt(rid)]})}).catch(()=>null),
+            ]);
+            const bdData=bdResp&&bdResp.ok?await bdResp.json().catch(()=>null):null;
+            const presData=presResp&&presResp.ok?await presResp.json().catch(()=>null):null;
+            const pres=presData&&presData.userPresences&&presData.userPresences[0];
+            const presStates=['Offline','Playing','In-Studio','Invisible'];
+            const presColor=['var(--c-text2)','var(--c-ok)','#a371f7','var(--c-text2)'];
+            const presState=pres?presStates[pres.userPresenceType||0]||'Offline':'Unknown';
+            const presCol=pres?presColor[pres.userPresenceType||0]||'var(--c-text2)':'var(--c-text2)';
+            const created=rblxInfo.accountCreated?new Date(rblxInfo.accountCreated):null;
+            const ageDays=created?Math.floor((Date.now()-created.getTime())/86400000):null;
+            const ageStr=ageDays!=null?(ageDays>=730?Math.floor(ageDays/365)+'y '+Math.floor((ageDays%365)/30)+'m':ageDays+'d'):'-';
+            const rows=[
+              ['Profile URL','<a href="https://www.roblox.com/users/'+rid+'/profile" target="_blank" style="color:var(--c-link);font-size:10px;">roblox.com/users/'+rid+'</a>'],
+              ['Presence','<span style="color:'+presCol+';font-weight:700;">'+presState+'</span>'+(pres&&pres.lastOnline?'<span style="color:var(--c-text2);font-size:9px;"> · '+new Date(pres.lastOnline).toLocaleDateString()+'</span>':'')],
+              ['Account Age',ageStr+' (created '+( created?created.toLocaleDateString():'-')+')'],
+              ['Description',(bdData&&bdData.description&&bdData.description.trim()||'None').substring(0,80)+(bdData&&bdData.description&&bdData.description.length>80?'…':'')],
+              ['External Links',(bdData&&Array.isArray(bdData.socialLinks)&&bdData.socialLinks.length?bdData.socialLinks.map(function(l){ return l.type; }).join(', '):'None listed')],
+            ];
+            el.innerHTML=rows.map(function(rv){
+              return '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--c-border);font-size:11px;gap:8px;">'
+                +'<span style="color:var(--c-text2);flex-shrink:0;min-width:80px;">'+rv[0]+'</span>'
+                +'<span style="text-align:right;word-break:break-word;color:var(--c-text);">'+rv[1]+'</span></div>';
+            }).join('');
+          }catch(e){ const el=document.getElementById('rblx-data-content-'+uid); if(el) el.innerHTML='<div style="color:var(--c-text2);font-size:11px;">Could not fetch extended Roblox data.</div>'; }
         })();
       }
     }
@@ -16961,12 +16980,15 @@ function openPunishPanel(uid, punishType){
     html+='<option value="2592000000">30 Days</option></select></div>';
   }
   html+='<div style="margin-bottom:12px;"><label style="font-size:11px;font-weight:700;color:var(--c-text);display:block;margin-bottom:6px;">Options</label>';
-  if(cfg.fields.includes('classified')){
-    html+='<div style="margin-bottom:6px;"><label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--c-text);cursor:pointer;"><input type="checkbox" id="psp-classified"> <span>Make Classified</span></label></div>';
-  }
-  if(cfg.fields.includes('locked')){
-    html+='<div style="margin-bottom:6px;"><label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--c-text);cursor:pointer;"><input type="checkbox" id="psp-locked"> <span>Make Locked</span></label></div>';
-  }
+  // Always show classified + locked for every punishment type
+  html+='<div style="margin-bottom:6px;"><label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--c-text);cursor:pointer;"><input type="checkbox" id="psp-classified" onchange="var o=document.getElementById(\'psp-classified-opts\');if(o)o.style.display=this.checked?\'flex\':\'none\';"> <span>Make Classified</span></label>'
+    +'<div id="psp-classified-opts" style="display:none;flex-direction:column;gap:4px;margin-left:22px;margin-top:6px;">'
+    +'<div><label style="font-size:10px;color:var(--c-text2);display:block;margin-bottom:2px;">Minimum rank to view</label>'
+    +'<select id="psp-min-rank" style="width:100%;font-size:11px;"><option value="">Everyone</option><option value="CONTENT MODERATOR">Content Moderator+</option><option value="CONTENT ADMINISTRATOR">Content Administrator+</option><option value="SENIOR CONTENT ADMINISTRATOR">Senior Admin+</option><option value="CONTENT MANAGER">Content Manager+</option><option value="SOFTWARE MANAGER">Software Manager only</option></select></div>'
+    +'<div><label style="font-size:10px;color:var(--c-text2);display:block;margin-bottom:2px;">Message shown to restricted users</label>'
+    +'<input type="text" id="psp-classified-msg" value="[CLASSIFIED]" style="width:100%;font-size:11px;"/></div>'
+    +'</div></div>';
+  html+='<div style="margin-bottom:6px;"><label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--c-text);cursor:pointer;"><input type="checkbox" id="psp-locked"> <span>Make Locked (prevents reverting)</span></label></div>';
   html+='</div>';
   html+='<button class="btn" id="psp-apply-btn" style="width:100%;background:'+cfg.color+';border-color:'+cfg.color+';color:#fff;font-weight:700;">Apply '+punishType+'</button>';
   html+='<div id="psp-msg" style="font-size:11px;margin-top:6px;min-height:14px;text-align:center;"></div>';
@@ -16977,11 +16999,13 @@ function openPunishPanel(uid, punishType){
     if(!reason){ document.getElementById('psp-msg').textContent='Reason is required.'; document.getElementById('psp-msg').style.color='var(--c-ban)'; return; }
     var classified=document.getElementById('psp-classified')&&document.getElementById('psp-classified').checked;
     var locked=document.getElementById('psp-locked')&&document.getElementById('psp-locked').checked;
+    var minRankEl=document.getElementById('psp-min-rank'); var minRank=minRankEl?minRankEl.value:'';
+    var clMsgEl=document.getElementById('psp-classified-msg'); var classifiedMsg=clMsgEl?clMsgEl.value:'[CLASSIFIED]';
     var expiresEl=document.getElementById('psp-expires');
     var expiresMs=expiresEl?parseInt(expiresEl.value)||0:0;
     var expiresAt=expiresMs>0?Date.now()+expiresMs:0;
     var pid='p_'+Date.now();
-    var entry={action:punishType,reason:reason,mod:ME,created:nowStr(),classified:classified||false,locked:locked||false,expiresAt:expiresAt,reverted:false};
+    var entry={action:punishType,reason:reason,mod:ME,created:nowStr(),classified:classified||false,locked:locked||false,minRank:minRank||'',classifiedMsg:classifiedMsg||'[CLASSIFIED]',expiresAt:expiresAt,reverted:false};
     await update(ref(db,'users/'+uid+'/punishments/'+pid),entry);
     await push(ref(db,'logs/moderation'),{user:u.username,action:punishType,mod:ME,date:nowStr(),reason:reason,classified:classified||false,locked:locked||false});
     auditLog(punishType+' issued','Against '+u.username+' by '+ME+': '+reason);
@@ -17016,7 +17040,7 @@ window.openPunishPanel=openPunishPanel;
 function renderMachineLogs(c){
   var typeColors={SESSION_LOCK:'#f85149',SCREENSHOT:'#e3b341',SCREENSHOT_FP:'#e3b341',LOGIN_ATTEMPT:'#a371f7',BLIND_AUDIT:'#58a6ff',TWO_FACTOR:'#3fb950',ACTION_RATE:'#f85149',PUNISH_DELETE:'#f85149',PUNISH_OPTIONS:'#58a6ff',DELETE_ATTEMPT:'#f85149',PAGE_VISIT:'rgba(88,166,255,0.5)'};
   var typeIcons={'SESSION_LOCK':'<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="3.5" y="7.5" width="9" height="7" rx="1.2" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 7.5V5a2.5 2.5 0 0 1 5 0v2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>','SCREENSHOT':'<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/></svg>','SCREENSHOT_FP':'<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="8" r="1" fill="currentColor"/></svg>','LOGIN_ATTEMPT':'<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="7" r="3.5" stroke="currentColor" stroke-width="1.3"/><path d="M8.5 9.5l5 5M10.5 11.5l2-2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>','BLIND_AUDIT':'<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M1.5 8C3 5 5 3 8 3s5 2 6.5 5c-1.5 3-3.5 5-6.5 5S3 11 1.5 8z" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.3"/></svg>','TWO_FACTOR':'<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="7" width="12" height="8" rx="1.3" stroke="currentColor" stroke-width="1.3"/><path d="M5 7V5a3 3 0 0 1 6 0v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>','ACTION_RATE':'<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1v6l4 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/></svg>','PUNISH_DELETE':'<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 4h10M6 4V2.5h4V4M5 4l.5 9h5L11 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>','DELETE_ATTEMPT':'<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M14.5 1.5l-13 13M1.5 1.5l13 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>','PAGE_VISIT':'<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2" width="13" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3"/><line x1="5" y1="6" x2="11" y2="6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="5" y1="9" x2="8" y2="9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>'};
-  var defaultIcon= + DEFAULT_SVG + r;
+  var defaultIcon='<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="8" r="2" fill="currentColor"/></svg>';
   var allEntries=[];
 
   function buildRow(r){
