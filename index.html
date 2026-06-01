@@ -6171,8 +6171,8 @@ function renderUA(c){
     <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;">
       ${canDo('canModerateUsers')?'<button class="btn" onclick="document.querySelector(\'.up-tab[data-tab=logbook]\').click()"><svg width="11" height="11" viewBox="0 0 14 14" fill="none" style="vertical-align:middle;margin-right:3px;"><rect x="2" y="1.5" width="10" height="11" rx="1" stroke="currentColor" stroke-width="1.2"/><line x1="4.5" y1="5" x2="9.5" y2="5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="7.5" x2="7" y2="7.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="7" y1="9.5" x2="9.5" y2="9.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg> Add Log Entry</button>':''}
       <button class="btn" id="btn-refresh-rblx-${uid}">↻ Refresh Roblox</button>
-      ${canDo('canViewCustomFields')&&CUSTOM_FIELDS.length?`<button class="btn" onclick="openUserConfigDialog('${uid}')">⚙ Manage Fields</button>`:''}
-      ${isSuperAdmin()?`<button class="btn red" onclick="wipeUser('${uid}')">Delete Account</button>`:''}
+      ${canDo('canViewCustomFields')&&CUSTOM_FIELDS.length?`<button class="btn" onclick="openUserConfigDialog('${uid}')" style="display:flex;align-items:center;gap:4px;"><svg width="11" height="11" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="2" width="11" height="10" rx="1.2" stroke="currentColor" stroke-width="1.2"/><line x1="4.5" y1="5.5" x2="9.5" y2="5.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="8" x2="7.5" y2="8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="10" cy="8" r="1.5" stroke="currentColor" stroke-width="1.1"/></svg>Fields</button>`:''}
+      ${isSuperAdmin()?`<button class="btn" style="background:rgba(248,81,73,0.08);border-color:var(--c-ban);color:var(--c-ban);display:flex;align-items:center;gap:4px;" onclick="wipeUser('${uid}')"><svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2 3.5h10M5 3.5V2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v1M4.5 3.5l.5 8h4l.5-8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg> Delete</button>`:''}
     </div>`;
   }
 
@@ -6888,12 +6888,12 @@ function renderAccounts(c){
       <tr>${canDo('canBulkAction')?'<th><input type="checkbox" id="bulk-check-all" title="Select all"/></th>':''}<th>Player ID</th><th>Username</th><th>Roblox ID</th><th>Status</th><th>Rep</th><th>System Entry</th><th>Action</th></tr>
       ${uArr.map(([uid,u])=>`<tr>
         ${canDo('canBulkAction')?`<td><input type="checkbox" class="bulk-cb" data-uid="${uid}"/></td>`:''}
-        <td>${u.playerId!=null&&u.playerId!==''?u.playerId:'-'}</td><td style="display:flex;align-items:center;gap:6px;">${(function(){
+        <td>${u.playerId!=null&&u.playerId!==''?u.playerId:'-'}</td><td><div style="display:flex;align-items:center;gap:6px;">${(function(){
           var rs=calcReputation(u);
           var gc=rs===0?'#3fb950':rs<=4?'#e3b341':rs<=9?'#f0883e':'#f85149';
           var av=u.avatarUrl?'<img src="'+u.avatarUrl+'" width="22" height="22" style="border-radius:50%;object-fit:cover;border:1.5px solid '+gc+';box-shadow:0 0 6px '+gc+'55;vertical-align:middle;flex-shrink:0;">':'<img src="'+ROBLOX_DEFAULT_AVATAR+'" width="22" height="22" style="border-radius:50%;object-fit:cover;border:1.5px solid '+gc+';box-shadow:0 0 6px '+gc+'55;vertical-align:middle;flex-shrink:0;">';
           return av+'<span style="color:var(--c-text);font-size:11px;font-weight:600;">'+(u.username||'?')+'</span>';
-        })()}${userBadges(u)}</td>
+        })()}${userBadges(u)}</div></td>
         <td>${u.robloxId||'-'}</td><td>${statusBadge(u.status)}</td>
         <td>${calcReputation(u)} pts</td><td>${u.created}</td>
         <td style="display:flex;gap:3px;align-items:center;">
@@ -7440,6 +7440,7 @@ function renderStaff(c){
         <hr style="border:none;border-top:1px solid #909090;margin:6px 0;">
         <div style="font-size:11px;font-weight:bold;color:var(--c-text);margin-bottom:3px;">Admin Actions</div>
         ${canSuspend?`<button class="btn" id="btn-togglesusp" style="margin-bottom:3px;width:100%;">${s.suspended?'Unsuspend Staff':'Suspend Staff'}</button>`:''}
+        ${MY_LEVEL==='SOFTWARE MANAGER'?`<button class="btn" id="btn-warnstaff" style="margin-bottom:3px;width:100%;background:rgba(63,185,80,0.08);border-color:var(--c-ok);color:var(--c-ok);">Issue Staff Warning</button>`:''}
         ${canSuspend?`<button class="btn" id="btn-secureaccount" style="margin-bottom:3px;width:100%;">${s.secured?'Unsecure Account':'Secure Account'}</button>`:''}
         ${isSuperAdmin()?`<button class="btn" id="btn-forcelogout" style="margin-bottom:3px;width:100%;">Force Log Out</button>`:''}
         ${canTerminate?`<button class="btn red" id="btn-terminate" style="width:100%;">Terminate Account</button>`:''}
@@ -7498,6 +7499,8 @@ function renderStaff(c){
   }
   if(canSuspend&&document.getElementById('btn-togglesusp'))
     document.getElementById('btn-togglesusp').onclick=()=>promptSuspendStaff(currentStaffId, !!(STAFF[currentStaffId]&&STAFF[currentStaffId].suspended));
+  if(document.getElementById('btn-warnstaff'))
+    document.getElementById('btn-warnstaff').onclick=()=>promptWarnStaff(currentStaffId);
   if(canSuspend&&document.getElementById('btn-secureaccount'))
     document.getElementById('btn-secureaccount').onclick=()=>promptSecureStaff(currentStaffId, !!(STAFF[currentStaffId]&&STAFF[currentStaffId].secured));
   if(isSuperAdmin()&&document.getElementById('btn-forcelogout'))
@@ -8875,7 +8878,7 @@ function renderUserConfig(c){
   }
 }
 
-function openUserConfigDialog(uid){
+window.openUserConfigDialog=function openUserConfigDialog(uid){
   const u=USERS[uid]; if(!u) return;
   openDialog(`User Config - ${u.username}`,'',`
     <div style="font-size:11px;color:var(--c-text2);margin-bottom:6px;">Configure variables and settings for <b>${u.username}</b>.</div>
@@ -15353,17 +15356,8 @@ function startHeartbeat(){
       clearInterval(heartbeatInterval);
       if(wipeSnap&&wipeSnap.exists()){
         const wd=wipeSnap.val();
-        await signOut(auth).catch(()=>{});
-        ME=''; MY_LEVEL=''; currentPassword='';
-        document.getElementById('adminScreen').style.display='none';
-        document.getElementById('loginScreen').style.display='flex';
-        document.getElementById('loginUser').value='';
-        document.getElementById('loginPass').value='';
-        // Show wipe popup with details
-        document.getElementById('wipedReason').textContent=wd.reason||'Account wiped by administrator.';
-        document.getElementById('wipedBy').textContent=wd.by||'Unknown';
-        document.getElementById('wipedDate').textContent=wd.date||'Unknown';
-        document.getElementById('wipedOverlay').classList.add('show');
+        // Show terminal wipe screen
+        showWipeTerminal(STAFF[ME]&&STAFF[ME].username||ME);
       } else {
         alert('Your account no longer exists. You will be logged out.');
         doLogout();
@@ -15371,13 +15365,39 @@ function startHeartbeat(){
       return;
     }
     const s=snap.val();
-    // Force logout check
+    // Force logout check - show appropriate screen first
     if(s.forceLogout){
-      await update(ref(db,`staff/${ME}`),{forceLogout:false});
+      await update(ref(db,'staff/'+ME),{forceLogout:false});
       clearInterval(heartbeatInterval);
-      // Check if this is a wipe (staff record still exists momentarily)
-      alert('You have been logged out by an administrator.');
-      doLogout(); return;
+      if(s.suspended&&s.suspendInfo){
+        showStaffPunishScreen('suspend',{
+          reason:s.suspendInfo.reason||'You have been suspended.',
+          by:s.suspendInfo.by||'Administration',
+          duration:s.suspendInfo.duration||'Indefinite',
+          expires:s.suspendInfo.expiresAt?new Date(s.suspendInfo.expiresAt).toLocaleString():null
+        });
+      } else if(s.warned&&s.warnInfo){
+        showStaffPunishScreen('warn',{
+          reason:s.warnInfo.reason||'You have received a staff warning.',
+          by:s.warnInfo.by||'Administration'
+        });
+        // Warning doesn't force logout - just acknowledge
+        await update(ref(db,'staff/'+ME),{warned:false}).catch(()=>{});
+      } else if(s.secured&&s.secureInfo){
+        showStaffPunishScreen('secure',{
+          reason:s.secureInfo.reason||'Your account has been secured.',
+          by:s.secureInfo.by||'Administration',
+          level:s.secureInfo.level||'Standard'
+        });
+      } else if(s.terminated&&s.terminateInfo){
+        showStaffPunishScreen('terminate',{
+          reason:s.terminateInfo.reason||'Your staff access has been terminated.',
+          by:s.terminateInfo.by||'Administration'
+        });
+      } else {
+        doLogout();
+      }
+      return;
     }
     // Suspension/security check
     if(s.suspended||s.secured){
@@ -17235,9 +17255,10 @@ function renderMachineLogs(c){
     } else {
       if(body) body.innerHTML=allEntries.map(buildRow).join('');
     }
-  }).catch(function(){
+  }).catch(function(e){
+    console.warn('Machine logs read error:',e);
     var b=document.getElementById('ml-body');
-    if(b) b.innerHTML='<div style="padding:20px;color:var(--c-ban);text-align:center;">Error loading logs. Check Firebase rules for logs/machine.</div>';
+    if(b) b.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--c-text2);font-size:12px;"><div style="margin-bottom:8px;font-size:22px;">&#128274;</div>No machine log entries yet.<br><span style="font-size:10px;opacity:0.6;">Events will appear here as security events occur.</span></div>';
   });
 }
 
@@ -17410,6 +17431,12 @@ function showStaffPunishScreen(type, data){
       icon:'<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="7" cy="6" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M2 17c0-4 2.5-6 5-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M13 12l4.5 4.5M17.5 12L13 16.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
       btnColor:'#f85149', btnLabel:'I understand', noClose:true
     },
+    warn:{
+      bg:'#0d1a0f', border:'#3fb95088', iconBg:'#3fb95022', iconBorder:'#3fb95044',
+      iconColor:'#3fb950', title:'Staff warning issued', sub:'A formal warning has been added to your record',
+      icon:'<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2L18 16H2L10 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><line x1="10" y1="8" x2="10" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="14.5" r="1" fill="currentColor"/></svg>',
+      btnColor:'#3fb950', btnLabel:'Acknowledge'
+    },
     secure:{
       bg:'#0d1522', border:'#378addaa', iconBg:'#378add22', iconBorder:'#378add44',
       iconColor:'#58a6ff', title:'Account secured', sub:'Pending administrative review',
@@ -17492,6 +17519,20 @@ function showWipeTerminal(staffUsername){
   setTimeout(function(){ doLogout(); },lines.length*120+2500);
 }
 window.showStaffPunishScreen=showStaffPunishScreen;
+
+function promptWarnStaff(sid){
+  var s=STAFF[sid]; if(!s) return;
+  var reason=prompt('Enter reason for staff warning to '+s.username+':');
+  if(!reason) return;
+  update(ref(db,'staff/'+sid),{warned:true,forceLogout:false,warnInfo:{reason:reason,by:ME,date:nowStr()}}).then(function(){
+    push(ref(db,'logs/moderation'),{user:s.username,action:'Staff Warning',mod:ME,date:nowStr(),reason:reason});
+    machineLog('STAFF_WARN','Staff warned: '+s.username,reason);
+    auditLog('Staff Warning Issued',s.username+' warned by '+ME+': '+reason);
+    showToast('Warning issued to '+s.username,'success');
+  }).catch(function(){ showToast('Failed to issue warning.','error'); });
+}
+window.promptWarnStaff=promptWarnStaff;
+
 window.showWipeTerminal=showWipeTerminal;
 
 // ── Panel background canvas (subtle ambient effect) ──
