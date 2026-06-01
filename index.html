@@ -6249,9 +6249,7 @@ function renderUA(c){
     <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;">
       ${canDo('canModerateUsers')?'<button class="btn" onclick="document.querySelector(\'.up-tab[data-tab=logbook]\').click()"><svg width="11" height="11" viewBox="0 0 14 14" fill="none" style="vertical-align:middle;margin-right:3px;"><rect x="2" y="1.5" width="10" height="11" rx="1" stroke="currentColor" stroke-width="1.2"/><line x1="4.5" y1="5" x2="9.5" y2="5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="7.5" x2="7" y2="7.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="7" y1="9.5" x2="9.5" y2="9.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg> Add Log Entry</button>':''}
       <button class="btn" id="btn-refresh-rblx-${uid}">↻ Refresh Roblox</button>
-      ${CUSTOM_FIELDS.length&&canDo('canViewCustomFields')?`<button class="btn" onclick="openUserConfigDialog('${uid}')" style="display:flex;align-items:center;gap:4px;"><svg width="11" height="11" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="2" width="11" height="10" rx="1.2" stroke="currentColor" stroke-width="1.2"/><line x1="4.5" y1="5.5" x2="9.5" y2="5.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="8" x2="7.5" y2="8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="10" cy="8" r="1.5" stroke="currentColor" stroke-width="1.1"/></svg>Manage Fields</button>`:''}
-      ${canDo('canManageCustomFields')?`<button class="btn" onclick="nav('staffconfig')" style="display:flex;align-items:center;gap:4px;" title="Configure custom field definitions"><svg width="11" height="11" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M3.1 3.1l1.1 1.1M9.8 9.8l1.1 1.1M3.1 10.9l1.1-1.1M9.8 4.2l1.1-1.1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Field Config</button>`:''}
-
+      ${canDo('canViewCustomFields')&&CUSTOM_FIELDS.length?`<button class="btn" onclick="openUserConfigDialog('${uid}')" style="display:flex;align-items:center;gap:4px;"><svg width="11" height="11" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="2" width="11" height="10" rx="1.2" stroke="currentColor" stroke-width="1.2"/><line x1="4.5" y1="5.5" x2="9.5" y2="5.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="8" x2="7.5" y2="8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="10" cy="8" r="1.5" stroke="currentColor" stroke-width="1.1"/></svg>Manage Fields</button>`:''}
       ${isSuperAdmin()?`<button class="btn" style="background:rgba(248,81,73,0.08);border-color:var(--c-ban);color:var(--c-ban);display:flex;align-items:center;gap:4px;" onclick="wipeUser('${uid}')"><svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2 3.5h10M5 3.5V2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v1M4.5 3.5l.5 8h4l.5-8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg> Delete</button>`:''}
     </div>`;
   }
@@ -17351,108 +17349,145 @@ window.requestTwoFactorApproval=requestTwoFactorApproval;
 
 // ── Staff punishment notification system ──
 function showStaffPunishScreen(type, data){
-  var overlay=document.getElementById('staff-punish-overlay');
-  var card=document.getElementById('sp-notice-card');
-  if(!overlay||!card) return;
-
-  var CONFIGS={
+  var configs={
     suspend:{
-      headerBg:'rgba(210,153,34,0.08)', border:'rgba(210,153,34,0.4)',
-      iconBg:'rgba(210,153,34,0.15)', iconBorder:'rgba(210,153,34,0.35)', iconColor:'#d29922',
-      badge:'Suspended', badgeColor:'#d29922',
-      title:'Account suspended', sub:'Your access has been temporarily removed',
-      icon:'<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="9" stroke="currentColor" stroke-width="1.5"/><line x1="8" y1="7" x2="8" y2="15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><line x1="14" y1="7" x2="14" y2="15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
-      btnLabel:'Acknowledge', btnBg:'#d29922', btnColor:'#0d1117',
-      showClose:true,
-      extraMeta:function(d){ return d.expires?[['Lifts at',d.expires]]:[] },
-      logoutOnAck:true
-    },
-    warn:{
-      headerBg:'rgba(63,185,80,0.06)', border:'rgba(63,185,80,0.35)',
-      iconBg:'rgba(63,185,80,0.15)', iconBorder:'rgba(63,185,80,0.35)', iconColor:'#3fb950',
-      badge:'Warning', badgeColor:'#3fb950',
-      title:'Staff warning issued', sub:'A formal warning has been added to your record',
-      icon:'<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 2.5L20 19H2L11 2.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><line x1="11" y1="9" x2="11" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="11" cy="16.5" r="1" fill="currentColor"/></svg>',
-      btnLabel:'Acknowledge', btnBg:'#3fb950', btnColor:'#0d1117',
-      showClose:false,
-      extraMeta:function(d){ return [] },
-      logoutOnAck:false
-    },
-    secure:{
-      headerBg:'rgba(56,138,197,0.06)', border:'rgba(56,138,197,0.35)',
-      iconBg:'rgba(56,138,197,0.15)', iconBorder:'rgba(56,138,197,0.35)', iconColor:'#58a6ff',
-      badge:'Restricted', badgeColor:'#58a6ff',
-      title:'Account secured', sub:'Pending administrative review',
-      icon:'<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 2L4 5.5v7C4 17 7 20 11 21.5 15 20 18 17 18 12.5v-7L11 2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><line x1="11" y1="9.5" x2="11" y2="13.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="11" cy="8" r="0.9" fill="currentColor"/></svg>',
-      btnLabel:'Acknowledge', btnBg:'#185fa5', btnColor:'#fff',
-      showClose:false,
-      showContact:true,
-      extraMeta:function(d){ return d.level?[['Level',d.level],['Action','Contact SM to reinstate']]:[] },
-      logoutOnAck:true
+      bg:'rgba(210,153,34,0.06)', border:'rgba(210,153,34,0.4)', iconBg:'rgba(210,153,34,0.12)', iconBorder:'rgba(210,153,34,0.3)',
+      iconColor:'#d29922', title:'Account suspended', sub:'Your access has been temporarily removed',
+      icon:'<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/><line x1="7" y1="6.5" x2="7" y2="13.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="13" y1="6.5" x2="13" y2="13.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+      btnColor:'#d29922', btnLabel:'Acknowledge', badge:'Suspended'
     },
     terminate:{
-      headerBg:'rgba(248,81,73,0.08)', border:'rgba(248,81,73,0.4)',
-      iconBg:'rgba(248,81,73,0.15)', iconBorder:'rgba(248,81,73,0.35)', iconColor:'#f85149',
-      badge:'Permanent', badgeColor:'#f85149',
-      title:'Staff access terminated', sub:'Your position has been permanently revoked',
-      icon:'<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="8" cy="7" r="3.5" stroke="currentColor" stroke-width="1.4"/><path d="M2 19c0-4 2.5-6.5 6-6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M14 14l5.5 5.5M19.5 14L14 19.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
-      btnLabel:'I understand', btnBg:'#b91c1c', btnColor:'#fff',
-      showClose:false,
-      extraMeta:function(d){ return [['Status','Permanent — no reinstatement']] },
-      logoutOnAck:true
+      bg:'#1a0d0d', border:'#f85149aa', iconBg:'#f8514922', iconBorder:'#f8514944',
+      iconColor:'#f85149', title:'Staff access terminated', sub:'Your position has been permanently revoked',
+      icon:'<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="7" cy="6" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M2 17c0-4 2.5-6 5-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M13 12l4.5 4.5M17.5 12L13 16.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+      btnColor:'#f85149', btnLabel:'I understand', noClose:true
+    },
+    warn:{
+      bg:'rgba(63,185,80,0.06)', border:'rgba(63,185,80,0.35)', iconBg:'rgba(63,185,80,0.12)', iconBorder:'rgba(63,185,80,0.3)',
+      iconColor:'#3fb950', title:'Staff warning issued', sub:'A formal warning has been added to your record',
+      icon:'<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2.5L18 17H2L10 2.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><line x1="10" y1="8" x2="10" y2="12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="14.8" r="0.9" fill="currentColor"/></svg>',
+      btnColor:'#3fb950', btnLabel:'Acknowledge', badge:'Warning', btnTextColor:'#0d1117'
+    },
+    secure:{
+      bg:'rgba(56,138,197,0.06)', border:'rgba(56,138,197,0.35)', iconBg:'rgba(56,138,197,0.12)', iconBorder:'rgba(56,138,197,0.3)',
+      iconColor:'#58a6ff', title:'Account secured', sub:'Pending administrative review',
+      icon:'<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2L3 5.5v6C3 16 6.5 18.5 10 19.5c3.5-1 7-3.5 7-8v-6L10 2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><line x1="10" y1="8.5" x2="10" y2="12.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="10" cy="7.2" r="0.8" fill="currentColor"/></svg>',
+      btnColor:'#185fa5', btnLabel:'Acknowledge', badge:'Restricted'
+    },
+    terminate:{
+      bg:'rgba(248,81,73,0.06)', border:'rgba(248,81,73,0.35)', iconBg:'rgba(248,81,73,0.12)', iconBorder:'rgba(248,81,73,0.3)',
+      iconColor:'#f85149', title:'Staff access terminated', sub:'Your position has been permanently revoked',
+      icon:'<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="7" cy="6" r="3" stroke="currentColor" stroke-width="1.4"/><path d="M2 17c0-4 2.2-6 5-6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M12 12l5.5 5.5M17.5 12L12 17.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+      btnColor:'#b91c1c', btnLabel:'I understand', badge:'Permanent', noClose:true
     }
   };
+  var cfg=configs[type]; if(!cfg) return;
+  var overlay=document.getElementById('staff-punish-overlay');
+  var card=document.getElementById('sp-notice-card');
+  var header=document.getElementById('sp-notice-header');
+  var body=document.getElementById('sp-notice-body');
+  var meta=document.getElementById('sp-notice-meta');
+  var footer=document.getElementById('sp-notice-footer');
+  if(!overlay||!card) return;
 
-  var cfg=CONFIGS[type]; if(!cfg) return;
-  var refCode=(type==='terminate'?'TRM':type==='suspend'?'SUS':type==='secure'?'SEC':'WRN')+'-'+new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0')+String(new Date().getDate()).padStart(2,'0')+'-'+String(Math.floor(Math.random()*999)+1).padStart(3,'0');
-
-  var metaRows=[
-    ['Issued by', (data.by||'Administration')+' ['+(data.byLevel||'Administration')+']'],
-    data.duration?['Duration',data.duration]:null,
-  ].concat(cfg.extraMeta(data)).concat([
-    ['Ref no.',refCode]
-  ]).filter(Boolean);
-
-  card.className='sa-panel';
-  card.style.cssText='width:min(460px,96vw);border:1px solid '+cfg.border+';';
-  card.innerHTML=
-    '<div class="sa-panel-header" style="background:'+cfg.headerBg+';border-bottom:1px solid rgba(255,255,255,0.06);">'
-    +'<div style="display:flex;align-items:center;gap:14px;">'
-    +'<div class="sa-panel-icon" style="width:48px;height:48px;background:'+cfg.iconBg+';border:1px solid '+cfg.iconBorder+';color:'+cfg.iconColor+';">'+cfg.icon+'</div>'
-    +'<div><div class="sa-panel-title" style="font-size:17px;color:'+cfg.iconColor+';">'+cfg.title+'</div><div class="sa-panel-sub">'+cfg.sub+'</div></div>'
-    +'</div>'
-    +'<span class="sa-badge" style="color:'+cfg.badgeColor+';margin-top:4px;">'+cfg.badge+'</span>'
-    +'</div>'
-    +'<div class="sa-body" style="padding:14px 22px 8px;">'
-    +'<div style="font-size:12px;color:#c9d1d9;line-height:1.65;margin-bottom:12px;border-left:2px solid '+cfg.iconColor+';padding-left:10px;">'+(data.reason||'')+'</div>'
-    +'<div style="display:flex;flex-direction:column;gap:0;">'
-    +metaRows.map(function(r){
-      var isHighlight=(r[0]==='Status'||r[0]==='Level');
-      return '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05);">'
-        +'<span style="color:#8b949e;flex-shrink:0;">'+r[0]+'</span>'
-        +'<span style="font-weight:600;color:'+(isHighlight?cfg.iconColor:'#f0f6fc')+';text-align:right;max-width:65%;">'+r[1]+'</span>'
-        +'</div>';
-    }).join('')
-    +'</div></div>'
-    +'<div class="sa-footer" style="gap:8px;">'
-    +(cfg.showContact?'<button class="sa-btn-cancel" onclick="document.getElementById(\'staff-punish-overlay\').classList.remove(\'show\')">Contact support</button>':'')
-    +(cfg.showClose?'<button class="sa-btn-cancel" onclick="document.getElementById(\'staff-punish-overlay\').classList.remove(\'show\')">Close</button>':'')
-    +'<button class="sa-btn-apply" id="sp-ack-btn" style="background:'+cfg.btnBg+';color:'+cfg.btnColor+';">'+cfg.btnLabel+'</button>'
-    +'</div>';
-
+  card.style.border='1px solid '+cfg.border;
+  header.style.background=cfg.bg;
+  header.innerHTML=
+    '<div class="sp-notice-icon" style="background:'+cfg.iconBg+';border:1px solid '+cfg.iconBorder+';color:'+cfg.iconColor+';">'+cfg.icon+'</div>'+
+    '<div><div style="font-size:15px;font-weight:700;color:'+cfg.iconColor+';">'+cfg.title+'</div>'+
+    '<div style="font-size:11px;color:'+cfg.iconColor+';opacity:0.6;margin-top:2px;">'+cfg.sub+'</div></div>';
+  body.innerHTML=data.reason||'';
+  var rows=[
+    ['Issued by', data.by||(data.issuedBy||'Administration')],
+    data.duration?['Duration', data.duration]:null,
+    data.expires?['Lifts at', data.expires]:null,
+    data.level?['Security level', data.level]:null,
+    ['Reference', 'REF-'+Date.now().toString(36).toUpperCase().slice(-6)],
+  ].filter(Boolean);
+  meta.innerHTML=rows.map(function(r){
+    return '<div class="sp-notice-row"><span class="sp-notice-key">'+r[0]+'</span><span class="sp-notice-val">'+r[1]+'</span></div>';
+  }).join('');
+  footer.innerHTML=(type==='secure'?'<button class="btn" onclick="document.getElementById(\'staff-punish-overlay\').classList.remove(\'show\')">Contact support</button>':'')+
+    '<button class="btn" style="background:'+cfg.btnColor+';border-color:'+cfg.btnColor+';color:#fff;" id="sp-ack-btn">'+cfg.btnLabel+'</button>';
   overlay.classList.add('show');
   document.getElementById('sp-ack-btn').onclick=function(){
     overlay.classList.remove('show');
-    _updateDisciplineStatus(ME,'ACKNOWLEDGED');
-    if(type==='warn'){
-      update(ref(db,'staff/'+ME),{warnAcknowledged:true}).catch(()=>{});
-    }
-    if(cfg.logoutOnAck) doLogout();
+    if(type==='terminate'||type==='suspend') doLogout();
   };
 }
-window.showStaffPunishScreen=showStaffPunishScreen;
 
-
+function showWipeTerminal(staffUsername){
+  var t=document.getElementById('staff-wipe-terminal');
+  if(!t) return;
+  t.innerHTML='';
+  t.style.cssText='position:fixed;inset:0;z-index:99999;background:#010409;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;font-family:"SF Mono","Fira Code",Consolas,monospace;padding:40px 60px;overflow:hidden;';
+  var con=document.createElement('div');
+  con.style.cssText='width:100%;max-width:600px;';
+  t.appendChild(con);
+  function addLine(text,color,delay){
+    setTimeout(function(){
+      var d=document.createElement('div');
+      d.style.cssText='font-size:12px;margin-bottom:3px;color:'+(color||'#374151')+';opacity:0;transition:opacity 0.25s;';
+      d.textContent=text;
+      con.appendChild(d);
+      requestAnimationFrame(function(){ d.style.opacity='1'; });
+    },delay);
+  }
+  addLine('SAMARITAN SYSTEMS \u2014 ADMINISTRATIVE DATA PURGE','#1f2937',0);
+  addLine('','',150);
+  addLine('// Session: '+new Date().toISOString().replace('T',' ').slice(0,19),'#374151',300);
+  addLine('// Target: ['+(staffUsername||'?')+']','#374151',450);
+  addLine('// Authorization: CONFIRMED','#374151',600);
+  addLine('','',750);
+  var tasks=['Authenticating operator code','Verifying second approver','Revoking session tokens','Invalidating credentials','Erasing profile data','Removing moderation history','Purging login records','Clearing machine logs','Writing final audit entry'];
+  var base=900;
+  tasks.forEach(function(label,i){
+    setTimeout(function(){
+      var w=document.createElement('div');
+      w.style.cssText='margin-bottom:8px;opacity:0;transition:opacity 0.2s;';
+      var top=document.createElement('div');
+      top.style.cssText='display:flex;justify-content:space-between;margin-bottom:3px;';
+      var lbl=document.createElement('span');
+      lbl.style.cssText='font-size:11px;color:#4b5563;';
+      lbl.textContent='\u2192  '+label;
+      var pct=document.createElement('span');
+      pct.style.cssText='font-size:10px;color:#374151;min-width:35px;text-align:right;';
+      pct.textContent='0%';
+      top.appendChild(lbl); top.appendChild(pct);
+      var track=document.createElement('div');
+      track.style.cssText='height:2px;background:#111827;border-radius:1px;overflow:hidden;';
+      var fill=document.createElement('div');
+      fill.style.cssText='height:100%;width:0%;background:#14532d;border-radius:1px;transition:width 0.04s;';
+      track.appendChild(fill);
+      w.appendChild(top); w.appendChild(track);
+      con.appendChild(w);
+      requestAnimationFrame(function(){ w.style.opacity='1'; });
+      var p=0;
+      var iv=setInterval(function(){
+        p+=Math.random()*8+4; if(p>=100){p=100;clearInterval(iv);}
+        fill.style.width=p+'%'; pct.textContent=Math.floor(p)+'%';
+        fill.style.background='rgb(0,'+Math.floor(20+p*0.6)+',15)';
+        if(p>=100){ lbl.style.color='#16a34a'; lbl.textContent='\u2713  '+label; pct.style.color='#16a34a'; fill.style.background='#16a34a'; }
+      },35);
+    },base+i*850);
+  });
+  setTimeout(function(){
+    addLine('','',0);
+    addLine('\u25b8  account ['+(staffUsername||'?')+'] permanently erased','#dc2626',300);
+    addLine('\u25b8  all references marked [WIPED]','#dc2626',600);
+    addLine('','',900);
+    setTimeout(function(){
+      var d=document.createElement('div');
+      d.style.cssText='font-size:14px;font-weight:700;color:#16a34a;opacity:0;transition:opacity 0.3s;';
+      d.textContent='process complete ';
+      var c=document.createElement('span');
+      c.style.cssText='display:inline-block;width:10px;height:15px;background:#16a34a;vertical-align:middle;animation:blink 1s step-end infinite;';
+      d.appendChild(c); con.appendChild(d);
+      requestAnimationFrame(function(){ d.style.opacity='1'; });
+      setTimeout(doLogout,3000);
+    },1100);
+  },base+tasks.length*850+200);
+}
 window.showWipeTerminal=showWipeTerminal;
 
 
@@ -17875,16 +17910,12 @@ function _writeDisciplineRecord(staffId, staffUsername, punishType, reason, by){
 }
 window._writeDisciplineRecord=_writeDisciplineRecord;
 
-var _disciplineUnsubscribe=null;
 function renderDisciplineLog(c){
-  // Unsubscribe previous listener if any
-  if(_disciplineUnsubscribe){ _disciplineUnsubscribe(); _disciplineUnsubscribe=null; }
   c.innerHTML='<div class="ptitle" style="display:flex;align-items:center;gap:8px;justify-content:space-between;"><span style="display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2" width="13" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3"/><line x1="4" y1="6" x2="12" y2="6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4" y1="9" x2="8" y2="9" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg> Discipline Status</span><button class="btn small" id="disc-refresh" style="display:flex;align-items:center;gap:3px;"><svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2 7a5 5 0 1 0 1-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><polyline points="1,2.5 2,7 6.5,5.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>Refresh</button></div>'
   +'<div id="disc-body" style="margin-top:4px;"><div style="text-align:center;padding:20px;color:var(--c-text2);">Loading...</div></div>';
   function loadDisc(){
     var body=document.getElementById('disc-body'); if(!body) return;
-    // Use onValue for live updates
-    if(_disciplineUnsubscribe){ _disciplineUnsubscribe(); }
+    if(_disciplineUnsubscribe) _disciplineUnsubscribe();
     _disciplineUnsubscribe=onValue(ref(db,'discipline'),function(snap){
       var STATUS_COLORS={SENT:'#8b949e',LOGGED_OUT:'#e3b341',READ:'#58a6ff',ACKNOWLEDGED:'#3fb950',APPEAL_PENDING:'#a371f7',APPEAL_DENIED:'#f85149',REINSTATED:'#3fb950'};
       var entries=snap.exists()?Object.values(snap.val()).sort(function(a,b){ return (b.issuedAt||0)-(a.issuedAt||0); }):[];
@@ -17919,32 +17950,12 @@ function renderDisciplineLog(c){
               +'</div>';
           }).join('')
           +'</div>'
-          +'<div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;">'
-      +(isSoftwareManager()?
-        '<button class="btn small disc-status-btn" data-key="'+r.key+'" data-status="REINSTATED" style="background:rgba(63,185,80,0.08);border-color:var(--c-ok);color:var(--c-ok);">Mark Reinstated</button>'
-        +'<button class="btn small disc-status-btn" data-key="'+r.key+'" data-status="APPEAL_DENIED" style="background:rgba(248,81,73,0.08);border-color:var(--c-ban);color:var(--c-ban);">Deny Appeal</button>'
-        :'')
-      +((!isSoftwareManager()&&(r.status==='READ'||r.status==='ACKNOWLEDGED')&&r.staffId===ME)?
-        '<button class="btn small disc-appeal-btn" data-key="'+r.key+'" style="background:rgba(163,113,247,0.08);border-color:#a371f7;color:#a371f7;">Submit Appeal</button>'
-        :'')
-      +'</div>'
+          +(isSoftwareManager()?'<div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;">'
+            +'<button class="btn small disc-status-btn" data-key="'+r.key+'" data-status="REINSTATED" style="background:rgba(63,185,80,0.08);border-color:var(--c-ok);color:var(--c-ok);">Mark Reinstated</button>'
+            +'<button class="btn small disc-status-btn" data-key="'+r.key+'" data-status="APPEAL_DENIED" style="background:rgba(248,81,73,0.08);border-color:var(--c-ban);color:var(--c-ban);">Deny Appeal</button>'
+            +'</div>':'')
           +'</div></div>';
       }).join('');
-      body.querySelectorAll('.disc-appeal-btn').forEach(function(btn){
-        btn.onclick=function(){
-          var key=this.dataset.key;
-          var rec=snap.val()[key]; if(!rec) return;
-          var reason=prompt('Enter your appeal reason:');
-          if(!reason) return;
-          var timeline=(rec.timeline||[]).slice();
-          timeline.push({status:'APPEAL_PENDING',ts:Date.now(),date:nowStr(),note:'Appeal submitted by '+ME+': '+reason});
-          update(ref(db,'discipline/'+key),{status:'APPEAL_PENDING',timeline:timeline}).then(function(){
-            // Notify SMs via a notification
-            push(ref(db,'staffMessages/'+ME),{from:ME,to:'SOFTWARE_MANAGER',subject:'Appeal: '+rec.punishType,body:reason,ts:Date.now(),read:false,type:'appeal',disciplineKey:key}).catch(()=>{});
-            showToast('Appeal submitted.','success');
-          });
-        };
-      });
       body.querySelectorAll('.disc-status-btn').forEach(function(btn){
         btn.onclick=async function(){
           var key=this.dataset.key; var st=this.dataset.status;
@@ -17957,11 +17968,7 @@ function renderDisciplineLog(c){
           loadDisc();
         };
       });
-    },function(e){
-      console.warn('discipline read error:',e);
-      var b=document.getElementById('disc-body');
-      if(b) b.innerHTML='<div style="text-align:center;padding:30px;color:var(--c-text2);font-size:12px;">No discipline records yet. Records appear here when staff are suspended, warned, secured, or terminated.</div>';
-    });
+    },function(e){ var b=document.getElementById('disc-body'); if(b) b.innerHTML='<div style="text-align:center;padding:30px;color:var(--c-text2);">No discipline records yet.</div>'; });
   }
   loadDisc();
   var rb=document.getElementById('disc-refresh'); if(rb) rb.onclick=loadDisc;
@@ -18933,343 +18940,6 @@ showLanding();
 // Staff section uses a different element ID to avoid conflict with 'staff' page
 const navStaffSection=document.getElementById('nav-staff-section');
 if(navStaffSection) navStaffSection.onclick=()=>nav('staff-section');
-</script>
-
-<script>
-// ── SHELL BACKGROUND VFX (admin panel) ──
-(function(){
-  let shellAnimId=null;
-  window.initShellBg = function(){
-    const canvas=document.getElementById('shellBg');
-    if(!canvas) return;
-    if(shellAnimId) cancelAnimationFrame(shellAnimId);
-    const ctx=canvas.getContext('2d');
-    let W=canvas.width=window.innerWidth;
-    let H=canvas.height=window.innerHeight;
-    window.addEventListener('resize',()=>{
-      W=canvas.width=window.innerWidth;
-      H=canvas.height=window.innerHeight;
-    });
-    canvas.style.opacity='1';
-    let t=0;
-
-    // Larger, slower deep orbs
-    const orbs=[
-      {x:W*0.85, y:H*0.1,  r:420, speedX:0.08, speedY:0.06, color:'88,166,255'},
-      {x:W*0.05, y:H*0.85, r:360, speedX:-0.07,speedY:0.05, color:'88,166,255'},
-      {x:W*0.5,  y:H*0.45, r:280, speedX:0.06, speedY:-0.08,color:'82,168,80'},
-      {x:W*0.2,  y:H*0.25, r:200, speedX:-0.09,speedY:0.07, color:'130,80,215'},
-    ];
-
-    // Flowing particles
-    const particles=Array.from({length:28},(_,i)=>({
-      x:Math.random()*W, y:Math.random()*H,
-      vx:(Math.random()-0.5)*0.25, vy:-0.1-Math.random()*0.2,
-      r:1+Math.random()*1.5, life:Math.random(), maxLife:1,
-    }));
-
-    function draw(){
-      const isDark=document.body.classList.contains('gh-dark');
-      if(!isDark){ canvas.style.opacity='0'; shellAnimId=requestAnimationFrame(draw); return; }
-      canvas.style.opacity='1';
-      ctx.clearRect(0,0,W,H);
-
-      // Deep orbs
-      orbs.forEach((o,i)=>{
-        o.x+=Math.sin(t*0.15+i*1.8)*o.speedX;
-        o.y+=Math.cos(t*0.12+i*1.8)*o.speedY;
-        const g=ctx.createRadialGradient(o.x,o.y,0,o.x,o.y,o.r);
-        g.addColorStop(0,`rgba(${o.color},0.055)`);
-        g.addColorStop(0.5,`rgba(${o.color},0.02)`);
-        g.addColorStop(1,'transparent');
-        ctx.fillStyle=g;
-        ctx.fillRect(0,0,W,H);
-      });
-
-      // Dot grid - pulsing with wave pattern
-      const STEP=52;
-      for(let x=0;x<W+STEP;x+=STEP){
-        for(let y=0;y<H+STEP;y+=STEP){
-          const wave=Math.sin(t*0.4+x*0.025+y*0.02)*0.5+0.5;
-          const dist=Math.sqrt((x-W/2)**2+(y-H/2)**2)/(W*0.7);
-          const alpha=(0.04+wave*0.05)*(1-dist*0.6);
-          ctx.beginPath();
-          ctx.arc(x,y,0.7+wave*0.5,0,Math.PI*2);
-          ctx.fillStyle=`rgba(88,166,255,${alpha})`;
-          ctx.fill();
-        }
-      }
-
-      // Subtle diagonal scan line
-      const scanX=(t*18)%(W+H);
-      ctx.strokeStyle='rgba(88,166,255,0.025)';
-      ctx.lineWidth=1;
-      ctx.beginPath();
-      ctx.moveTo(scanX-H,0);
-      ctx.lineTo(scanX,H);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(scanX-H*0.5,0);
-      ctx.lineTo(scanX+H*0.5,H);
-      ctx.stroke();
-
-      // Floating particles
-      particles.forEach(p=>{
-        p.x+=p.vx; p.y+=p.vy; p.life+=0.004;
-        if(p.y<-10||p.life>p.maxLife){
-          p.x=Math.random()*W; p.y=H+10; p.life=0; p.vy=-0.1-Math.random()*0.2;
-        }
-        const a=Math.sin(p.life*Math.PI)*0.35;
-        ctx.beginPath();
-        ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-        ctx.fillStyle=`rgba(88,166,255,${a})`;
-        ctx.fill();
-      });
-
-      t+=0.006;
-      shellAnimId=requestAnimationFrame(draw);
-    }
-    draw();
-  };
-  document.addEventListener('DOMContentLoaded',()=>{ setTimeout(window.initShellBg,200); });
-})();
-</script>
-<script>
-// ── LOGIN BACKGROUND ANIMATION ──
-(function(){
-  let _loginAnimId=null;
-  window.initLoginBgFn = function initLoginBg(){
-    // Cancel any previous loop before starting a new one
-    if(_loginAnimId){ cancelAnimationFrame(_loginAnimId); _loginAnimId=null; }
-    const canvas=document.getElementById('loginBg');
-    if(!canvas) return;
-    const ctx=canvas.getContext('2d');
-    let W=canvas.width=window.innerWidth;
-    let H=canvas.height=window.innerHeight;
-    window.addEventListener('resize',()=>{W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;});
-    let t=0;
-
-    // Larger glowing orbs
-    const orbs=[
-      {x:W*0.15,y:H*0.25,r:260,vx:0.18,vy:0.12,color:'88,166,255',alpha:0.09},
-      {x:W*0.82,y:H*0.7, r:320,vx:-0.14,vy:0.1,color:'88,166,255',alpha:0.07},
-      {x:W*0.65,y:H*0.1, r:190,vx:0.1, vy:0.15,color:'82,168,80', alpha:0.06},
-      {x:W*0.35,y:H*0.85,r:220,vx:-0.12,vy:-0.08,color:'130,80,215',alpha:0.05},
-    ];
-
-    // Flowing line particles
-    const lines=Array.from({length:12},()=>({
-      x:Math.random()*W, y:Math.random()*H,
-      len:30+Math.random()*80, angle:-Math.PI/2+(Math.random()-0.5)*0.4,
-      speed:0.3+Math.random()*0.5, alpha:0.04+Math.random()*0.06,
-    }));
-
-    const STEP=44;
-    const COLS=Math.ceil(W/STEP)+2, ROWS=Math.ceil(H/STEP)+2;
-
-    function draw(){
-      if(!document.getElementById('loginScreen')||document.getElementById('loginScreen').style.display==='none') return;
-      const isDark=document.body.classList.contains('gh-dark');
-      ctx.fillStyle=isDark?'#0d1117':'#f6f8fa';
-      ctx.fillRect(0,0,W,H);
-
-      // Orbs
-      orbs.forEach((o,i)=>{
-        o.x+=Math.sin(t*0.25+i)*o.vx;
-        o.y+=Math.cos(t*0.18+i)*o.vy;
-        const g=ctx.createRadialGradient(o.x,o.y,0,o.x,o.y,o.r);
-        g.addColorStop(0,`rgba(${o.color},${o.alpha})`);
-        g.addColorStop(0.5,`rgba(${o.color},${o.alpha*0.4})`);
-        g.addColorStop(1,'transparent');
-        ctx.fillStyle=g;
-        ctx.fillRect(0,0,W,H);
-      });
-
-      // Grid dots with ripple
-      const cx=W/2, cy=H/2;
-      for(let col=0;col<COLS;col++){
-        for(let row=0;row<ROWS;row++){
-          const x=col*STEP, y=row*STEP;
-          const dist=Math.sqrt((x-cx)**2+(y-cy)**2);
-          const ripple=Math.sin(t*1.2-dist*0.015)*0.5+0.5;
-          const pulse=Math.sin(t*0.5+col*0.3+row*0.25)*0.5+0.5;
-          const alpha=isDark?(0.06+ripple*0.08+pulse*0.04):(0.05+ripple*0.05);
-          ctx.beginPath();
-          ctx.arc(x,y,0.8+pulse*0.6,0,Math.PI*2);
-          ctx.fillStyle=isDark?`rgba(88,166,255,${alpha})`:`rgba(9,105,218,${alpha*0.7})`;
-          ctx.fill();
-        }
-      }
-
-      // Flowing line streaks
-      lines.forEach(l=>{
-        l.y+=l.speed;
-        if(l.y>H+l.len) l.y=-l.len;
-        const x2=l.x+Math.cos(l.angle)*l.len, y2=l.y+Math.sin(l.angle)*l.len;
-        const grad=ctx.createLinearGradient(l.x,l.y,x2,y2);
-        grad.addColorStop(0,'transparent');
-        grad.addColorStop(0.5,`rgba(88,166,255,${l.alpha})`);
-        grad.addColorStop(1,'transparent');
-        ctx.strokeStyle=grad;
-        ctx.lineWidth=1;
-        ctx.globalAlpha=1;
-        ctx.beginPath();
-        ctx.moveTo(l.x,l.y);
-        ctx.lineTo(x2,y2);
-        ctx.stroke();
-      });
-
-      // Horizon glow at bottom (dark mode)
-      if(isDark){
-        const hg=ctx.createLinearGradient(0,H*0.75,0,H);
-        hg.addColorStop(0,'transparent');
-        hg.addColorStop(1,'rgba(88,166,255,0.04)');
-        ctx.fillStyle=hg;
-        ctx.fillRect(0,H*0.75,W,H*0.25);
-      }
-
-      t+=0.012;
-      _loginAnimId=requestAnimationFrame(draw);
-    }
-    draw();
-  };
-  // Only init login background when login screen is actually shown
-  // (not on page load since we show the landing page first)
-  window._initLoginBgOnce=function(){
-    if(document.getElementById('loginScreen').style.display!=='none'){
-      window.initLoginBgFn();
-    }
-  };
-})();
-</script>
-</body>
-</html>function showWipeTerminal(staffUsername){
-  var terminal=document.getElementById('staff-wipe-terminal');
-  if(!terminal) return;
-  terminal.innerHTML='';
-  terminal.className=''; // reset
-  terminal.style.cssText='position:fixed;inset:0;z-index:99999;background:#010409;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;font-family:"SF Mono","Fira Code","Consolas",monospace;padding:48px 64px;overflow:hidden;';
-
-  var container=document.createElement('div');
-  container.style.cssText='width:100%;max-width:640px;';
-  terminal.appendChild(container);
-
-  var lines=[
-    {text:'SAMARITAN SYSTEMS — ADMINISTRATIVE DATA PURGE',color:'#3d4451',delay:0},
-    {text:'',delay:200},
-    {text:'// Session initiated: '+new Date().toISOString().replace('T',' ').slice(0,19)+' UTC',color:'#4a5568',delay:400},
-    {text:'// Target account: ['+( staffUsername||'?')+']',color:'#4a5568',delay:600},
-    {text:'// Authorization: CONFIRMED',color:'#4a5568',delay:800},
-    {text:'',delay:1000},
-  ];
-  var tasks=[
-    {label:'Authenticating operator code',delay:1200},
-    {label:'Verifying second approver signature',delay:1900},
-    {label:'Revoking session tokens',delay:2700},
-    {label:'Invalidating authentication credentials',delay:3600},
-    {label:'Erasing profile data',delay:4600},
-    {label:'Removing moderation history',delay:5700},
-    {label:'Purging login records',delay:6900},
-    {label:'Deleting audit references',delay:8200},
-    {label:'Clearing machine logs',delay:9600},
-    {label:'Writing final audit entry',delay:11100},
-  ];
-
-  // Render header lines
-  lines.forEach(function(l){
-    setTimeout(function(){
-      var d=document.createElement('div');
-      d.style.cssText='font-size:12px;margin-bottom:3px;color:'+(l.color||'#3d4451')+';opacity:0;transition:opacity 0.3s;';
-      d.textContent=l.text;
-      container.appendChild(d);
-      requestAnimationFrame(function(){ d.style.opacity='1'; });
-    },l.delay);
-  });
-
-  // Render task lines with progress bars
-  tasks.forEach(function(task,i){
-    setTimeout(function(){
-      var wrapper=document.createElement('div');
-      wrapper.style.cssText='margin-bottom:10px;opacity:0;transition:opacity 0.2s;';
-      var labelRow=document.createElement('div');
-      labelRow.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;';
-      var label=document.createElement('span');
-      label.style.cssText='font-size:11px;color:#6b7280;';
-      label.textContent='→  '+task.label;
-      var pct=document.createElement('span');
-      pct.style.cssText='font-size:10px;color:#374151;font-variant-numeric:tabular-nums;';
-      pct.textContent='0%';
-      labelRow.appendChild(label); labelRow.appendChild(pct);
-      var barBg=document.createElement('div');
-      barBg.style.cssText='height:2px;background:#1f2937;border-radius:1px;overflow:hidden;';
-      var barFill=document.createElement('div');
-      barFill.style.cssText='height:100%;width:0%;background:#1e3a2f;border-radius:1px;transition:width 0.05s linear;';
-      barBg.appendChild(barFill);
-      wrapper.appendChild(labelRow); wrapper.appendChild(barBg);
-      container.appendChild(wrapper);
-      requestAnimationFrame(function(){ wrapper.style.opacity='1'; });
-
-      // Animate progress bar
-      var prog=0;
-      var interval=setInterval(function(){
-        prog+=Math.random()*8+4;
-        if(prog>=100){prog=100;clearInterval(interval);}
-        barFill.style.width=prog+'%';
-        pct.textContent=Math.floor(prog)+'%';
-        // Color shift as it completes
-        var g=Math.floor(30+prog*0.5);
-        barFill.style.background='rgb(0,'+g+',20)';
-        if(prog>=100){
-          // Mark complete
-          label.style.color='#3fb950';
-          label.textContent='✓  '+task.label;
-          pct.style.color='#3fb950';
-          pct.textContent='100%';
-          barFill.style.background='#3fb950';
-        }
-      },40);
-    },task.delay);
-  });
-
-  // Final messages after all tasks
-  var finalDelay=tasks[tasks.length-1].delay+800;
-  setTimeout(function(){
-    [
-      {text:'',delay:0},
-      {text:'▸  account ['+( staffUsername||'?')+'] permanently erased',color:'#ef4444',delay:300},
-      {text:'▸  all session data invalidated',color:'#ef4444',delay:600},
-      {text:'▸  staff registry entry removed',color:'#ef4444',delay:900},
-      {text:'',delay:1200},
-      {text:'process complete',color:'#3fb950',cursor:true,delay:1400},
-    ].forEach(function(l){
-      setTimeout(function(){
-        var d=document.createElement('div');
-        d.style.cssText='font-size:13px;margin-bottom:4px;color:'+(l.color||'#4a5568')+';font-weight:'+(l.cursor?700:400)+';opacity:0;transition:opacity 0.3s;';
-        d.textContent=l.text;
-        if(l.cursor){
-          var c=document.createElement('span');
-          c.style.cssText='display:inline-block;width:9px;height:14px;background:#3fb950;vertical-align:middle;margin-left:6px;animation:blink 1s step-end infinite;';
-          d.appendChild(c);
-        }
-        container.appendChild(d);
-        requestAnimationFrame(function(){ d.style.opacity='1'; });
-      },l.delay);
-    });
-    // Logout after final animation
-    setTimeout(function(){ doLogout(); },3500);
-  },finalDelay);
-}
-window.showWipeTerminal=showWipeTerminal;meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Samaritan Systems</title>
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-XC8WG9YHB0"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-XC8WG9YHB0');
 </script>
 
 <script>
