@@ -3410,7 +3410,7 @@ function updateSidebar(){
     'staff-section':['staff','activity','messaging','suggestions','staffconfig','evaluations','calendar','staffreports'],
     logs:['modlog','revokelog','suspendlog','terminatelog','warnlog','loginlog','auditlog'],
     configuration:['alerts','adminlog'],
-    machine:['siteconfig','statuslog','wipelog','robloxlog','badgemgmt','leakid','clearance','samlog','blacklist','discordconfig','landingconfig','appsconfig','loginlog','machinelogs','twofactorconfig'],
+    machine:['siteconfig','statuslog','wipelog','robloxlog','badgemgmt','leakid','clearance','samlog','blacklist','discordconfig','landingconfig','appsconfig','discipline','loginlog','machinelogs','twofactorconfig'],
   };
   document.querySelectorAll('.sb-section-link').forEach(el=>el.classList.remove('active'));
   for(const [section, pages] of Object.entries(sectionMap)){
@@ -3440,7 +3440,7 @@ var SECTION_PAGES={
   'staff-section':['staff','activity','messaging','suggestions','staffconfig','evaluations','calendar','staffreports'],
   logs:['modlog','revokelog','suspendlog','terminatelog','warnlog','loginlog','auditlog'],
   configuration:['alerts','adminlog'],
-  machine:['siteconfig','statuslog','wipelog','robloxlog','badgemgmt','leakid','clearance','samlog','blacklist','discordconfig','landingconfig','appsconfig','loginlog','machinelogs','twofactorconfig'],
+  machine:['siteconfig','statuslog','wipelog','robloxlog','badgemgmt','leakid','clearance','samlog','blacklist','discordconfig','landingconfig','appsconfig','discipline','loginlog','machinelogs','twofactorconfig'],
 };
 
 // Which section a page belongs to
@@ -3733,6 +3733,7 @@ function render(){
       {id:'blacklist', label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><line x1="3" y1="3" x2="11" y2="11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>IP Blacklist', smOnly:true},
       {id:'landingconfig', label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><circle cx="7" cy="5" r="2.5" stroke="currentColor" stroke-width="1.2"/><path d="M1 13c0-3 2.5-5 6-5s6 2 6 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="11" y1="1" x2="13" y2="3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="11" y1="3" x2="13" y2="1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Landing Page', smOnly:true},
       {id:'appsconfig', label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><rect x="2" y="1" width="10" height="12" rx="1.5" stroke="currentColor" stroke-width="1.2"/><line x1="4.5" y1="4.5" x2="9.5" y2="4.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="7" x2="9.5" y2="7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><path d="M4.5 9.5l1.5 1.5 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Applications', smOnly:true},
+      {id:'discipline',    label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><rect x="1.5" y="2" width="11" height="10" rx="1.2" stroke="currentColor" stroke-width="1.2"/><line x1="4" y1="5.5" x2="10" y2="5.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4" y1="8" x2="7" y2="8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="9.5" cy="8" r="1.5" fill="currentColor" style="color:#58a6ff;"/></svg> Discipline Status',      smOnly:true},
       {id:'loginlog',      label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><rect x="2" y="2" width="7" height="10" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M9 5l3 2-3 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><line x1="6" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Login Log',      smOnly:true},
       {id:'machinelogs',   label:'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;"><path d="M8 1v6l4 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.3"/></svg> Machine Logs', smOnly:true},
       {id:'twofactorconfig', label:'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;"><rect x="2" y="7" width="12" height="8" rx="1.3" stroke="currentColor" stroke-width="1.3"/><path d="M5 7V5a3 3 0 0 1 6 0v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> 2FA Config', smOnly:true},
@@ -3750,6 +3751,7 @@ function render(){
       else if(page==='discordconfig') renderDiscordConfig(inner);
       else if(page==='landingconfig') renderLandingConfig(inner);
       else if(page==='appsconfig') renderAppsConfig(inner);
+      else if(page==='discipline') isSoftwareManager()?renderDisciplineLog(inner):inner.innerHTML=denied;
       else if(page==='loginlog') isSoftwareManager()?renderLoginLog(inner):inner.innerHTML=denied;
       else if(page==='machinelogs') renderMachineLogs(inner);
       else if(page==='twofactorconfig') renderTwoFactorConfig(inner);
@@ -7556,6 +7558,11 @@ function renderStaff(c){
             <button id="btn-forcelogout" style="width:100%;padding:7px 10px;background:rgba(139,148,158,0.08);border:1px solid rgba(139,148,158,0.25);border-radius:6px;color:#8b949e;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background 0.15s;" onmouseover="this.style.background='rgba(139,148,158,0.15)'" onmouseout="this.style.background='rgba(139,148,158,0.08)'">
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;"><path d="M6 3H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M10 5l3 3-3 3M13 8H6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
               <div style="text-align:left;flex:1;"><div>Force Log Out</div><div style="font-size:9px;font-weight:400;opacity:0.65;margin-top:1px;">Expires session — next heartbeat</div></div>
+            </button>`:``}
+            ${isSoftwareManager()&&s.username!==ME?`
+            <button id="btn-wipe-staff" style="width:100%;padding:7px 10px;background:rgba(100,0,0,0.12);border:1px solid rgba(180,0,0,0.4);border-radius:6px;color:#9b1c1c;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background 0.15s;" onmouseover="this.style.background='rgba(180,0,0,0.18)'" onmouseout="this.style.background='rgba(100,0,0,0.12)'">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;"><path d="M2 4h12M5 4V2.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 .5.5V4M4.5 4l.5 10h6l.5-10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><line x1="6.5" y1="7" x2="6.5" y2="11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="9.5" y1="7" x2="9.5" y2="11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+              <div style="text-align:left;flex:1;"><div>Wipe Account</div><div style="font-size:9px;font-weight:400;opacity:0.65;margin-top:1px;">Permanent data erasure — irreversible</div></div>
             </button>`:``}
             ${canTerminate?`
             <button id="btn-terminate" style="width:100%;padding:7px 10px;background:rgba(248,81,73,0.08);border:1px solid rgba(248,81,73,0.35);border-radius:6px;color:#f85149;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background 0.15s;" onmouseover="this.style.background='rgba(248,81,73,0.15)'" onmouseout="this.style.background='rgba(248,81,73,0.08)'">
@@ -15164,6 +15171,8 @@ async function doLogin(){
       }, attempts===10?400:800);
     })(10);
     document.getElementById('topbarTitle').innerHTML=`<span style='color:#58a6ff;font-weight:800;letter-spacing:-0.5px;font-size:14px;'>SAMARITAN</span><span style='color:var(--c-topbar-sub);font-weight:400;font-size:12px;'> | Internal</span> <span style='color:var(--c-topbar-sub);font-size:11px;font-weight:400;'>&mdash; ${ME}</span> <span style='color:var(--c-topbar-text);font-size:11px;font-weight:600;'>[${MY_LEVEL}]</span>`;
+    // Check for pending punishment notification on login
+    await checkPendingPunishmentOnLogin();
     startListeners();
     startHeartbeat();
     if(typeof window.initShellBg==='function') setTimeout(window.initShellBg,300);
@@ -15355,44 +15364,21 @@ function startHeartbeat(){
       return;
     }
     const s=snap.val();
-    // Force logout check - show appropriate screen first
+    // Force logout: just log out silently - the punishment screen shows on next login
     if(s.forceLogout){
       await update(ref(db,'staff/'+ME),{forceLogout:false});
       clearInterval(heartbeatInterval);
-      if(s.suspended&&s.suspendInfo){
-        showStaffPunishScreen('suspend',{
-          reason:s.suspendInfo.reason||'You have been suspended.',
-          by:s.suspendInfo.by||'Administration',
-          duration:s.suspendInfo.duration||'Indefinite',
-          expires:s.suspendInfo.expiresAt?new Date(s.suspendInfo.expiresAt).toLocaleString():null
-        });
-      } else if(s.warned&&s.warnInfo){
-        showStaffPunishScreen('warn',{
-          reason:s.warnInfo.reason||'You have received a staff warning.',
-          by:s.warnInfo.by||'Administration'
-        });
-        // Warning doesn't force logout - just acknowledge
-        await update(ref(db,'staff/'+ME),{warned:false}).catch(()=>{});
-      } else if(s.secured&&s.secureInfo){
-        showStaffPunishScreen('secure',{
-          reason:s.secureInfo.reason||'Your account has been secured.',
-          by:s.secureInfo.by||'Administration',
-          level:s.secureInfo.level||'Standard'
-        });
-      } else if(s.terminated&&s.terminateInfo){
-        showStaffPunishScreen('terminate',{
-          reason:s.terminateInfo.reason||'Your staff access has been terminated.',
-          by:s.terminateInfo.by||'Administration'
-        });
-      } else {
-        doLogout();
-      }
+      // Log the logout event
+      var logoutType=s.suspended?'SUSPEND':s.secured?'SECURE':s.terminated?'TERMINATE':'FORCE_LOGOUT';
+      machineLog('SESSION_LOCK','Logged out: '+ME+' ('+logoutType+')','Reason: '+(s.suspendInfo&&s.suspendInfo.reason||s.secureInfo&&s.secureInfo.reason||s.terminateInfo&&s.terminateInfo.reason||'forced'));
+      // Update discipline record status to LOGGED_OUT
+      _updateDisciplineStatus(ME,logoutType==='FORCE_LOGOUT'?'LOGGED_OUT':'LOGGED_OUT');
+      doLogout();
       return;
     }
-    // Suspension/security check
+    // Suspension/security: also just logout
     if(s.suspended||s.secured){
       clearInterval(heartbeatInterval);
-      alert(s.secured?'Your account has been secured. You will be logged out.':'Your account has been suspended. You will be logged out.');
       doLogout(); return;
     }
     // Auto-delete expired wipedAccounts records (runs for SW managers only to clean up)
@@ -17567,9 +17553,9 @@ function promptSuspendStaff(sid, isCurrentlySuspended){
         await remove(ref(db,'staff/'+sid+'/suspendInfo')).catch(()=>{});
         await push(ref(db,'logs/suspend'),{username:s.username,action:'Unsuspend',by:ME,date:nowStr(),reason});
         auditLog('Staff Unsuspended',s.username+': '+reason);
-        if(STAFF[sid]){STAFF[sid].suspended=false;STAFF[sid].suspendInfo=null;}
+        if(STAFF[sid]){STAFF[sid].suspended=false;STAFF[sid].suspendInfo=null;STAFF[sid].forceLogout=false;}
         showToast(s.username+' unsuspended.','success');
-        nav('staff');
+        safeRender(); nav('staff');
       });
   } else {
     openSAPanel(`
@@ -17614,6 +17600,7 @@ function promptSuspendStaff(sid, isCurrentlySuspended){
         await push(ref(db,'logs/suspend'),{username:s.username,action:'Suspend',by:ME,date:nowStr(),reason});
         auditLog('Staff Suspended',s.username+': '+reason);
         machineLog('SUSPEND','Staff suspended: '+s.username,reason);
+        _writeDisciplineRecord(sid,s.username,'Suspension',reason,ME);
         if((document.getElementById('sa-discord')||{checked:false}).checked)
           fireDiscordWebhook('staff_events',buildGenericEmbed('Staff Suspended',ME+' suspended **'+s.username+'** — '+reason,'#d29922')).catch(()=>{});
         showToast(s.username+' suspended.','warning');
@@ -17651,10 +17638,11 @@ function promptWarnStaff(sid){
     async()=>{
       var reason=(document.getElementById('sa-reason')||{value:''}).value.trim();
       if(!reason){showToast('Reason is required.','error');return;}
-      await update(ref(db,'staff/'+sid),{warned:true,warnInfo:{reason,by:ME,date:nowStr(),category:(document.getElementById('sa-cat')||{value:'Other'}).value}});
+      await update(ref(db,'staff/'+sid),{warned:true,warnAcknowledged:false,warnInfo:{reason,by:ME,date:nowStr(),category:(document.getElementById('sa-cat')||{value:'Other'}).value}});
       await push(ref(db,'logs/moderation'),{user:s.username,action:'Staff Warning',mod:ME,date:nowStr(),reason});
       auditLog('Staff Warning Issued',s.username+' warned by '+ME+': '+reason);
       machineLog('STAFF_WARN','Staff warned: '+s.username,reason);
+      _writeDisciplineRecord(sid,s.username,'Staff Warning',reason,ME);
       if((document.getElementById('sa-discord')||{checked:false}).checked)
         fireDiscordWebhook('staff_events',buildGenericEmbed('Staff Warning',ME+' issued warning to **'+s.username+'** — '+reason,'#3fb950')).catch(()=>{});
       showToast('Warning issued to '+s.username,'success');
@@ -17691,9 +17679,9 @@ function promptSecureStaff(sid, isCurrentlySecured){
         await update(ref(db,'staff/'+sid),{secured:false,forceLogout:false});
         await remove(ref(db,'staff/'+sid+'/secureInfo')).catch(()=>{});
         auditLog('Staff Account Unsecured',s.username+': '+reason);
-        if(STAFF[sid]){STAFF[sid].secured=false;STAFF[sid].secureInfo=null;}
-        showToast(s.username+" account unsecured.",'success');
-        nav('staff');
+        if(STAFF[sid]){STAFF[sid].secured=false;STAFF[sid].secureInfo=null;STAFF[sid].forceLogout=false;}
+        showToast(s.username+' account unsecured.','success');
+        safeRender(); nav('staff');
       });
   } else {
     openSAPanel(`
@@ -17729,6 +17717,7 @@ function promptSecureStaff(sid, isCurrentlySecured){
         await update(ref(db,'staff/'+sid),{secured:true,forceLogout:force,secureInfo:{reason,level,by:ME,date:nowStr()}});
         auditLog('Staff Account Secured',s.username+': '+reason);
         machineLog('SECURE','Staff secured: '+s.username,reason);
+        _writeDisciplineRecord(sid,s.username,'Account Secured',reason,ME);
         if((document.getElementById('sa-discord')||{checked:false}).checked)
           fireDiscordWebhook('staff_events',buildGenericEmbed('Account Secured',ME+' secured **'+s.username+'** ('+level+') — '+reason,'#185fa5')).catch(()=>{});
         showToast(s.username+' secured.','success');
@@ -17822,6 +17811,7 @@ function promptTerminateStaff(sid){
       if(blacklist) await update(ref(db,'blacklist/'+sid),{username:s.username,reason:'Terminated: '+reason,by:ME,date:nowStr()});
       auditLog('Staff Terminated',s.username+': '+reason);
       machineLog('TERMINATE','Staff terminated: '+s.username,reason+' | category:'+cat);
+      _writeDisciplineRecord(sid,s.username,'Termination',reason,ME);
       if((document.getElementById('sa-discord')||{checked:true}).checked)
         fireDiscordWebhook('staff_events',buildGenericEmbed('Staff Terminated',ME+' terminated **'+s.username+'** ('+cat+') — '+reason,'#b91c1c')).catch(()=>{});
       await remove(ref(db,'staff/'+sid));
@@ -17832,11 +17822,178 @@ function promptTerminateStaff(sid){
 }
 window.promptSuspendStaff=promptSuspendStaff;
 window.promptWarnStaff=promptWarnStaff;
+
+function promptWipeStaff(sid){
+  var s=STAFF[sid]; if(!s) return;
+  openSAPanel(`
+    <div class="sa-panel-header" style="background:rgba(100,0,0,0.1);border-bottom:1px solid #21262d;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="sa-panel-icon" style="background:rgba(180,0,0,0.15);border:1px solid rgba(180,0,0,0.3);color:#9b1c1c;">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 5h14M7 5V3.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 .5.5V5M5.5 5l.5 12.5h8L14.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><line x1="8" y1="9" x2="8" y2="14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="12" y1="9" x2="12" y2="14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        </div>
+        <div><div class="sa-panel-title">Wipe ${s.username}</div><div class="sa-panel-sub">Full data erasure — irreversible</div></div>
+      </div>
+      <span class="sa-badge" style="color:#9b1c1c;">Destructive</span>
+    </div>
+    <div class="sa-body" style="padding-top:14px;">
+      <div class="sa-field"><label>Reason <span class="req">*</span></label><textarea id="sa-reason" placeholder="Document why this account must be fully wiped…"></textarea></div>
+      <div class="sa-field"><label>Operator code <span class="req">*</span></label><input type="password" id="sa-opcode" placeholder="Enter operator authorization code…"/></div>
+      <div class="sa-warn-text" style="background:rgba(100,0,0,0.1);color:#9b1c1c;border:1px solid rgba(180,0,0,0.25);">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;"><path d="M8 1.5L14.5 13H1.5L8 1.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        Irreversible. All profile data, history, and access will be permanently deleted.
+      </div>
+    </div>
+    <div class="sa-footer"><button class="sa-btn-cancel" id="sa-cancel">Cancel</button>
+      <button class="sa-btn-apply" id="sa-apply" style="background:#7f1d1d;">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5 4V2.5h6V4M4.5 4l.5 10h6l.5-10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>Confirm wipe
+      </button></div>`,
+    async()=>{
+      var reason=(document.getElementById('sa-reason')||{value:''}).value.trim();
+      var opcode=(document.getElementById('sa-opcode')||{value:''}).value.trim();
+      if(!reason||!opcode){showToast('Reason and operator code required.','error');return;}
+      var opcSnap=await get(ref(db,'meta/operatorCode')).catch(()=>null);
+      var validCode=opcSnap&&opcSnap.exists()?opcSnap.val():'SAMARITAN_DELETE';
+      if(opcode!==validCode){showToast('Invalid operator code.','error');machineLog('DELETE_ATTEMPT','Wipe failed - wrong code for '+s.username,'');return;}
+      // Write discipline record
+      _writeDisciplineRecord(sid,s.username,'Account Wipe',reason,ME);
+      // Force logout
+      await update(ref(db,'staff/'+sid),{forceLogout:true}).catch(()=>{});
+      await new Promise(r=>setTimeout(r,400));
+      // Wipe the account
+      await wipeStaffMember(sid,s.username,reason);
+      machineLog('WIPE','Staff wiped: '+s.username,reason);
+      auditLog('Staff Account Wiped',s.username+' wiped by '+ME+': '+reason);
+      currentStaffId=null; nav('staff');
+      showToast(s.username+' has been wiped.','success');
+    });
+}
+window.promptWipeStaff=promptWipeStaff;
+
 window.promptSecureStaff=promptSecureStaff;
 window.promptForceLogout=promptForceLogout;
 window.promptTerminateStaff=promptTerminateStaff;
 window.openSAPanel=openSAPanel;
 window.closeSAPanel=closeSAPanel;
+
+
+async function checkPendingPunishmentOnLogin(){
+  // Check current user's staff record for any unacknowledged punishment
+  var sSnap=await get(ref(db,'staff/'+ME)).catch(()=>null);
+  if(!sSnap||!sSnap.exists()) return;
+  var s=sSnap.val();
+  if(s.terminated&&s.terminateInfo){
+    showStaffPunishScreen('terminate',{reason:s.terminateInfo.reason||'Your access has been terminated.',by:s.terminateInfo.by||'Administration'});
+    _updateDisciplineStatus(ME,'READ');
+    return true;
+  }
+  if(s.suspended&&s.suspendInfo){
+    showStaffPunishScreen('suspend',{reason:s.suspendInfo.reason||'You have been suspended.',by:s.suspendInfo.by||'Administration',duration:s.suspendInfo.duration||'Indefinite',expires:s.suspendInfo.expiresAt?new Date(s.suspendInfo.expiresAt).toLocaleString():null});
+    _updateDisciplineStatus(ME,'READ');
+    return true;
+  }
+  if(s.secured&&s.secureInfo){
+    showStaffPunishScreen('secure',{reason:s.secureInfo.reason||'Your account has been secured.',by:s.secureInfo.by||'Administration',level:s.secureInfo.level||'Standard'});
+    _updateDisciplineStatus(ME,'READ');
+    return true;
+  }
+  if(s.warned&&s.warnInfo&&!s.warnAcknowledged){
+    showStaffPunishScreen('warn',{reason:s.warnInfo.reason||'You have received a staff warning.',by:s.warnInfo.by||'Administration'});
+    _updateDisciplineStatus(ME,'READ');
+    return true;
+  }
+  return false;
+}
+window.checkPendingPunishmentOnLogin=checkPendingPunishmentOnLogin;
+
+function _writeDisciplineRecord(staffId, staffUsername, punishType, reason, by){
+  var key='disc_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);
+  var record={
+    key:key, staffId:staffId, staffUsername:staffUsername,
+    punishType:punishType, reason:reason, by:by,
+    issuedAt:Date.now(), issuedDate:nowStr(),
+    status:'SENT', // SENT | LOGGED_OUT | READ | ACKNOWLEDGED | APPEAL_PENDING | APPEAL_DENIED | REINSTATED
+    timeline:[{status:'SENT',ts:Date.now(),date:nowStr(),note:punishType+' issued by '+by}]
+  };
+  set(ref(db,'discipline/'+key),record).catch(()=>{});
+  return key;
+}
+window._writeDisciplineRecord=_writeDisciplineRecord;
+
+function renderDisciplineLog(c){
+  c.innerHTML='<div class="ptitle" style="display:flex;align-items:center;gap:8px;justify-content:space-between;"><span style="display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2" width="13" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3"/><line x1="4" y1="6" x2="12" y2="6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4" y1="9" x2="8" y2="9" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg> Discipline Status</span><button class="btn small" id="disc-refresh" style="display:flex;align-items:center;gap:3px;"><svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2 7a5 5 0 1 0 1-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><polyline points="1,2.5 2,7 6.5,5.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>Refresh</button></div>'
+  +'<div id="disc-body" style="margin-top:4px;"><div style="text-align:center;padding:20px;color:var(--c-text2);">Loading...</div></div>';
+  function loadDisc(){
+    var body=document.getElementById('disc-body'); if(!body) return;
+    get(ref(db,'discipline')).then(function(snap){
+      var STATUS_COLORS={SENT:'#8b949e',LOGGED_OUT:'#e3b341',READ:'#58a6ff',ACKNOWLEDGED:'#3fb950',APPEAL_PENDING:'#a371f7',APPEAL_DENIED:'#f85149',REINSTATED:'#3fb950'};
+      var entries=snap.exists()?Object.values(snap.val()).sort(function(a,b){ return (b.issuedAt||0)-(a.issuedAt||0); }):[];
+      if(!entries.length){ body.innerHTML='<div style="text-align:center;padding:30px;color:var(--c-text2);font-size:12px;">No discipline records yet.</div>'; return; }
+      body.innerHTML=entries.map(function(r){
+        var sc=STATUS_COLORS[r.status]||'#8b949e';
+        var ptColor=r.punishType==='Termination'?'#f85149':r.punishType==='Suspension'?'#d29922':r.punishType==='Account Secured'?'#58a6ff':'#3fb950';
+        var staffS=STAFF[r.staffId]||{};
+        return '<div style="border:1px solid var(--c-border);border-radius:8px;margin-bottom:6px;overflow:hidden;background:var(--bg-tbl-odd);">'
+          +'<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'block\':\'none\'">'
+          +tinyAvatarOnly(staffS.avatarUrl||'',r.staffUsername,28)
+          +'<div style="flex:1;min-width:0;">'
+          +'<div style="font-size:12px;font-weight:700;color:var(--c-text);">'+r.staffUsername+'</div>'
+          +'<div style="font-size:10px;color:'+ptColor+';font-weight:600;">'+r.punishType+'</div>'
+          +'</div>'
+          +'<div style="text-align:right;flex-shrink:0;">'
+          +'<div style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:'+sc+'18;color:'+sc+';border:1px solid '+sc+'44;display:inline-block;">'+r.status+'</div>'
+          +'<div style="font-size:9px;color:var(--c-text2);margin-top:2px;">'+r.issuedDate+'</div>'
+          +'</div>'
+          +'</div>'
+          +'<div style="display:none;padding:10px 14px;border-top:1px solid var(--c-border);background:var(--bg-content);">'
+          +'<div style="font-size:11px;color:var(--c-text);margin-bottom:8px;padding:6px 8px;background:var(--bg-tbl-odd);border-radius:4px;border-left:3px solid '+ptColor+';">'+( r.reason||'No reason')+'</div>'
+          +'<div style="font-size:10px;font-weight:700;color:var(--c-text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Status Timeline</div>'
+          +'<div style="position:relative;padding-left:16px;">'
+          +(r.timeline||[]).map(function(t,i){
+            var tc=STATUS_COLORS[t.status]||'#8b949e';
+            return '<div style="position:relative;padding-bottom:10px;padding-left:12px;border-left:1.5px solid '+(i<(r.timeline||[]).length-1?'var(--c-border)':'transparent')+';">'
+              +'<div style="position:absolute;left:-5px;top:2px;width:8px;height:8px;border-radius:50%;background:'+tc+';box-shadow:0 0 6px '+tc+'88;"></div>'
+              +'<div style="font-size:10px;font-weight:700;color:'+tc+';">'+t.status+'</div>'
+              +'<div style="font-size:9px;color:var(--c-text2);">'+t.date+'</div>'
+              +(t.note?'<div style="font-size:10px;color:var(--c-text);margin-top:1px;">'+t.note+'</div>':'')
+              +'</div>';
+          }).join('')
+          +'</div>'
+          +(isSoftwareManager()?'<div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;">'
+            +'<button class="btn small disc-status-btn" data-key="'+r.key+'" data-status="REINSTATED" style="background:rgba(63,185,80,0.08);border-color:var(--c-ok);color:var(--c-ok);">Mark Reinstated</button>'
+            +'<button class="btn small disc-status-btn" data-key="'+r.key+'" data-status="APPEAL_DENIED" style="background:rgba(248,81,73,0.08);border-color:var(--c-ban);color:var(--c-ban);">Deny Appeal</button>'
+            +'</div>':'')
+          +'</div></div>';
+      }).join('');
+      body.querySelectorAll('.disc-status-btn').forEach(function(btn){
+        btn.onclick=async function(){
+          var key=this.dataset.key; var st=this.dataset.status;
+          var ts={status:st,ts:Date.now(),date:nowStr(),note:'Updated by '+ME};
+          var rec=snap.val()[key];
+          var timeline=(rec&&rec.timeline)||[];
+          timeline.push(ts);
+          await update(ref(db,'discipline/'+key),{status:st,timeline:timeline,statusUpdatedAt:Date.now()});
+          showToast('Status updated to '+st,'success');
+          loadDisc();
+        };
+      });
+    }).catch(function(){ body.innerHTML='<div style="padding:20px;color:var(--c-ban);">Error loading discipline records.</div>'; });
+  }
+  loadDisc();
+  var rb=document.getElementById('disc-refresh'); if(rb) rb.onclick=loadDisc;
+}
+
+
+
+function _updateDisciplineStatus(staffId, status){
+  // Update the discipline record status in Firebase
+  get(ref(db,'discipline')).then(function(snap){
+    if(!snap.exists()) return;
+    var records=snap.val();
+    var key=Object.keys(records).find(function(k){ return records[k].staffId===staffId&&records[k].status!=='REINSTATED'&&records[k].status!=='APPEAL_DENIED'; });
+    if(key) update(ref(db,'discipline/'+key),{status:status,statusUpdatedAt:Date.now(),statusUpdatedBy:'system'}).catch(()=>{});
+  }).catch(()=>{});
+}
+window._updateDisciplineStatus=_updateDisciplineStatus;
 
 // ── Panel background canvas (subtle ambient effect) ──
 var _panelAnimId=null;
