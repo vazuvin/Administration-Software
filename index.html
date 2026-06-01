@@ -1175,6 +1175,76 @@ body.gh-dark .topinfo{ background:rgba(9,13,22,0.95); border-bottom-color:rgba(8
 .wt-cursor{ display:inline-block;width:9px;height:14px;background:#3fb950;vertical-align:middle; }
 @keyframes wtFade{from{opacity:0;transform:translateX(-8px);}to{opacity:1;transform:translateX(0);}}
 
+
+/* ── Staff Action Panels ── */
+#sa-panel-overlay{
+  position:fixed;inset:0;z-index:9500;
+  display:none;align-items:center;justify-content:center;
+  background:rgba(1,4,9,0.75);backdrop-filter:blur(6px);
+  padding:16px;
+}
+#sa-panel-overlay.show{display:flex;}
+.sa-panel{
+  width:min(480px,100%);
+  background:#161b22;
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow:0 24px 64px rgba(0,0,0,0.7);
+  animation:saPanelIn 0.2s ease;
+}
+@keyframes saPanelIn{from{opacity:0;transform:scale(0.97) translateY(-8px);}to{opacity:1;transform:scale(1) translateY(0);}}
+.sa-panel-header{
+  padding:18px 22px 14px;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+}
+.sa-panel-icon{
+  width:44px;height:44px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.sa-panel-title{font-size:16px;font-weight:700;color:#f0f6fc;margin-bottom:2px;}
+.sa-panel-sub{font-size:11px;opacity:0.55;color:#f0f6fc;}
+.sa-badge{
+  font-size:10px;font-weight:600;padding:3px 10px;border-radius:99px;
+  border:1px solid currentColor;white-space:nowrap;flex-shrink:0;margin-top:2px;
+}
+.sa-body{padding:0 22px 6px;display:flex;flex-direction:column;gap:10px;}
+.sa-field label{font-size:11px;color:#8b949e;display:block;margin-bottom:4px;font-weight:500;}
+.sa-field label span.req{color:#f85149;}
+.sa-field input,.sa-field select,.sa-field textarea{
+  width:100%;box-sizing:border-box;
+  background:#0d1117;border:1px solid #30363d;border-radius:7px;
+  color:#f0f6fc;font-size:12px;padding:8px 10px;
+  font-family:inherit;
+  transition:border-color 0.15s;
+}
+.sa-field input:focus,.sa-field select:focus,.sa-field textarea:focus{border-color:#58a6ff;outline:none;}
+.sa-field textarea{resize:vertical;min-height:80px;}
+.sa-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.sa-checks{display:flex;flex-direction:column;gap:5px;}
+.sa-check{display:flex;align-items:flex-start;gap:7px;font-size:11px;color:#c9d1d9;cursor:pointer;}
+.sa-check input{width:13px;height:13px;margin-top:1px;flex-shrink:0;accent-color:#58a6ff;}
+.sa-check-desc{font-size:10px;color:#8b949e;margin-top:1px;}
+.sa-divider{height:1px;background:#21262d;margin:2px 0;}
+.sa-warn-text{font-size:11px;padding:8px 10px;border-radius:6px;display:flex;align-items:center;gap:6px;}
+.sa-footer{
+  padding:14px 22px;border-top:1px solid #21262d;
+  display:flex;gap:8px;justify-content:flex-end;
+}
+.sa-btn-cancel{
+  padding:7px 16px;border-radius:8px;font-size:12px;font-weight:500;
+  background:transparent;border:1px solid #30363d;color:#8b949e;cursor:pointer;
+  transition:all 0.15s;
+}
+.sa-btn-cancel:hover{background:#21262d;color:#f0f6fc;}
+.sa-btn-apply{
+  padding:7px 20px;border-radius:8px;font-size:12px;font-weight:600;
+  border:none;cursor:pointer;color:#fff;
+  transition:all 0.15s;display:flex;align-items:center;gap:6px;
+}
+.sa-btn-apply:hover{filter:brightness(1.1);}
+.sa-btn-apply:disabled{opacity:0.5;cursor:not-allowed;}
+
 </style>
 </head>
 <body>
@@ -1517,6 +1587,12 @@ body.gh-dark .topinfo{ background:rgba(9,13,22,0.95); border-bottom-color:rgba(8
 <!-- Staff Wipe Terminal -->
 <div id="staff-wipe-terminal" id="staff-wipe-terminal">
   <div id="wt-lines"></div>
+</div>
+
+
+<!-- Staff Action Panel Overlay -->
+<div id="sa-panel-overlay">
+  <div class="sa-panel" id="sa-panel-card"></div>
 </div>
 
 <div id="adminScreen" style="position:relative;">
@@ -14822,139 +14898,9 @@ async function updateStaffPass(sid){
   setTimeout(()=>{ if(el) el.textContent=''; },2000);
 }
 
-function promptSuspendStaff(sid, isCurrentlySuspended){
-  const s=STAFF[sid]; if(!s) return;
-  if(s.level==='SOFTWARE MANAGER'){
-    openDialog('Action Blocked','<span style="color:var(--c-ban);font-weight:bold;">SOFTWARE MANAGER accounts cannot be suspended.</span><br><br>This account has system-level access and is protected from all administrative actions via the panel.','',null);
-    document.getElementById('dlgOK').style.display='none';
-    document.getElementById('dlgCancel').textContent='Close';
-    return;
-  }
-  if(isCurrentlySuspended){
-    openDialog('Unsuspend Staff',`Unsuspend staff member <b>${s.username}</b>?`,
-      `<div style="font-size:11px;color:var(--c-text);margin-bottom:3px;">Reason:</div><textarea id="dlgReason" style="width:100%;height:36px;"></textarea>`,
-      async()=>{
-        const reasonEl=document.getElementById('dlgReason');
-        const reason=(reasonEl?reasonEl.value.trim():'')||'No reason given.';
-        // Atomic single write - avoids race between update+remove
-        await update(ref(db,'staff/'+sid),{suspended:false,forceLogout:false});
-        await remove(ref(db,'staff/'+sid+'/suspendInfo')).catch(()=>{});
-        await push(ref(db,'logs/suspend'),{username:s.username,action:'Unsuspend',by:ME,date:nowStr(),reason,modNote:'',offensiveItem:''});
-        auditLog('Staff Unsuspended',s.username);
-        if(STAFF[sid]){ STAFF[sid].suspended=false; STAFF[sid].suspendInfo=null; STAFF[sid].forceLogout=false; }
-        showToast(`${s.username} has been unsuspended.`,'success');
-        currentStaffId=sid;
-        nav('staff');
-      }
-    );
-  }else{
-    openDialog('Suspend Staff',`Suspend staff member <b>${s.username}</b>?`,`
-      <div style="margin-bottom:4px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Reason:</label>
-        <select id="suspReasonSel" style="width:100%;font-family:inherit;font-size:11px;height:16px;">
-          <option>-- Select --</option><option>Misconduct</option><option>Inactivity</option><option>Abuse of Power</option><option>Terms of Use Violation</option><option>Other</option>
-        </select></div>
-      <div style="margin-bottom:4px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Moderator Note:</label>
-        <textarea id="suspModNoteIn" style="width:100%;height:40px;"></textarea></div>
-      <div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Offensive Item (evidence/ID):</label>
-        <input type="text" id="suspOffItemIn" style="width:100%;"/></div>`,
-      async()=>{
-        const reason=document.getElementById('suspReasonSel').value;
-        const modNote=document.getElementById('suspModNoteIn').value.trim();
-        const offensiveItem=document.getElementById('suspOffItemIn').value.trim();
-        const suspInfo={date:nowStr(),reason,modNote,offensiveItem,by:ME};
-        await update(ref(db,`staff/${sid}`),{suspended:true,suspendInfo:suspInfo,forceLogout:true});
-        await push(ref(db,'logs/suspend'),{username:s.username,action:'Suspend',by:ME,date:nowStr(),reason,modNote,offensiveItem});
-        auditLog('Staff Suspended',`${s.username}: ${reason}`);
-        fireDiscordWebhook('staff_events',buildGenericEmbed('Staff Suspended',ME+' suspended **'+s.username+'** for: '+reason+'.','#9a6700')).catch(()=>{});
-        showToast(`${s.username} has been suspended.`,'warning');
-      }
-    );
-  }
-}
 
-function promptForceLogout(sid){
-  const s=STAFF[sid]; if(!s) return;
-  if(s.username===ME){ openDialog('Error','You cannot force-log out yourself.','',null); document.getElementById('dlgOK').style.display='none'; document.getElementById('dlgCancel').textContent='Close'; return; }
-  openDialog('Force Log Out',`Force log out <b>${s.username}</b>? This will set their session as expired. They will be auto-logged out on their next heartbeat check.`,
-    `<div style="font-size:11px;color:var(--c-text);margin-bottom:2px;">Reason:</div><textarea id="dlgReason" style="width:100%;height:36px;" placeholder="Reason for forced logout..."></textarea>`,
-    async()=>{
-      const reason=document.getElementById('dlgReason').value.trim()||'Forced logout by administrator.';
-      await update(ref(db,`staff/${sid}`),{forceLogout:true,lastAction:'Force logged out by '+ME});
-      await push(ref(db,'logs/login'),{username:s.username,level:s.level||'-',date:nowStr(),result:'force-logout',ip:'-'});
-      auditLog('Staff Force Logged Out',`${s.username} by ${ME}: ${reason}`);
-    }
-  );
-}
 
-function promptSecureStaff(sid, isCurrentlySecured){
-  const s=STAFF[sid]; if(!s) return;
-  if(s.level==='SOFTWARE MANAGER'){
-    openDialog('Action Blocked','<span style="color:var(--c-ban);font-weight:bold;">SOFTWARE MANAGER accounts cannot be secured via the panel.</span>','',null);
-    document.getElementById('dlgOK').style.display='none'; document.getElementById('dlgCancel').textContent='Close'; return;
-  }
-  if(isCurrentlySecured){
-    openDialog('Unsecure Account',`Remove security lock from <b>${s.username}</b>?`,
-      `<div style="font-size:11px;color:var(--c-text);margin-bottom:2px;">Reason:</div><textarea id="dlgReason" style="width:100%;height:36px;"></textarea>`,
-      async()=>{
-        const reasonEl=document.getElementById('dlgReason');
-        const reason=(reasonEl?reasonEl.value.trim():'')||'Cleared by admin.';
-        await update(ref(db,'staff/'+sid),{secured:false,forceLogout:false});
-        await remove(ref(db,'staff/'+sid+'/secureInfo')).catch(()=>{});
-        auditLog('Staff Account Unsecured',`${s.username}: ${reason}`);
-        if(STAFF[sid]){ STAFF[sid].secured=false; STAFF[sid].secureInfo=null; }
-        showToast(`${s.username}'s account has been unsecured.`,'success');
-        currentStaffId=sid;
-        nav('staff');
-      });
-  } else {
-    openDialog('Secure Account',`Lock account <b>${s.username}</b> due to suspected compromise?`,`
-      <div style="background:#fde8e8;border:1px solid #cc6666;padding:6px;margin-bottom:8px;font-size:11px;color:var(--c-ban);">Securing an account prevents login until unsecured by an administrator. This action is permanently logged.</div>
-      <div style="margin-bottom:4px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Reason:</label>
-        <select id="secureReason" style="width:100%;font-family:inherit;font-size:11px;height:16px;">
-          <option>Suspected Compromise</option><option>Unauthorized Access</option><option>Password Sharing</option><option>Other</option>
-        </select></div>
-      <div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Notes:</label>
-        <textarea id="secureNote" style="width:100%;height:36px;"></textarea></div>`,
-      async()=>{
-        const reason=document.getElementById('secureReason').value;
-        const note=document.getElementById('secureNote').value.trim();
-        await update(ref(db,`staff/${sid}`),{secured:true,secureInfo:{reason,note,by:ME,date:nowStr()}});
-        auditLog('Staff Account Secured',`${s.username}: ${reason}`); nav('staff');
-      });
-  }
-}
 
-function promptTerminateStaff(sid){  const s=STAFF[sid]; if(!s) return;
-  if(s.level==='SOFTWARE MANAGER'){
-    openDialog('Action Blocked','<span style="color:var(--c-ban);font-weight:bold;">SOFTWARE MANAGER accounts cannot be terminated.</span><br><br>This account has system-level access and is protected from all administrative actions via the panel.','',null);
-    document.getElementById('dlgOK').style.display='none';
-    document.getElementById('dlgCancel').textContent='Close';
-    return;
-  }
-  openDialog('Terminate Account',`Terminate staff account <b>${s.username}</b>?<br><span style="color:var(--c-ban);font-size:11px;">This will permanently remove their access.</span>`,`
-    <div style="margin-bottom:4px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Reason:</label>
-      <select id="termReasonSel" style="width:100%;font-family:inherit;font-size:11px;height:16px;">
-        <option>-- Select --</option><option>Misconduct</option><option>Inactivity</option><option>Abuse of Power</option><option>Terms of Use Violation</option><option>Other</option>
-      </select></div>
-    <div style="margin-bottom:4px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Moderator Note:</label>
-      <textarea id="termModNoteIn" style="width:100%;height:40px;"></textarea></div>
-    <div><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Offensive Item (evidence/ID):</label>
-      <input type="text" id="termOffItemIn" style="width:100%;"/></div>`,
-    async()=>{
-      const reason=document.getElementById('termReasonSel').value;
-      const modNote=document.getElementById('termModNoteIn').value.trim();
-      const offensiveItem=document.getElementById('termOffItemIn').value.trim();
-      await push(ref(db,'logs/terminate'),{username:s.username,type:'Staff',by:ME,date:nowStr(),reason,modNote,offensiveItem});
-      auditLog('Staff Terminated',`${s.username}: ${reason}`);
-      fireDiscordWebhook('staff_events',buildGenericEmbed('Staff Terminated',ME+' terminated **'+s.username+'** for: '+reason+'.','#cf222e')).catch(()=>{});
-      // Force logout before removing - gives them a kick message
-      await update(ref(db,`staff/${sid}`),{forceLogout:true}).catch(()=>{});
-      await new Promise(r=>setTimeout(r,300));
-      await remove(ref(db,`staff/${sid}`));
-      currentStaffId=null; nav('staff');
-    }
-  );
-}
 
 function openDialog(title, body, extraHTML, cb){
   document.getElementById('dlgTitle').textContent=title;
@@ -17564,20 +17510,333 @@ function showWipeTerminal(staffUsername){
 }
 window.showStaffPunishScreen=showStaffPunishScreen;
 
-function promptWarnStaff(sid){
-  var s=STAFF[sid]; if(!s) return;
-  var reason=prompt('Enter reason for staff warning to '+s.username+':');
-  if(!reason) return;
-  update(ref(db,'staff/'+sid),{warned:true,forceLogout:false,warnInfo:{reason:reason,by:ME,date:nowStr()}}).then(function(){
-    push(ref(db,'logs/moderation'),{user:s.username,action:'Staff Warning',mod:ME,date:nowStr(),reason:reason});
-    machineLog('STAFF_WARN','Staff warned: '+s.username,reason);
-    auditLog('Staff Warning Issued',s.username+' warned by '+ME+': '+reason);
-    showToast('Warning issued to '+s.username,'success');
-  }).catch(function(){ showToast('Failed to issue warning.','error'); });
-}
-window.promptWarnStaff=promptWarnStaff;
 
 window.showWipeTerminal=showWipeTerminal;
+
+
+// ── Staff Action Panel Engine ──
+function openSAPanel(html, onApply, onCancel){
+  document.getElementById('sa-panel-card').innerHTML = html;
+  document.getElementById('sa-panel-overlay').classList.add('show');
+  var cancelBtn = document.getElementById('sa-cancel');
+  if(cancelBtn) cancelBtn.onclick = function(){
+    document.getElementById('sa-panel-overlay').classList.remove('show');
+    if(onCancel) onCancel();
+  };
+  document.getElementById('sa-panel-overlay').onclick = function(e){
+    if(e.target===this){ this.classList.remove('show'); if(onCancel) onCancel(); }
+  };
+  var applyBtn = document.getElementById('sa-apply');
+  if(applyBtn) applyBtn.onclick = async function(){
+    applyBtn.disabled = true;
+    await onApply();
+    document.getElementById('sa-panel-overlay').classList.remove('show');
+  };
+}
+function closeSAPanel(){ document.getElementById('sa-panel-overlay').classList.remove('show'); }
+
+// ── SUSPEND ──
+function promptSuspendStaff(sid, isCurrentlySuspended){
+  var s=STAFF[sid]; if(!s) return;
+  if(s.level==='SOFTWARE MANAGER'){
+    openSAPanel(`<div class="sa-panel-header"><div><div class="sa-panel-title">Action Blocked</div><div class="sa-panel-sub">SOFTWARE MANAGER accounts are protected</div></div></div><div class="sa-body"><div class="sa-warn-text" style="background:rgba(248,81,73,0.08);color:#f85149;border:1px solid rgba(248,81,73,0.25);">SOFTWARE MANAGER accounts cannot be actioned via the panel.</div></div><div class="sa-footer"><button class="sa-btn-cancel" id="sa-cancel">Close</button></div>`, ()=>{});
+    document.getElementById('sa-apply') && (document.getElementById('sa-apply').style.display='none');
+    return;
+  }
+  if(isCurrentlySuspended){
+    openSAPanel(`
+      <div class="sa-panel-header" style="background:rgba(63,185,80,0.06);border-bottom:1px solid #21262d;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="sa-panel-icon" style="background:rgba(63,185,80,0.12);border:1px solid rgba(63,185,80,0.3);color:#3fb950;">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 10l5 5 9-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div><div class="sa-panel-title">Unsuspend ${s.username}</div><div class="sa-panel-sub">Restore staff access</div></div>
+        </div>
+        <span class="sa-badge" style="color:#3fb950;">Reversible</span>
+      </div>
+      <div class="sa-body" style="padding-top:14px;">
+        <div class="sa-field"><label>Reason for reinstatement</label><textarea id="sa-reason" placeholder="Why is this suspension being lifted?"></textarea></div>
+      </div>
+      <div class="sa-footer"><button class="sa-btn-cancel" id="sa-cancel">Cancel</button>
+        <button class="sa-btn-apply" id="sa-apply" style="background:#3fb950;">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 8l4 4 8-8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Unsuspend
+        </button></div>`,
+      async()=>{
+        var reason=(document.getElementById('sa-reason')||{value:''}).value.trim()||'Reinstated.';
+        await update(ref(db,'staff/'+sid),{suspended:false,forceLogout:false});
+        await remove(ref(db,'staff/'+sid+'/suspendInfo')).catch(()=>{});
+        await push(ref(db,'logs/suspend'),{username:s.username,action:'Unsuspend',by:ME,date:nowStr(),reason});
+        auditLog('Staff Unsuspended',s.username+': '+reason);
+        if(STAFF[sid]){STAFF[sid].suspended=false;STAFF[sid].suspendInfo=null;}
+        showToast(s.username+' unsuspended.','success');
+        nav('staff');
+      });
+  } else {
+    openSAPanel(`
+      <div class="sa-panel-header" style="background:rgba(210,153,34,0.06);border-bottom:1px solid #21262d;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="sa-panel-icon" style="background:rgba(210,153,34,0.12);border:1px solid rgba(210,153,34,0.3);color:#d29922;">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/><line x1="7" y1="6.5" x2="7" y2="13.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="13" y1="6.5" x2="13" y2="13.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </div>
+          <div><div class="sa-panel-title">Suspend ${s.username}</div><div class="sa-panel-sub">Temporary access removal</div></div>
+        </div>
+        <span class="sa-badge" style="color:#d29922;">Reversible</span>
+      </div>
+      <div class="sa-body" style="padding-top:14px;">
+        <div class="sa-field"><label>Reason <span class="req">*</span></label><textarea id="sa-reason" placeholder="Describe the reason for suspension…"></textarea></div>
+        <div class="sa-row">
+          <div class="sa-field"><label>Duration</label>
+            <select id="sa-dur"><option value="3600000">1 hour</option><option value="21600000">6 hours</option><option value="86400000" selected>24 hours</option><option value="259200000">3 days</option><option value="604800000">1 week</option><option value="0">Indefinite</option></select>
+          </div>
+          <div class="sa-field"><label>Return condition</label>
+            <select id="sa-ret"><option value="auto">Automatic</option><option value="manual">Manual reinstatement</option><option value="appeal">Appeal required</option></select>
+          </div>
+        </div>
+        <div class="sa-divider"></div>
+        <div class="sa-checks">
+          <label class="sa-check"><input type="checkbox" id="sa-force" checked><div><div>Force logout now</div><div class="sa-check-desc">Expires active session immediately</div></div></label>
+          <label class="sa-check"><input type="checkbox" id="sa-discord"><div><div>Notify via Discord</div><div class="sa-check-desc">Posts to staff-events webhook</div></div></label>
+        </div>
+      </div>
+      <div class="sa-footer"><button class="sa-btn-cancel" id="sa-cancel">Cancel</button>
+        <button class="sa-btn-apply" id="sa-apply" style="background:#d29922;">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/><line x1="6" y1="5" x2="6" y2="11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="10" y1="5" x2="10" y2="11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Apply suspension
+        </button></div>`,
+      async()=>{
+        var reason=(document.getElementById('sa-reason')||{value:''}).value.trim();
+        if(!reason){showToast('Reason is required.','error');return;}
+        var dur=parseInt((document.getElementById('sa-dur')||{value:'0'}).value)||0;
+        var ret=(document.getElementById('sa-ret')||{value:'auto'}).value;
+        var force=(document.getElementById('sa-force')||{checked:true}).checked;
+        var expiresAt=dur>0?Date.now()+dur:0;
+        var suspInfo={reason,by:ME,date:nowStr(),expiresAt,returnCondition:ret,duration:dur>0?new Date(Date.now()+dur).toLocaleString():'Indefinite'};
+        await update(ref(db,'staff/'+sid),{suspended:true,forceLogout:force,suspendInfo:suspInfo});
+        await push(ref(db,'logs/suspend'),{username:s.username,action:'Suspend',by:ME,date:nowStr(),reason});
+        auditLog('Staff Suspended',s.username+': '+reason);
+        machineLog('SUSPEND','Staff suspended: '+s.username,reason);
+        if((document.getElementById('sa-discord')||{checked:false}).checked)
+          fireDiscordWebhook('staff_events',buildGenericEmbed('Staff Suspended',ME+' suspended **'+s.username+'** — '+reason,'#d29922')).catch(()=>{});
+        showToast(s.username+' suspended.','warning');
+        nav('staff');
+      });
+  }
+}
+
+// ── WARN ──
+function promptWarnStaff(sid){
+  var s=STAFF[sid]; if(!s) return;
+  openSAPanel(`
+    <div class="sa-panel-header" style="background:rgba(63,185,80,0.06);border-bottom:1px solid #21262d;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="sa-panel-icon" style="background:rgba(63,185,80,0.12);border:1px solid rgba(63,185,80,0.3);color:#3fb950;">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2L18.5 17H1.5L10 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><line x1="10" y1="8" x2="10" y2="12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="15" r="0.9" fill="currentColor"/></svg>
+        </div>
+        <div><div class="sa-panel-title">Warn ${s.username}</div><div class="sa-panel-sub">Formal warning — logged to record</div></div>
+      </div>
+      <span class="sa-badge" style="color:#3fb950;">On record</span>
+    </div>
+    <div class="sa-body" style="padding-top:14px;">
+      <div class="sa-field"><label>Warning reason <span class="req">*</span></label><textarea id="sa-reason" placeholder="What is this warning for?"></textarea></div>
+      <div class="sa-field"><label>Category</label>
+        <select id="sa-cat"><option>Conduct</option><option>Inactivity</option><option>Policy violation</option><option>Abuse of tools</option><option>Other</option></select>
+      </div>
+      <div class="sa-checks">
+        <label class="sa-check"><input type="checkbox" id="sa-discord"><div><div>Notify via Discord</div><div class="sa-check-desc">Posts to staff-events webhook</div></div></label>
+      </div>
+    </div>
+    <div class="sa-footer"><button class="sa-btn-cancel" id="sa-cancel">Cancel</button>
+      <button class="sa-btn-apply" id="sa-apply" style="background:#3fb950;color:#0d1117;">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L14.5 13H1.5L8 1.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>Issue warning
+      </button></div>`,
+    async()=>{
+      var reason=(document.getElementById('sa-reason')||{value:''}).value.trim();
+      if(!reason){showToast('Reason is required.','error');return;}
+      await update(ref(db,'staff/'+sid),{warned:true,warnInfo:{reason,by:ME,date:nowStr(),category:(document.getElementById('sa-cat')||{value:'Other'}).value}});
+      await push(ref(db,'logs/moderation'),{user:s.username,action:'Staff Warning',mod:ME,date:nowStr(),reason});
+      auditLog('Staff Warning Issued',s.username+' warned by '+ME+': '+reason);
+      machineLog('STAFF_WARN','Staff warned: '+s.username,reason);
+      if((document.getElementById('sa-discord')||{checked:false}).checked)
+        fireDiscordWebhook('staff_events',buildGenericEmbed('Staff Warning',ME+' issued warning to **'+s.username+'** — '+reason,'#3fb950')).catch(()=>{});
+      showToast('Warning issued to '+s.username,'success');
+      nav('staff');
+    });
+}
+
+// ── SECURE / UNSECURE ──
+function promptSecureStaff(sid, isCurrentlySecured){
+  var s=STAFF[sid]; if(!s) return;
+  if(s.level==='SOFTWARE MANAGER'){
+    openSAPanel(`<div class="sa-panel-header"><div><div class="sa-panel-title">Action Blocked</div></div></div><div class="sa-body"><div class="sa-warn-text" style="background:rgba(248,81,73,0.08);color:#f85149;border:1px solid rgba(248,81,73,0.25);">SOFTWARE MANAGER accounts cannot be actioned via the panel.</div></div><div class="sa-footer"><button class="sa-btn-cancel" id="sa-cancel">Close</button></div>`,()=>{});
+    return;
+  }
+  if(isCurrentlySecured){
+    openSAPanel(`
+      <div class="sa-panel-header" style="background:rgba(63,185,80,0.06);border-bottom:1px solid #21262d;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="sa-panel-icon" style="background:rgba(63,185,80,0.12);border:1px solid rgba(63,185,80,0.3);color:#3fb950;">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2L3 5.5v6C3 16 6.5 18.5 10 19.5c3.5-1 7-3.5 7-8v-6L10 2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M6.5 10l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div><div class="sa-panel-title">Unsecure ${s.username}</div><div class="sa-panel-sub">Remove security lock</div></div>
+        </div>
+      </div>
+      <div class="sa-body" style="padding-top:14px;">
+        <div class="sa-field"><label>Reason for clearing</label><textarea id="sa-reason" placeholder="Why is the security lock being removed?"></textarea></div>
+      </div>
+      <div class="sa-footer"><button class="sa-btn-cancel" id="sa-cancel">Cancel</button>
+        <button class="sa-btn-apply" id="sa-apply" style="background:#3fb950;color:#0d1117;">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 8l4 4 8-8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Unsecure account
+        </button></div>`,
+      async()=>{
+        var reason=(document.getElementById('sa-reason')||{value:''}).value.trim()||'Cleared by admin.';
+        await update(ref(db,'staff/'+sid),{secured:false,forceLogout:false});
+        await remove(ref(db,'staff/'+sid+'/secureInfo')).catch(()=>{});
+        auditLog('Staff Account Unsecured',s.username+': '+reason);
+        if(STAFF[sid]){STAFF[sid].secured=false;STAFF[sid].secureInfo=null;}
+        showToast(s.username+" account unsecured.",'success');
+        nav('staff');
+      });
+  } else {
+    openSAPanel(`
+      <div class="sa-panel-header" style="background:rgba(56,138,197,0.06);border-bottom:1px solid #21262d;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="sa-panel-icon" style="background:rgba(56,138,197,0.12);border:1px solid rgba(56,138,197,0.3);color:#58a6ff;">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2L3 5.5v6C3 16 6.5 18.5 10 19.5c3.5-1 7-3.5 7-8v-6L10 2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><line x1="10" y1="8" x2="10" y2="12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="10" cy="7" r="0.8" fill="currentColor"/></svg>
+          </div>
+          <div><div class="sa-panel-title">Secure ${s.username}</div><div class="sa-panel-sub">Lock account pending review</div></div>
+        </div>
+        <span class="sa-badge" style="color:#58a6ff;">Restricted</span>
+      </div>
+      <div class="sa-body" style="padding-top:14px;">
+        <div class="sa-field"><label>Reason <span class="req">*</span></label><textarea id="sa-reason" placeholder="Why is this account being secured?"></textarea></div>
+        <div class="sa-field"><label>Security level</label>
+          <select id="sa-level"><option value="Standard">Standard — login disabled</option><option value="High">High — credential reset required</option><option value="Critical">Critical — SM review required</option></select>
+        </div>
+        <div class="sa-divider"></div>
+        <div class="sa-checks">
+          <label class="sa-check"><input type="checkbox" id="sa-force" checked><div><div>Force logout immediately</div><div class="sa-check-desc">Expires active session on next heartbeat</div></div></label>
+          <label class="sa-check"><input type="checkbox" id="sa-discord"><div><div>Alert Software Manager via Discord</div><div class="sa-check-desc">Posts to private SM webhook</div></div></label>
+        </div>
+      </div>
+      <div class="sa-footer"><button class="sa-btn-cancel" id="sa-cancel">Cancel</button>
+        <button class="sa-btn-apply" id="sa-apply" style="background:#185fa5;">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 1L14 3.5v5C14 12 8 15 8 15S2 12 2 8.5v-5L8 1Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>Secure account
+        </button></div>`,
+      async()=>{
+        var reason=(document.getElementById('sa-reason')||{value:''}).value.trim();
+        if(!reason){showToast('Reason is required.','error');return;}
+        var level=(document.getElementById('sa-level')||{value:'Standard'}).value;
+        var force=(document.getElementById('sa-force')||{checked:true}).checked;
+        await update(ref(db,'staff/'+sid),{secured:true,forceLogout:force,secureInfo:{reason,level,by:ME,date:nowStr()}});
+        auditLog('Staff Account Secured',s.username+': '+reason);
+        machineLog('SECURE','Staff secured: '+s.username,reason);
+        if((document.getElementById('sa-discord')||{checked:false}).checked)
+          fireDiscordWebhook('staff_events',buildGenericEmbed('Account Secured',ME+' secured **'+s.username+'** ('+level+') — '+reason,'#185fa5')).catch(()=>{});
+        showToast(s.username+' secured.','success');
+        nav('staff');
+      });
+  }
+}
+
+// ── FORCE LOG OUT ──
+function promptForceLogout(sid){
+  var s=STAFF[sid]; if(!s) return;
+  if(s.username===ME){
+    openSAPanel(`<div class="sa-panel-header"><div><div class="sa-panel-title">Action Blocked</div><div class="sa-panel-sub">You cannot force-log out yourself</div></div></div><div class="sa-footer"><button class="sa-btn-cancel" id="sa-cancel">Close</button></div>`,()=>{});
+    return;
+  }
+  openSAPanel(`
+    <div class="sa-panel-header" style="background:rgba(139,148,158,0.05);border-bottom:1px solid #21262d;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="sa-panel-icon" style="background:rgba(139,148,158,0.1);border:1px solid rgba(139,148,158,0.25);color:#8b949e;">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M7 4H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M13 7l4 3-4 3M17 10H8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div><div class="sa-panel-title">Force Log Out ${s.username}</div><div class="sa-panel-sub">Expires session on next heartbeat (~30s)</div></div>
+      </div>
+      <span class="sa-badge" style="color:#8b949e;">No lock</span>
+    </div>
+    <div class="sa-body" style="padding-top:14px;">
+      <div class="sa-field"><label>Reason</label><textarea id="sa-reason" placeholder="Reason for forced logout…" style="min-height:60px;"></textarea></div>
+      <div class="sa-warn-text" style="background:rgba(139,148,158,0.06);color:#8b949e;border:1px solid rgba(139,148,158,0.2);font-size:10px;">This does not lock the account — they can log back in immediately unless suspended or secured.</div>
+    </div>
+    <div class="sa-footer"><button class="sa-btn-cancel" id="sa-cancel">Cancel</button>
+      <button class="sa-btn-apply" id="sa-apply" style="background:#30363d;">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M7 4H4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M10 6l3 2-3 2M13 8H7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>Force log out
+      </button></div>`,
+    async()=>{
+      var reason=(document.getElementById('sa-reason')||{value:''}).value.trim()||'Forced logout by '+ME;
+      await update(ref(db,'staff/'+sid),{forceLogout:true});
+      await push(ref(db,'logs/login'),{username:s.username,level:s.level||'-',date:nowStr(),result:'force-logout'});
+      auditLog('Staff Force Logged Out',s.username+' by '+ME+': '+reason);
+      machineLog('SESSION_LOCK','Force logout: '+s.username,reason);
+      showToast(s.username+' will be logged out shortly.','success');
+    });
+}
+
+// ── TERMINATE ──
+function promptTerminateStaff(sid){
+  var s=STAFF[sid]; if(!s) return;
+  if(s.level==='SOFTWARE MANAGER'){
+    openSAPanel(`<div class="sa-panel-header"><div><div class="sa-panel-title">Action Blocked</div></div></div><div class="sa-body"><div class="sa-warn-text" style="background:rgba(248,81,73,0.08);color:#f85149;border:1px solid rgba(248,81,73,0.25);">SOFTWARE MANAGER accounts are protected from this action.</div></div><div class="sa-footer"><button class="sa-btn-cancel" id="sa-cancel">Close</button></div>`,()=>{});
+    return;
+  }
+  openSAPanel(`
+    <div class="sa-panel-header" style="background:rgba(248,81,73,0.06);border-bottom:1px solid #21262d;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="sa-panel-icon" style="background:rgba(248,81,73,0.12);border:1px solid rgba(248,81,73,0.3);color:#f85149;">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="7" cy="6" r="3.5" stroke="currentColor" stroke-width="1.4"/><path d="M2 17c0-4 2.2-6 5-6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M12 12l5.5 5.5M17.5 12L12 17.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <div><div class="sa-panel-title">Terminate ${s.username}</div><div class="sa-panel-sub">Permanent removal from staff</div></div>
+      </div>
+      <span class="sa-badge" style="color:#f85149;">Permanent</span>
+    </div>
+    <div class="sa-body" style="padding-top:14px;">
+      <div class="sa-field"><label>Reason <span class="req">*</span></label><textarea id="sa-reason" placeholder="Provide full justification for termination…"></textarea></div>
+      <div class="sa-field"><label>Category</label>
+        <select id="sa-cat"><option>Policy violation</option><option>Misconduct</option><option>Inactivity</option><option>Voluntary resignation</option><option>Other</option></select>
+      </div>
+      <div class="sa-divider"></div>
+      <div class="sa-checks">
+        <label class="sa-check"><input type="checkbox" id="sa-force" checked><div><div>Force logout immediately</div></div></label>
+        <label class="sa-check"><input type="checkbox" id="sa-blacklist"><div><div>Blacklist account</div><div class="sa-check-desc">Flags as ineligible for reinstatement</div></div></label>
+        <label class="sa-check"><input type="checkbox" id="sa-discord" checked><div><div>Log to Discord</div></div></label>
+      </div>
+      <div class="sa-warn-text" style="background:rgba(248,81,73,0.06);color:#f85149;border:1px solid rgba(248,81,73,0.2);">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;"><path d="M8 1.5L14.5 13H1.5L8 1.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        This action cannot be undone. Requires second approval if 2FA is enabled.
+      </div>
+    </div>
+    <div class="sa-footer"><button class="sa-btn-cancel" id="sa-cancel">Cancel</button>
+      <button class="sa-btn-apply" id="sa-apply" style="background:#b91c1c;">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 14c0-3 1.6-4.5 4-4.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M11 10l3.5 3.5M14.5 10L11 13.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Terminate
+      </button></div>`,
+    async()=>{
+      var reason=(document.getElementById('sa-reason')||{value:''}).value.trim();
+      if(!reason){showToast('Reason is required.','error');return;}
+      var cat=(document.getElementById('sa-cat')||{value:'Other'}).value;
+      var blacklist=(document.getElementById('sa-blacklist')||{checked:false}).checked;
+      var force=(document.getElementById('sa-force')||{checked:true}).checked;
+      var termInfo={reason,category:cat,by:ME,date:nowStr()};
+      await update(ref(db,'staff/'+sid),{terminated:true,forceLogout:force,terminateInfo:termInfo});
+      await new Promise(r=>setTimeout(r,350));
+      await push(ref(db,'logs/terminate'),{username:s.username,type:'Staff',by:ME,date:nowStr(),reason,category:cat});
+      if(blacklist) await update(ref(db,'blacklist/'+sid),{username:s.username,reason:'Terminated: '+reason,by:ME,date:nowStr()});
+      auditLog('Staff Terminated',s.username+': '+reason);
+      machineLog('TERMINATE','Staff terminated: '+s.username,reason+' | category:'+cat);
+      if((document.getElementById('sa-discord')||{checked:true}).checked)
+        fireDiscordWebhook('staff_events',buildGenericEmbed('Staff Terminated',ME+' terminated **'+s.username+'** ('+cat+') — '+reason,'#b91c1c')).catch(()=>{});
+      await remove(ref(db,'staff/'+sid));
+      currentStaffId=null;
+      showToast(s.username+' has been terminated.','success');
+      nav('staff');
+    });
+}
+window.promptSuspendStaff=promptSuspendStaff;
+window.promptWarnStaff=promptWarnStaff;
+window.promptSecureStaff=promptSecureStaff;
+window.promptForceLogout=promptForceLogout;
+window.promptTerminateStaff=promptTerminateStaff;
+window.openSAPanel=openSAPanel;
+window.closeSAPanel=closeSAPanel;
 
 // ── Panel background canvas (subtle ambient effect) ──
 var _panelAnimId=null;
