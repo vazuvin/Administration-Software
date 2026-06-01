@@ -3408,7 +3408,7 @@ function updateSidebar(){
 ['useradmin','accounts','requests','userconfig'],
     moderation:['reputation','appeals','altdetect','msganalyze'],
     'staff-section':['staff','activity','messaging','suggestions','staffconfig','evaluations','calendar','staffreports'],
-    logs:['modlog','revokelog','suspendlog','terminatelog','warnlog','loginlog','auditlog'],
+    logs:['modlog','revokelog','suspendlog','terminatelog','warnlog','auditlog'],
     configuration:['alerts','adminlog'],
     machine:['siteconfig','statuslog','wipelog','robloxlog','badgemgmt','leakid','clearance','samlog','blacklist','discordconfig','landingconfig','appsconfig','discipline','loginlog','machinelogs','twofactorconfig'],
   };
@@ -3438,7 +3438,7 @@ var SECTION_PAGES={
 ['useradmin','accounts','requests','userconfig'],
   moderation:['reputation','appeals','altdetect','msganalyze'],
   'staff-section':['staff','activity','messaging','suggestions','staffconfig','evaluations','calendar','staffreports'],
-  logs:['modlog','revokelog','suspendlog','terminatelog','warnlog','loginlog','auditlog'],
+  logs:['modlog','revokelog','suspendlog','terminatelog','warnlog','auditlog'],
   configuration:['alerts','adminlog'],
   machine:['siteconfig','statuslog','wipelog','robloxlog','badgemgmt','leakid','clearance','samlog','blacklist','discordconfig','landingconfig','appsconfig','discipline','loginlog','machinelogs','twofactorconfig'],
 };
@@ -6960,7 +6960,7 @@ function renderAccounts(c){
     </div>
     <div id="bulk-msg" style="font-size:11px;margin-top:3px;"></div>
   </div></div>`:''}
-  <div class="sbox"><div class="stitle">Player List</div><div class="sbody">
+  <div class="sbox"><div class="stitle" style="display:flex;align-items:center;justify-content:space-between;">Player List<button class="btn small" id="btn-accounts-refresh" style="display:flex;align-items:center;gap:3px;"><svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2 7a5 5 0 1 0 1-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><polyline points="1,2.5 2,7 6.5,5.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>Refresh</button></div><div class="sbody">
     ${uArr.length===0?'<i style="color:var(--c-text2);">No players yet.</i>':`
     <div class="tbl-wrap"><table class="tbl">
       <tr>${canDo('canBulkAction')?'<th><input type="checkbox" id="bulk-check-all" title="Select all"/></th>':''}<th>Player ID</th><th>Username</th><th>Roblox ID</th><th>Status</th><th>Rep</th><th>System Entry</th><th>Action</th></tr>
@@ -6989,14 +6989,7 @@ function renderAccounts(c){
         <button class="btn" id="btn-adduser">Add Player</button>
       </div>
     </div>
-    <div>
-      <label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:4px;font-weight:600;">Mass Add (comma-separated)</label>
-      <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:flex-start;">
-        <textarea id="nuBulkUsers" style="flex:1;min-width:200px;height:50px;" placeholder="user1, user2, user3, ..."></textarea>
-        <button class="btn" id="btn-addbulkusers">Add All</button>
-      </div>
-      <div id="bulk-add-msg" style="font-size:11px;margin-top:4px;color:var(--c-text2);min-height:14px;"></div>
-    </div>
+
     </div>
     <div id="nuMsg" style="font-size:11px;margin-top:3px;"></div>
     <div id="nuPreview" style="margin-top:5px;display:none;align-items:center;gap:8px;">
@@ -7009,49 +7002,11 @@ function renderAccounts(c){
     btn.onclick=()=>{ openOpDialog(`WARNING: Permanently purge all data for "${btn.dataset.uname}"?`, async()=>{ await wipeUser(btn.dataset.uid,btn.dataset.uname); }); };
   });
   document.getElementById('btn-adduser').onclick=addUser;
+  var _accRefBtn=document.getElementById('btn-accounts-refresh'); if(_accRefBtn) _accRefBtn.onclick=function(){ safeRender(); };
   // Mass add
-  const bulkAddBtn=document.getElementById('btn-addbulkusers');
-  if(bulkAddBtn) bulkAddBtn.onclick=async function(){
-    const raw=(document.getElementById('nuBulkUsers')||{}).value||'';
-    const msg=document.getElementById('bulk-add-msg');
-    const names=raw.split(/[,\n]/).map(function(s){ return s.trim(); }).filter(Boolean);
-    if(!names.length){ if(msg){ msg.style.color='var(--c-ban)'; msg.textContent='Enter at least one username.'; } return; }
-    bulkAddBtn.disabled=true;
-    let ok=0, fail=0, skip=0;
-    for(var bi=0;bi<names.length;bi++){
-      const name=names[bi];
-      if(msg){ msg.style.color='var(--c-text2)'; msg.textContent='Processing '+name+' ('+(bi+1)+'/'+names.length+')...'; }
-      try{
-        const existing=Object.values(USERS).find(function(u){ return u.username&&u.username.toLowerCase()===name.toLowerCase(); });
-        if(existing){ skip++; continue; }
-        // Use exact same flow as single add
-        const info=await fetchRobloxInfo(name).catch(()=>null);
-        const pid=await getNextPlayerId().catch(()=>Date.now()%90000+10000);
-        const nuid='uid_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);
-        const entry={
-          username:name, robloxUsername:name, playerId:pid,
-          status:'active', created:nowStr(),
-          robloxId:info&&info.robloxId||'',
-          avatarUrl:info&&info.avatarUrl||ROBLOX_DEFAULT_AVATAR,
-          displayName:info&&info.displayName||name,
-          robloxAccountCreated:info&&info.accountCreated||'',
-          notes:'', punishments:{}
-        };
-        await set(ref(db,'users/'+nuid),entry);
-        USERS[nuid]=entry;
-        ok++;
-      }catch(e){ console.warn('Bulk add failed for',name,e); fail++; }
-    }
-    bulkAddBtn.disabled=false;
-    if(msg){
-      msg.style.color=fail>0?'var(--c-sus)':'var(--c-ok)';
-      msg.textContent='Done — added '+ok+(skip?' · skipped '+skip:'')+(fail?' · failed '+fail:'')+'.';
-    }
-    if(ok>0){
-      const el=document.getElementById('nuBulkUsers'); if(el) el.value='';
-      safeRender();
-    }
-  };
+
+  // bulk add removed
+;
   // Show last auto-refresh time
   const lastStatusEl=document.getElementById('mass-refresh-laststatus');
   if(lastStatusEl){
@@ -17396,10 +17351,10 @@ window.requestTwoFactorApproval=requestTwoFactorApproval;
 function showStaffPunishScreen(type, data){
   var configs={
     suspend:{
-      bg:'#1c1a0e', border:'#d29922aa', iconBg:'#d2992222', iconBorder:'#d2992244',
+      bg:'rgba(210,153,34,0.06)', border:'rgba(210,153,34,0.4)', iconBg:'rgba(210,153,34,0.12)', iconBorder:'rgba(210,153,34,0.3)',
       iconColor:'#d29922', title:'Account suspended', sub:'Your access has been temporarily removed',
-      icon:'<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/><line x1="7" y1="6" x2="7" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="13" y1="6" x2="13" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
-      btnColor:'#d29922', btnLabel:'Acknowledge'
+      icon:'<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/><line x1="7" y1="6.5" x2="7" y2="13.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="13" y1="6.5" x2="13" y2="13.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+      btnColor:'#d29922', btnLabel:'Acknowledge', badge:'Suspended'
     },
     terminate:{
       bg:'#1a0d0d', border:'#f85149aa', iconBg:'#f8514922', iconBorder:'#f8514944',
@@ -17408,16 +17363,22 @@ function showStaffPunishScreen(type, data){
       btnColor:'#f85149', btnLabel:'I understand', noClose:true
     },
     warn:{
-      bg:'#0d1a0f', border:'#3fb95088', iconBg:'#3fb95022', iconBorder:'#3fb95044',
+      bg:'rgba(63,185,80,0.06)', border:'rgba(63,185,80,0.35)', iconBg:'rgba(63,185,80,0.12)', iconBorder:'rgba(63,185,80,0.3)',
       iconColor:'#3fb950', title:'Staff warning issued', sub:'A formal warning has been added to your record',
-      icon:'<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2L18 16H2L10 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><line x1="10" y1="8" x2="10" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="14.5" r="1" fill="currentColor"/></svg>',
-      btnColor:'#3fb950', btnLabel:'Acknowledge'
+      icon:'<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2.5L18 17H2L10 2.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><line x1="10" y1="8" x2="10" y2="12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="14.8" r="0.9" fill="currentColor"/></svg>',
+      btnColor:'#3fb950', btnLabel:'Acknowledge', badge:'Warning', btnTextColor:'#0d1117'
     },
     secure:{
-      bg:'#0d1522', border:'#378addaa', iconBg:'#378add22', iconBorder:'#378add44',
+      bg:'rgba(56,138,197,0.06)', border:'rgba(56,138,197,0.35)', iconBg:'rgba(56,138,197,0.12)', iconBorder:'rgba(56,138,197,0.3)',
       iconColor:'#58a6ff', title:'Account secured', sub:'Pending administrative review',
-      icon:'<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2L3 5.5v5.5C3 15 6 18 10 19.5 14 18 17 15 17 11V5.5L10 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><line x1="10" y1="9" x2="10" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="7.5" r="0.8" fill="currentColor"/></svg>',
-      btnColor:'#185fa5', btnLabel:'Acknowledge'
+      icon:'<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2L3 5.5v6C3 16 6.5 18.5 10 19.5c3.5-1 7-3.5 7-8v-6L10 2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><line x1="10" y1="8.5" x2="10" y2="12.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="10" cy="7.2" r="0.8" fill="currentColor"/></svg>',
+      btnColor:'#185fa5', btnLabel:'Acknowledge', badge:'Restricted'
+    },
+    terminate:{
+      bg:'rgba(248,81,73,0.06)', border:'rgba(248,81,73,0.35)', iconBg:'rgba(248,81,73,0.12)', iconBorder:'rgba(248,81,73,0.3)',
+      iconColor:'#f85149', title:'Staff access terminated', sub:'Your position has been permanently revoked',
+      icon:'<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="7" cy="6" r="3" stroke="currentColor" stroke-width="1.4"/><path d="M2 17c0-4 2.2-6 5-6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M12 12l5.5 5.5M17.5 12L12 17.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+      btnColor:'#b91c1c', btnLabel:'I understand', badge:'Permanent', noClose:true
     }
   };
   var cfg=configs[type]; if(!cfg) return;
@@ -17976,7 +17937,7 @@ function renderDisciplineLog(c){
           loadDisc();
         };
       });
-    }).catch(function(){ body.innerHTML='<div style="padding:20px;color:var(--c-ban);">Error loading discipline records.</div>'; });
+    }).catch(function(e){ console.warn('discipline read error:',e); body.innerHTML='<div style="text-align:center;padding:30px;color:var(--c-text2);font-size:12px;">No discipline records yet. Records appear here when staff are suspended, warned, secured, or terminated.</div>'; });
   }
   loadDisc();
   var rb=document.getElementById('disc-refresh'); if(rb) rb.onclick=loadDisc;
