@@ -1215,9 +1215,10 @@ body.gh-dark .topinfo{ background:rgba(9,13,22,0.95); border-bottom-color:rgba(8
   width:100%;box-sizing:border-box;
   background:#0d1117;border:1px solid #30363d;border-radius:7px;
   color:#f0f6fc;font-size:12px;padding:8px 10px;
-  font-family:inherit;
+  font-family:inherit;line-height:1.4;
   transition:border-color 0.15s;
 }
+.sa-field select{height:36px;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238b949e' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px;}
 .sa-field input:focus,.sa-field select:focus,.sa-field textarea:focus{border-color:#58a6ff;outline:none;}
 .sa-field textarea{resize:vertical;min-height:80px;}
 .sa-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
@@ -6249,7 +6250,7 @@ function renderUA(c){
     <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;">
       ${canDo('canModerateUsers')?'<button class="btn" onclick="document.querySelector(\'.up-tab[data-tab=logbook]\').click()"><svg width="11" height="11" viewBox="0 0 14 14" fill="none" style="vertical-align:middle;margin-right:3px;"><rect x="2" y="1.5" width="10" height="11" rx="1" stroke="currentColor" stroke-width="1.2"/><line x1="4.5" y1="5" x2="9.5" y2="5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="7.5" x2="7" y2="7.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="7" y1="9.5" x2="9.5" y2="9.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg> Add Log Entry</button>':''}
       <button class="btn" id="btn-refresh-rblx-${uid}">↻ Refresh Roblox</button>
-      ${canDo('canViewCustomFields')&&CUSTOM_FIELDS.length?`<button class="btn" onclick="openUserConfigDialog('${uid}')" style="display:flex;align-items:center;gap:4px;"><svg width="11" height="11" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="2" width="11" height="10" rx="1.2" stroke="currentColor" stroke-width="1.2"/><line x1="4.5" y1="5.5" x2="9.5" y2="5.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="8" x2="7.5" y2="8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="10" cy="8" r="1.5" stroke="currentColor" stroke-width="1.1"/></svg>Manage Fields</button>`:''}
+      ${canDo('canManageCustomFields')?`<button class="btn" onclick="nav('staffconfig')" style="display:flex;align-items:center;gap:4px;" title="Manage Custom User Field definitions"><svg width="11" height="11" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="2" width="11" height="10" rx="1.2" stroke="currentColor" stroke-width="1.2"/><line x1="4.5" y1="5.5" x2="9.5" y2="5.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="8" x2="7.5" y2="8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="10" cy="8" r="1.5" stroke="currentColor" stroke-width="1.1"/></svg>Manage Fields</button>`:''}
       ${isSuperAdmin()?`<button class="btn" style="background:rgba(248,81,73,0.08);border-color:var(--c-ban);color:var(--c-ban);display:flex;align-items:center;gap:4px;" onclick="wipeUser('${uid}')"><svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2 3.5h10M5 3.5V2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v1M4.5 3.5l.5 8h4l.5-8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg> Delete</button>`:''}
     </div>`;
   }
@@ -15011,11 +15012,14 @@ async function doLogin(){
         document.getElementById('suspReason').textContent=termInfo.reason||'No reason provided.';
         document.getElementById('suspModNote').textContent=termInfo.modNote||'None.';
         document.getElementById('suspOffItem').textContent=termInfo.offensiveItem||'None.';
-        document.getElementById('suspPopupTitle').textContent='Account Terminated';
-        document.getElementById('suspPopupHeading').textContent='Account Terminated';
-        document.getElementById('suspPopupMsg').textContent='Your staff account has been permanently terminated by administration. You no longer have access to this system.';
         status.textContent='TERMINATED';
-        document.getElementById('suspOverlay').classList.add('show');
+        ME=u;
+        document.getElementById('loginScreen').style.display='none';
+        document.getElementById('adminScreen').style.display='block';
+        showStaffPunishScreen('terminate',{
+          reason:termInfo.reason||'Your staff access has been permanently terminated.',
+          by:termInfo.by||'Administration'
+        });
       } else {
         // Firebase Auth exists but no staff record and no wipe/terminate record - generic invalid
         status.textContent='INVALID!';
@@ -15027,31 +15031,33 @@ async function doLogin(){
     if(staffData.suspended){
       await signOut(auth);
       const si=staffData.suspendInfo||{};
-      document.getElementById('suspReviewed').textContent=si.date||'Unknown';
-      document.getElementById('suspReason').textContent=si.reason||'No reason provided.';
-      document.getElementById('suspModNote').textContent=si.modNote||'None.';
-      document.getElementById('suspOffItem').textContent=si.offensiveItem||'None.';
-      document.getElementById('suspPopupTitle').textContent='Account Suspended';
-      document.getElementById('suspPopupHeading').textContent='Account Suspended';
-      document.getElementById('suspPopupMsg').textContent='Our content administration has determined your behavior has been in violation of our Terms of Use.';
       status.textContent='SUSPENDED';
-      document.getElementById('suspOverlay').classList.add('show');
-      await push(ref(db,'logs/login'),{username:u,level:staffData.level||'-',date:nowStr(),result:'suspended',ip:'-',browser:collectSessionData().browser,os:collectSessionData().os});
+      await push(ref(db,'logs/login'),{username:u,level:staffData.level||'-',date:nowStr(),result:'suspended',ip:'-'}).catch(()=>{});
+      // Show new modern suspension screen
+      ME=u; // temporarily set so _updateDisciplineStatus works
+      document.getElementById('loginScreen').style.display='none';
+      document.getElementById('adminScreen').style.display='block';
+      showStaffPunishScreen('suspend',{
+        reason:si.reason||'Your account has been suspended.',
+        by:si.by||'Administration',
+        duration:si.duration||'Indefinite',
+        expires:si.expiresAt?new Date(si.expiresAt).toLocaleString():null
+      });
       return;
     }
     if(staffData.secured){
       await signOut(auth);
       const si=staffData.secureInfo||{};
-      document.getElementById('suspReviewed').textContent=si.date||'Unknown';
-      document.getElementById('suspReason').textContent=si.reason||'Account secured by administrator.';
-      document.getElementById('suspModNote').textContent=si.note||'Contact an administrator.';
-      document.getElementById('suspOffItem').textContent='N/A';
-      document.getElementById('suspPopupTitle').textContent='Account Secured';
-      document.getElementById('suspPopupHeading').textContent='Account Secured - Access Locked';
-      document.getElementById('suspPopupMsg').textContent='Your account has been locked by an administrator due to suspected unauthorized access or compromise. Please contact a senior administrator.';
       status.textContent='LOCKED';
-      document.getElementById('suspOverlay').classList.add('show');
-      await push(ref(db,'logs/login'),{username:u,level:staffData.level||'-',date:nowStr(),result:'secured-locked',ip:'-'});
+      await push(ref(db,'logs/login'),{username:u,level:staffData.level||'-',date:nowStr(),result:'secured-locked',ip:'-'}).catch(()=>{});
+      ME=u;
+      document.getElementById('loginScreen').style.display='none';
+      document.getElementById('adminScreen').style.display='block';
+      showStaffPunishScreen('secure',{
+        reason:si.reason||'Your account has been secured pending review.',
+        by:si.by||'Administration',
+        level:si.level||'Standard'
+      });
       return;
     }
     ME=u; MY_LEVEL=staffData.level; currentPassword=p;
