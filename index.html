@@ -6241,7 +6241,7 @@ function renderUA(c){
           <div class="row"><label>System Entry:</label><span>${u.created||'-'}</span></div>
           <div class="row"><label>Account Age:</label><span>${u.robloxAccountCreated?accountAge(u.robloxAccountCreated):'—'}</span></div>
           ${CUSTOM_FIELDS.length&&canDo('canViewCustomFields')?'<hr style="border:none;border-top:1px solid var(--c-border);margin:4px 0;">':'' }
-          ${CUSTOM_FIELDS.length&&canDo('canViewCustomFields')?CUSTOM_FIELDS.map(f=>`<div class="row"><label>${f.name}:</label><span>${(u.customData&&u.customData[f.name])||'-'}</span></div>`).join(''):''}
+          ${CUSTOM_FIELDS.length&&canDo('canViewCustomFields')?CUSTOM_FIELDS.map(function(f){var fid=f.id||f.name;var val=u.customData&&(u.customData[fid]!=null?u.customData[fid]:u.customData[f.name]);return '<div class="row"><label>'+(f.label||f.name)+':</label><span style="color:var(--c-text);">'+(val!=null?val:'-')+'</span></div>';}).join(''):''}
         </div></div>
       </div>
       <div style="flex:1;min-width:200px;">
@@ -6252,7 +6252,7 @@ function renderUA(c){
     <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;">
       ${canDo('canModerateUsers')?'<button class="btn" onclick="document.querySelector(\'.up-tab[data-tab=logbook]\').click()"><svg width="11" height="11" viewBox="0 0 14 14" fill="none" style="vertical-align:middle;margin-right:3px;"><rect x="2" y="1.5" width="10" height="11" rx="1" stroke="currentColor" stroke-width="1.2"/><line x1="4.5" y1="5" x2="9.5" y2="5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="7.5" x2="7" y2="7.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="7" y1="9.5" x2="9.5" y2="9.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg> Add Log Entry</button>':''}
       <button class="btn" id="btn-refresh-rblx-${uid}">↻ Refresh Roblox</button>
-      ${canDo('canManageCustomFields')?`<button class="btn" onclick="nav('staffconfig')" style="display:flex;align-items:center;gap:4px;" title="Manage Custom User Field definitions"><svg width="11" height="11" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="2" width="11" height="10" rx="1.2" stroke="currentColor" stroke-width="1.2"/><line x1="4.5" y1="5.5" x2="9.5" y2="5.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="8" x2="7.5" y2="8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="10" cy="8" r="1.5" stroke="currentColor" stroke-width="1.1"/></svg>Manage Fields</button>`:''}
+      ${CUSTOM_FIELDS.length&&canDo('canViewCustomFields')?`<button class="btn" onclick="openUserConfigDialog('${uid}')" style="display:flex;align-items:center;gap:4px;" title="Edit custom field values for this player"><svg width="11" height="11" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="2" width="11" height="10" rx="1.2" stroke="currentColor" stroke-width="1.2"/><line x1="4.5" y1="5.5" x2="9.5" y2="5.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="8" x2="7.5" y2="8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="10" cy="8" r="1.5" stroke="currentColor" stroke-width="1.1"/></svg>Fields</button>`:''}
       ${isSuperAdmin()?`<button class="btn" style="background:rgba(248,81,73,0.08);border-color:var(--c-ban);color:var(--c-ban);display:flex;align-items:center;gap:4px;" onclick="wipeUser('${uid}')"><svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2 3.5h10M5 3.5V2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v1M4.5 3.5l.5 8h4l.5-8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg> Delete</button>`:''}
     </div>`;
   }
@@ -17929,16 +17929,26 @@ function renderDisciplineLog(c){
       btn.onclick=async function(){ if(!confirm('Delete record?')) return; await remove(ref(db,'discipline/'+this.dataset.k)).catch(()=>{}); showToast('Deleted','success'); };
     });
   }
-  _disciplineUnsubscribe=onValue(ref(db,'discipline'),function(snap){
-    _snap=snap; draw();
-  },function(e){
-    console.warn('discipline onValue error:',e);
-    // Try a one-time get as fallback
-    get(ref(db,'discipline')).then(function(s){ _snap=s; draw(); }).catch(function(){
+  // Use onValue but with robust fallback - if it errors, poll every 5s
+  function _discLoad(){
+    get(ref(db,'discipline')).then(function(s){ _snap=s; draw(); }).catch(function(e2){
+      console.warn('discipline get error:',e2);
       var b=document.getElementById('disc-body');
-      if(b) b.innerHTML='<div style="text-align:center;padding:30px;color:var(--c-text2);font-size:12px;">No discipline records yet.<br><span style="font-size:10px;opacity:0.6;">Records appear when staff are punished.</span></div>';
+      if(b&&b.textContent==='Loading...') b.innerHTML='<div style="text-align:center;padding:30px;color:var(--c-text2);font-size:12px;">No discipline records yet.</div>';
     });
-  });
+  }
+  try {
+    _disciplineUnsubscribe=onValue(ref(db,'discipline'),function(snap){
+      _snap=snap; draw();
+    },function(e){
+      console.warn('discipline onValue error, using polling:',e);
+      _discLoad();
+      // Poll every 5s as fallback
+      var _pollId=setInterval(function(){ if(!document.getElementById('disc-body')){clearInterval(_pollId);return;} _discLoad(); },5000);
+    });
+  } catch(e3) {
+    _discLoad();
+  }
   setTimeout(function(){
     var rf=document.getElementById('disc-refresh'); if(rf) rf.onclick=function(){ if(_snap) draw(); };
     var fi=document.getElementById('disc-filter'); if(fi) fi.onchange=function(){ if(_snap) draw(); };
@@ -18055,7 +18065,7 @@ function renderOperatorTerminal(c){
     sp.addEventListener('keydown',async function(e){
       if(e.key==='ArrowUp'){
         e.preventDefault();
-        if(_hIdx<_hist.length-1){_hIdx++;var t=_hist[_hist.length-1-_hIdx]||'';this.textContent=t;var r=document.createRange();r.selectNodeContents(this);r.collapse(false);var s=window.getSelection();s.removeAllRanges();s.addRange(r);}
+        if(_hIdx<_hist.length-1){_hIdx++;var t=_hist[_hist.length-1-_hIdx]||'';this.textContent=t;this.innerText=t;var r=document.createRange();r.selectNodeContents(this);r.collapse(false);var s=window.getSelection();s.removeAllRanges();s.addRange(r);}
         return;
       }
       if(e.key==='ArrowDown'){
@@ -18066,7 +18076,7 @@ function renderOperatorTerminal(c){
       }
       if(e.key==='Enter'){
         e.preventDefault();
-        var raw=(this.textContent||'').trim();
+        var raw=(this.textContent||this.innerText||'').replace(/[\u00a0\u200b]/g,' ').replace(/<br>/gi,' ').trim();
         this.contentEditable='false';
         // Finalize this line - make it static
         var il2=document.getElementById('ps-active-line');
@@ -18154,6 +18164,7 @@ function renderOperatorTerminal(c){
         ['Unlock-Account','Function','Remove security lock. -Name <string>'],
         ['Stop-Session','Function','Force logout. -Name <string>'],
         ['Remove-Staff','Function','Terminate (irreversible). -Name <s> -Reason <s>'],
+        ['Wipe-Staff','Function','Full data erasure. -Name <s> -Code <operator-code>'],
         ['Get-Players','Function','Player list. -Limit <int>'],
         ['Get-Player','Function','Player lookup. -Name <string>'],
         ['Get-DisciplineLog','Function','Discipline records. -Limit <int> -Status <string>'],
@@ -18290,7 +18301,7 @@ function renderOperatorTerminal(c){
       body.appendChild(cil);body.scrollTop=body.scrollHeight;csp.focus();
       csp.addEventListener('keydown',async function(e2){
         if(e2.key!=='Enter') return; e2.preventDefault();
-        var conf=(csp.textContent||'').trim().toUpperCase(); csp.contentEditable='false'; ccur.remove();
+        var conf=(csp.textContent||csp.innerText||'').replace(/[\u00a0]/g,' ').trim().toUpperCase(); csp.contentEditable='false'; ccur.remove();
         cil.id=''; writeLine('PS C:\\Software\\Operator> '+conf);
         if(conf==='CONFIRM'){
           await update(ref(db,'staff/'+f.sid),{terminated:true,forceLogout:true,terminateInfo:{reason:rsn,by:ME,date:new Date().toLocaleString()}});
@@ -18299,6 +18310,40 @@ function renderOperatorTerminal(c){
           _writeDisciplineRecord(f.sid,f.s.username,'Termination',rsn,ME);
           blank();writeTable(['Property','Value'],[['Target',f.s.username],['Action','Terminated'],['Reason',rsn],['Status','TERMINATED']]);blank();
         } else { blank();writeLine('Remove-Staff : Operation cancelled.');blank(); }
+        createInputLine();
+      });
+      return;
+    }
+    if(cmdU==='WIPE-STAFF'||cmdU==='WIPE'){
+      if(needAuth()) return;
+      var tn=params['name']||pos[0]; var code=params['code']||params['operatorcode']||pos[1];
+      if(!tn){writeLine('<span class="ps-err">Wipe-Staff : -Name and -Code required.</span>');return;}
+      var f=findStaff(tn); if(!f.s){writeLine('<span class="ps-err">Wipe-Staff : "'+tn+'" not found.</span>');return;}
+      if(f.s.username===ME){writeLine('<span class="ps-err">Wipe-Staff : Cannot wipe your own account.</span>');return;}
+      // Validate operator code
+      var opcSnap=await get(ref(db,'meta/operatorCode')).catch(()=>null);
+      var validCode=opcSnap&&opcSnap.exists()?String(opcSnap.val()).trim():'SAMARITAN_DELETE';
+      if(!code||String(code).trim()!==validCode){writeLine('<span class="ps-err">Wipe-Staff : Invalid operator code. -Code <operator-code> required.</span>');machineLog('DELETE_ATTEMPT','Terminal: wipe failed - wrong code for '+f.s.username,'');return;}
+      writeLine('');writeLine('<span class="ps-err">WARNING: All data for '+f.s.username+' will be permanently erased. Type CONFIRM to proceed:</span>');
+      var _wold=document.getElementById('ps-active-line'); if(_wold)_wold.id='';
+      var _wcil=document.createElement('div');_wcil.className='ps-input-line';_wcil.id='ps-active-line';
+      var _wpr=document.createElement('span');_wpr.className='ps-prompt-color';_wpr.textContent='PS C:\\Software\\Operator> ';
+      var _wsp=document.createElement('span');_wsp.className='ps-inp-span';_wsp.contentEditable='true';_wsp.setAttribute('spellcheck','false');
+      var _wcur=document.createElement('span');_wcur.className='ps-cursor-inline';
+      _wcil.appendChild(_wpr);_wcil.appendChild(_wsp);_wcil.appendChild(_wcur);
+      body.appendChild(_wcil);body.scrollTop=body.scrollHeight;_wsp.focus();
+      _wsp.addEventListener('keydown',async function(ew){
+        if(ew.key!=='Enter') return; ew.preventDefault();
+        var wconf=(_wsp.textContent||_wsp.innerText||'').trim().toUpperCase(); _wsp.contentEditable='false'; _wcur.remove(); _wcil.id='';
+        writeLine('PS C:\\Software\\Operator> '+wconf);
+        if(wconf==='CONFIRM'){
+          await update(ref(db,'staff/'+f.sid),{wiped:true,forceLogout:true}).catch(()=>{});
+          await new Promise(function(r){setTimeout(r,400);});
+          _writeDisciplineRecord(f.sid,f.s.username,'Account Wipe','Wiped via terminal by '+ME,ME,{wipeScheduledAt:Date.now()});
+          await wipeStaffMember(f.sid,f.s.username,'Wiped via terminal by '+ME).catch(()=>{});
+          machineLog('WIPE','[Terminal] Wiped: '+f.s.username,'');
+          blank();writeTable(['Property','Value'],[['Target',f.s.username],['Action','Account Wiped'],['Status','EXECUTED']]);blank();
+        } else { blank();writeLine('Wipe-Staff : Operation cancelled.');blank(); }
         createInputLine();
       });
       return;
