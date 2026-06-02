@@ -18163,8 +18163,7 @@ window._updateDisciplineStatus=_updateDisciplineStatus;
 function renderOperatorTerminal(c){
   var _unlocked=false, _hist=[], _hIdx=-1;
   var _auditMode=false;
-  var _awaitingConfirm=false;
-  var _confirmCallback=null; // when set, next Enter goes here
+  var _pendingAction=null; // {type, data} - set when awaiting Y/N confirmation
 
   // CSS
   if(!document.getElementById('ps-style')){
@@ -18281,10 +18280,8 @@ function renderOperatorTerminal(c){
       this.contentEditable='false';
       var frozen=document.getElementById('ps-active-line'); if(frozen) frozen.removeAttribute('id');
       if(!raw){ createInputLine(); return; }
-      if(_confirmCallback){ var cb=_confirmCallback; _confirmCallback=null; _awaitingConfirm=false; await cb(raw); createInputLine(); return; }
-      if(_awaitingConfirm){ return; }
       _hist.push(raw); _hIdx=-1;
-      await dispatch(raw);
+      try { await dispatch(raw); } catch(err) { writeLine('<span class="ps-err">Error: '+String(err)+'</span>'); }
       createInputLine();
     });
     return sp;
@@ -18292,6 +18289,40 @@ function renderOperatorTerminal(c){
 
   // ── COMMAND DISPATCH ──
   async function dispatch(raw){
+    // Handle pending confirmation
+    if(_pendingAction){
+      var pa=_pendingAction; _pendingAction=null;
+      var ans=raw.trim().toUpperCase();
+      var yes=(ans==='Y'||ans==='YES'||ans==='CONFIRM');
+      var no=(ans==='N'||ans==='NO'||ans==='CANCEL');
+      if(!yes&&!no){ writeLine('<span class="ps-err">Expected Y/N or CONFIRM/CANCEL. Action aborted.</span>'); blank(); return; }
+      if(no){ blank(); writeLine('<span class="ps-dim">Operation cancelled.</span>'); blank(); return; }
+      // Execute the pending action
+      if(pa.type==='terminate'){
+        var fs=pa.data;
+        try {
+          await update(ref(db,'staff/'+fs.sid),{terminated:true,forceLogout:true,terminateInfo:{reason:fs.rsn,by:ME,date:new Date().toLocaleString()}});
+          await new Promise(function(r){setTimeout(r,400);});
+          await remove(ref(db,'staff/'+fs.sid));
+          delete STAFF[fs.sid];
+          _writeDisciplineRecord(fs.sid,fs.username,'Termination',fs.rsn,ME);
+          try{ var _smT={}; Object.entries(STAFF).forEach(function(e){ if(!e[1].terminated){ _smT[e[0]]={username:e[1].username,level:e[1].level,avatarUrl:e[1].avatarUrl||''}; } }); await set(ref(db,'meta/staffMirror'),_smT); }catch(eT){}
+          blank(); writeTable(['Property','Value'],[['Target',fs.username],['Action','Terminated'],['Reason',fs.rsn],['Status','TERMINATED']]); blank();
+        } catch(e) { writeLine('<span class="ps-err">Error: '+String(e)+'</span>'); }
+      } else if(pa.type==='wipe'){
+        var fw=pa.data;
+        try {
+          await update(ref(db,'staff/'+fw.sid),{wiped:true,forceLogout:true}).catch(()=>{});
+          await new Promise(function(r){setTimeout(r,400);});
+          _writeDisciplineRecord(fw.sid,fw.username,'Account Wipe','Wiped via terminal by '+ME,ME,{wipeScheduledAt:Date.now()});
+          await wipeStaffMember(fw.sid,fw.username,'Wiped via terminal by '+ME).catch(()=>{});
+          machineLog('WIPE','[Terminal] Wiped: '+fw.username,'');
+          try{ var _smW={}; Object.entries(STAFF).forEach(function(e){ if(!e[1].terminated){ _smW[e[0]]={username:e[1].username,level:e[1].level,avatarUrl:e[1].avatarUrl||''}; } }); await set(ref(db,'meta/staffMirror'),_smW); }catch(eW){}
+          blank(); writeTable(['Property','Value'],[['Target',fw.username],['Action','Account Wiped'],['Status','EXECUTED']]); blank();
+        } catch(e) { writeLine('<span class="ps-err">Error: '+String(e)+'</span>'); }
+      }
+      return;
+    }
     var tokens=raw.match(/(?:[^\s"]+|"[^"]*")+/g)||[];
     var cmdRaw=tokens[0]||''; var cmdU=cmdRaw.toUpperCase();
     var args=tokens.slice(1).map(function(t){return t.replace(/^"|"$/g,'');});
@@ -18492,19 +18523,8 @@ function renderOperatorTerminal(c){
       if(!tn||!rsn){writeLine('<span class="ps-err">Remove-Staff : -Name and -Reason required.</span>');return;}
       var f=findStaff(tn); if(!f.s){writeLine('<span class="ps-err">"'+tn+'" not found.</span>');return;}
       if(f.s.username===ME){writeLine('<span class="ps-err">Remove-Staff : Cannot terminate your own account.</span>');return;}
-      writeLine('');writeLine('<span class="ps-err">WARNING: This action is irreversible.</span>');writeLine('<span class="ps-warn">Type Y or CONFIRM to proceed, N to cancel:</span>');
-      _awaitingConfirm=true;
-      _confirmCallback=async function(conf){
-        var c2=conf.trim().toUpperCase();
-        if(c2==='CONFIRM'||c2==='Y'||c2==='YES'){
-          await update(ref(db,'staff/'+f.sid),{terminated:true,forceLogout:true,terminateInfo:{reason:rsn,by:ME,date:new Date().toLocaleString()}});
-          await new Promise(function(r){setTimeout(r,400);});
-          await remove(ref(db,'staff/'+f.sid));
-          delete STAFF[f.sid];
-          _writeDisciplineRecord(f.sid,f.s.username,'Termination',rsn,ME);
-          blank();writeTable(['Property','Value'],[['Target',f.s.username],['Action','Terminated'],['Reason',rsn],['Status','TERMINATED']]);blank();
-        } else { blank();writeLine('<span class="ps-dim">Remove-Staff : Cancelled.</span>');blank(); }
-      };
+      blank(); writeLine('<span class="ps-err">WARNING: This action is irreversible.</span>'); writeLine('<span class="ps-warn">Type Y or CONFIRM to proceed, N or CANCEL to abort:</span>');
+      _pendingAction={type:'terminate',data:{sid:f.sid,username:f.s.username,rsn:rsn}};
       return;
     }
     if(cmdU==='WIPE-STAFF'||cmdU==='WIPE'){
@@ -18517,19 +18537,8 @@ function renderOperatorTerminal(c){
       var opcSnap=await get(ref(db,'meta/operatorCode')).catch(()=>null);
       var validCode=opcSnap&&opcSnap.exists()?String(opcSnap.val()).trim():'SAMARITAN_DELETE';
       if(!code||String(code).trim()!==validCode){writeLine('<span class="ps-err">Wipe-Staff : Invalid operator code. -Code <operator-code> required.</span>');machineLog('DELETE_ATTEMPT','Terminal: wipe failed - wrong code for '+f.s.username,'');return;}
-      writeLine('');writeLine('<span class="ps-err">WARNING: All data for '+f.s.username+' will be permanently erased.</span>');writeLine('<span class="ps-warn">Type Y or CONFIRM to proceed, N to cancel:</span>');
-      _awaitingConfirm=true;
-      _confirmCallback=async function(wconf){
-        var wc2=wconf.trim().toUpperCase();
-        if(wc2==='CONFIRM'||wc2==='Y'||wc2==='YES'){
-          await update(ref(db,'staff/'+f.sid),{wiped:true,forceLogout:true}).catch(()=>{});
-          await new Promise(function(r){setTimeout(r,400);});
-          _writeDisciplineRecord(f.sid,f.s.username,'Account Wipe','Wiped via terminal by '+ME,ME,{wipeScheduledAt:Date.now()});
-          await wipeStaffMember(f.sid,f.s.username,'Wiped via terminal by '+ME).catch(()=>{});
-          machineLog('WIPE','[Terminal] Wiped: '+f.s.username,'');
-          blank();writeTable(['Property','Value'],[['Target',f.s.username],['Action','Account Wiped'],['Status','EXECUTED']]);blank();
-        } else { blank();writeLine('<span class="ps-dim">Wipe-Staff : Cancelled.</span>');blank(); }
-      };
+      blank(); writeLine('<span class="ps-err">WARNING: All data for '+f.s.username+' will be permanently erased.</span>'); writeLine('<span class="ps-warn">Type Y or CONFIRM to proceed, N or CANCEL to abort:</span>');
+      _pendingAction={type:'wipe',data:{sid:f.sid,username:f.s.username}};
       return;
     }
     if(cmdU==='GET-PLAYERS'||cmdU==='LISTUSERS'){
