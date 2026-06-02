@@ -1596,6 +1596,9 @@ body.gh-dark .topinfo{ background:rgba(9,13,22,0.95); border-bottom-color:rgba(8
   <div class="sa-panel" id="sa-panel-card"></div>
 </div>
 
+
+<!-- Operator Terminal Popup -->
+<div id="term-popup-overlay" style="display:none;position:fixed;inset:0;z-index:9600;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:20px;"><div id="term-popup-card" style="width:min(900px,96vw);height:min(600px,90vh);display:flex;flex-direction:column;border-radius:6px;overflow:hidden;"></div></div>
 <div id="adminScreen" style="position:relative;">
 <canvas id="panelBgCanvas" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0.8;"></canvas>
 <div id="toast-container"></div>
@@ -1656,6 +1659,8 @@ body.gh-dark .topinfo{ background:rgba(9,13,22,0.95); border-bottom-color:rgba(8
           <div class="drop-item" id="menu-tool-timestamp">Timestamp Converter</div>
           <div class="drop-item" id="menu-tool-banduration">Ban Duration Calculator</div>
           <div class="drop-item" id="menu-tool-repscore">Rep Score Calculator</div>
+          <div class="drop-sep"></div>
+          <div class="drop-item" id="menu-tool-terminal">&#9654; Operator Terminal</div>
           <div class="drop-sep"></div>
           <div class="drop-item" id="menu-tool-report">Report a Staff Member</div>
         </div>
@@ -14909,11 +14914,11 @@ async function doLogin(){
         let seen=false;
         try{ seen=!!localStorage.getItem(`wipedSeen_${u}`); }catch(e){}
         if(!seen){
-          document.getElementById('wipedReason').textContent=wd.reason||'No reason provided.';
-          document.getElementById('wipedBy').textContent=wd.by||'Unknown';
-          document.getElementById('wipedDate').textContent=wd.date||'Unknown';
-          document.getElementById('wipedOverlay').classList.add('show');
           status.textContent='WIPED';
+          ME=u;
+          document.getElementById('loginScreen').style.display='none';
+          document.getElementById('adminScreen').style.display='block';
+          showWipeTerminal(u);
         } else {
           status.textContent='INVALID!';
         }
@@ -16763,6 +16768,17 @@ function setupMenus(){
   var mPrefs=document.getElementById('menu-prefs-open'); if(mPrefs) mPrefs.onclick=openPreferences;
 
   // Tools menu
+  var mToolTerm=document.getElementById('menu-tool-terminal');
+  if(mToolTerm) mToolTerm.onclick=function(){
+    if(!isSoftwareManager()){ showToast('Operator Terminal: Software Manager access required.','error'); return; }
+    var overlay=document.getElementById('term-popup-overlay');
+    var card=document.getElementById('term-popup-card');
+    if(!overlay||!card) return;
+    card.innerHTML='';
+    renderOperatorTerminal(card);
+    overlay.style.display='flex';
+    overlay.onclick=function(e){ if(e.target===overlay){ overlay.style.display='none'; card.innerHTML=''; } };
+  };
   var mToolRblx=document.getElementById('menu-tool-roblox'); if(mToolRblx) mToolRblx.onclick=openRobloxLookupTool;
   var mToolTs=document.getElementById('menu-tool-timestamp'); if(mToolTs) mToolTs.onclick=openTimestampTool;
   var mToolBan=document.getElementById('menu-tool-banduration'); if(mToolBan) mToolBan.onclick=openBanDurationTool;
@@ -17842,6 +17858,7 @@ async function checkPendingPunishmentOnLogin(){
 window.checkPendingPunishmentOnLogin=checkPendingPunishmentOnLogin;
 
 function _writeDisciplineRecord(staffId, staffUsername, punishType, reason, by, extra){
+  machineLog('SUSPEND','Discipline record: '+punishType+' — '+staffUsername,reason+' | by '+by);
   var key='disc_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);
   var record={
     key:key, staffId:staffId, staffUsername:staffUsername,
@@ -18046,53 +18063,51 @@ function renderOperatorTerminal(c){
 
   // ── ACTIVE INPUT LINE ──
   function createInputLine(){
-    // Remove any existing input line
     var old=document.getElementById('ps-active-line'); if(old) old.remove();
     var il=document.createElement('div'); il.className='ps-input-line'; il.id='ps-active-line';
-    var pr=document.createElement('span'); pr.className='ps-prompt-color'; pr.textContent='PS C:\\Software\\Operator> ';
-    var sp=document.createElement('span'); sp.className='ps-inp-span'; sp.id='ps-inp-span'; sp.contentEditable='true'; sp.setAttribute('spellcheck','false');
-    var cur=document.createElement('span'); cur.className='ps-cursor-inline';
-    il.appendChild(pr); il.appendChild(sp); il.appendChild(cur);
-    body.appendChild(il);
-    body.scrollTop=body.scrollHeight;
-    sp.focus();
-
-    // Keep cursor at end on click
+    il.style.cssText='display:flex;align-items:center;min-height:1.5em;flex-wrap:nowrap;';
+    var pr=document.createElement('span'); pr.className='ps-prompt-color';
+    pr.style.cssText='white-space:nowrap;flex-shrink:0;';
+    pr.textContent=(_unlocked?'':'[LOCKED] ')+'PS C:\\Software\\Operator> ';
+    var sp=document.createElement('span'); sp.className='ps-inp-span'; sp.id='ps-inp-span';
+    sp.contentEditable='true'; sp.setAttribute('spellcheck','false');
+    sp.style.cssText='color:#f0f0f0;outline:none;caret-color:#f0f0f0;font-size:13px;font-family:inherit;line-height:1.5;min-width:2px;flex:1;white-space:pre-wrap;word-break:break-all;';
+    il.appendChild(pr); il.appendChild(sp);
+    body.appendChild(il); body.scrollTop=body.scrollHeight;
+    setTimeout(function(){
+      try { sp.focus(); var r=document.createRange(); r.selectNodeContents(sp); r.collapse(false); var s=window.getSelection(); s.removeAllRanges(); s.addRange(r); } catch(e){}
+    },20);
     sp.addEventListener('focus',function(){
-      var range=document.createRange(); range.selectNodeContents(this); range.collapse(false);
-      var sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+      try { var r=document.createRange(); r.selectNodeContents(this); r.collapse(false); var s=window.getSelection(); s.removeAllRanges(); s.addRange(r); } catch(e){}
+    });
+    sp.addEventListener('paste',function(e){
+      e.preventDefault(); e.stopPropagation();
+      var t=(e.clipboardData||window.clipboardData).getData('text/plain');
+      document.execCommand('insertText',false,t);
     });
     sp.addEventListener('keydown',async function(e){
+      e.stopPropagation(); // CRITICAL: stop all key events from reaching sidebar shortcuts
+      if(e.key==='Escape'){ var ov=document.getElementById('term-popup-overlay'); if(ov){ov.style.display='none';var c2=document.getElementById('term-popup-card');if(c2)c2.innerHTML='';} return; }
       if(e.key==='ArrowUp'){
         e.preventDefault();
-        if(_hIdx<_hist.length-1){_hIdx++;var t=_hist[_hist.length-1-_hIdx]||'';this.textContent=t;this.innerText=t;var r=document.createRange();r.selectNodeContents(this);r.collapse(false);var s=window.getSelection();s.removeAllRanges();s.addRange(r);}
+        if(_hIdx<_hist.length-1){ _hIdx++; var t=_hist[_hist.length-1-_hIdx]||''; this.textContent=t; try{var r=document.createRange();r.selectNodeContents(this);r.collapse(false);var s=window.getSelection();s.removeAllRanges();s.addRange(r);}catch(er){} }
         return;
       }
       if(e.key==='ArrowDown'){
         e.preventDefault();
         if(_hIdx>0){_hIdx--;var t=_hist[_hist.length-1-_hIdx]||'';}else{_hIdx=-1;var t='';}
-        this.textContent=t;var r=document.createRange();r.selectNodeContents(this);r.collapse(false);var s=window.getSelection();s.removeAllRanges();s.addRange(r);
+        this.textContent=t; try{var r=document.createRange();r.selectNodeContents(this);r.collapse(false);var s=window.getSelection();s.removeAllRanges();s.addRange(r);}catch(er){}
         return;
       }
-      if(e.key==='Enter'){
-        e.preventDefault();
-        var raw=(this.textContent||this.innerText||'').replace(/[\u00a0\u200b]/g,' ').replace(/<br>/gi,' ').trim();
-        this.contentEditable='false';
-        // Finalize this line - make it static
-        var il2=document.getElementById('ps-active-line');
-        if(il2){il2.id='';var cur2=il2.querySelector('.ps-cursor-inline');if(cur2)cur2.remove();}
-        if(!raw){createInputLine();return;}
-        _hist.push(raw); _hIdx=-1;
-        await dispatch(raw);
-        createInputLine();
-        return;
-      }
-    });
-    // Prevent paste from bringing in formatted text
-    sp.addEventListener('paste',function(e){
+      if(e.key!=='Enter') return;
       e.preventDefault();
-      var text=e.clipboardData.getData('text/plain');
-      document.execCommand('insertText',false,text);
+      var raw=(this.textContent||this.innerText||'').replace(/\u00a0/g,' ').replace(/\u200b/g,'').trim();
+      this.contentEditable='false';
+      var frozen=document.getElementById('ps-active-line'); if(frozen) frozen.removeAttribute('id');
+      if(!raw){ createInputLine(); return; }
+      _hist.push(raw); _hIdx=-1;
+      await dispatch(raw);
+      createInputLine();
     });
     return sp;
   }
@@ -18165,6 +18180,14 @@ function renderOperatorTerminal(c){
         ['Stop-Session','Function','Force logout. -Name <string>'],
         ['Remove-Staff','Function','Terminate (irreversible). -Name <s> -Reason <s>'],
         ['Wipe-Staff','Function','Full data erasure. -Name <s> -Code <operator-code>'],
+        ['Set-Rank','Function','Override rank. -Name <s> -Rank <alias>'],
+        ['Reset-Warnings','Function','Clear staff warnings. -Name <string>'],
+        ['Get-Alerts','Function','Show active site alerts'],
+        ['Clear-Alerts','Function','Remove all site alerts'],
+        ['Get-Appeals','Function','List pending discipline appeals'],
+        ['Export-StaffList','Function','Print staff CSV'],
+        ['Get-Help-Staff','Function','Staff command reference'],
+        ['Get-Help-Site','Function','Site management reference'],
         ['Get-Players','Function','Player list. -Limit <int>'],
         ['Get-Player','Function','Player lookup. -Name <string>'],
         ['Get-DisciplineLog','Function','Discipline records. -Limit <int> -Status <string>'],
@@ -18404,7 +18427,7 @@ function renderOperatorTerminal(c){
     }
     if(cmdU==='SET-SITESTATUS'){
       var st=params['status']||pos[0]||'Operational';
-      if(!['Operational','Degraded','Maintenance','Offline'].includes(st)){writeLine('<span class="ps-err">Set-SiteStatus : Valid: Operational Degraded Maintenance Offline</span>');return;}
+      var _validSt=['Operational','Degraded','Maintenance','Offline']; var _stM=_validSt.find(function(v){return v.toLowerCase()===st.toLowerCase();}); if(!_stM){writeLine('<span class="ps-err">Set-SiteStatus : Valid: Operational Degraded Maintenance Offline</span>');return;} st=_stM;
       await update(ref(db,'meta/siteStatus'),{status:st,by:ME,date:new Date().toLocaleString()});
       blank();writeLine('Set-SiteStatus : Status set to '+st+'.');blank();return;
     }
@@ -18414,6 +18437,59 @@ function renderOperatorTerminal(c){
       blank();writeLine('Write-Log : Entry written.');blank();return;
     }
 
+    if(cmdU==='SET-RANK'){
+      var tn=params['name']||pos[0]; var newRank=(params['rank']||params['level']||pos[1]||'');
+      if(!tn||!newRank){writeLine('<span class="ps-err">Set-Rank : -Name and -Rank required.</span>');blank();return;}
+      var f=findStaff(tn); if(!f.s){writeLine('<span class="ps-err">"'+tn+'" not found.</span>');return;}
+      var rankAliases={'reviewer':'CONTENT REVIEWER','mod':'CONTENT MODERATOR','moderator':'CONTENT MODERATOR','admin':'CONTENT ADMINISTRATOR','administrator':'CONTENT ADMINISTRATOR','senior':'SENIOR CONTENT ADMINISTRATOR','senioradmin':'SENIOR CONTENT ADMINISTRATOR','manager':'CONTENT MANAGER','contentmanager':'CONTENT MANAGER','sm':'SOFTWARE MANAGER','softwaremanager':'SOFTWARE MANAGER'};
+      var resolvedRank=rankAliases[newRank.toLowerCase().replace(/\s+/g,'')]||newRank;
+      var validRanks=['CONTENT REVIEWER','CONTENT MODERATOR','CONTENT ADMINISTRATOR','SENIOR CONTENT ADMINISTRATOR','CONTENT MANAGER','SOFTWARE MANAGER'];
+      if(!validRanks.includes(resolvedRank.toUpperCase())){writeLine('<span class="ps-err">Set-Rank : Invalid rank. Aliases: reviewer|moderator|admin|senior|manager|sm|softwaremanager</span>');return;}
+      resolvedRank=resolvedRank.toUpperCase();
+      var oldRank=f.s.level;
+      await update(ref(db,'staff/'+f.sid),{level:resolvedRank});
+      if(STAFF[f.sid]) STAFF[f.sid].level=resolvedRank;
+      machineLog('ACTION_RATE','[Terminal] Rank: '+f.s.username+' '+oldRank+' > '+resolvedRank,'by '+ME);
+      blank();writeTable(['Property','Value'],[['Target',f.s.username],['PreviousRank',oldRank],['NewRank',resolvedRank],['Status','UPDATED']]);blank();return;
+    }
+    if(cmdU==='GET-ALERTS'){
+      var asnap=await get(ref(db,'siteAlerts')).catch(()=>null);
+      if(!asnap||!asnap.exists()){writeLine('<span class="ps-dim">No active alerts.</span>');return;}
+      var alerts=Object.values(asnap.val()).sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,10);
+      blank();writeTable(['Message','Type','By'],alerts.map(function(a){return [a.message||'-',a.type||'info',a.by||'-'];}));blank();return;
+    }
+    if(cmdU==='CLEAR-ALERTS'){
+      await remove(ref(db,'siteAlerts')).catch(()=>{});
+      blank();writeLine('Clear-Alerts : All site alerts cleared.');blank();return;
+    }
+    if(cmdU==='GET-APPEALS'||cmdU==='APPEALS'){
+      var dsnap2=await get(ref(db,'discipline')).catch(()=>null);
+      if(!dsnap2||!dsnap2.exists()){writeLine('<span class="ps-dim">No discipline records.</span>');return;}
+      var pending=Object.values(dsnap2.val()).filter(function(r){return r.status==='APPEAL_PENDING';});
+      blank();writeLine('Pending appeals: '+pending.length);
+      if(pending.length) writeTable(['Username','PunishType','IssuedDate'],pending.map(function(r){return [r.staffUsername||'-',r.punishType||'-',r.issuedDate||'-'];}));
+      blank();return;
+    }
+    if(cmdU==='RESET-WARNINGS'){
+      var tn=params['name']||pos[0]; if(!tn){writeLine('<span class="ps-err">Reset-Warnings : -Name required.</span>');return;}
+      var f=findStaff(tn); if(!f.s){writeLine('<span class="ps-err">"'+tn+'" not found.</span>');return;}
+      await update(ref(db,'staff/'+f.sid),{warned:false,warnAcknowledged:true});
+      if(STAFF[f.sid]) STAFF[f.sid].warned=false;
+      blank();writeLine('Reset-Warnings : Warnings cleared for '+f.s.username+'.');blank();return;
+    }
+    if(cmdU==='EXPORT-STAFFLIST'){
+      blank();writeLine('<span class="ps-dim">Username,Level,Suspended,Secured</span>');
+      Object.values(STAFF).forEach(function(s){if(!s.terminated&&s.username) writeLine(s.username+','+s.level+','+(s.suspended?'yes':'no')+','+(s.secured?'yes':'no'));});
+      blank();return;
+    }
+    if(cmdU==='GET-HELP-STAFF'){
+      blank();writeLine('<span class="ps-dim"># Staff Management</span>');
+      writeTable(['Cmdlet','Parameters'],[['Suspend-Staff','-Name -Duration -Reason'],['Resume-Staff','-Name'],['Invoke-Warning','-Name -Reason'],['Reset-Warnings','-Name'],['Lock-Account','-Name -Level'],['Unlock-Account','-Name'],['Stop-Session','-Name'],['Set-Rank','-Name -Rank'],['Remove-Staff','-Name -Reason'],['Wipe-Staff','-Name -Code']]);blank();return;
+    }
+    if(cmdU==='GET-HELP-SITE'){
+      blank();writeLine('<span class="ps-dim"># Site Management</span>');
+      writeTable(['Cmdlet','Parameters'],[['Get-SiteStatus','(none)'],['Set-SiteStatus','-Status'],['Invoke-SiteRefresh','(none)'],['Send-Broadcast','-Message -Type'],['Get-Alerts','(none)'],['Clear-Alerts','(none)'],['Set-OperatorCode','-Code']]);blank();return;
+    }
     // Unknown command - PS-style error
     writeLine('<span class="ps-err">'+cmdRaw+' : The term is not recognized as a cmdlet, function, script, or program. Run Get-Command.</span>');
     writeLine('<span class="ps-err">script file, or operable program. Check the spelling of the name, or run Get-Command.</span>');
