@@ -17901,6 +17901,33 @@ function promptTerminateStaff(sid){
 window.promptSuspendStaff=promptSuspendStaff;
 window.promptWarnStaff=promptWarnStaff;
 
+
+async function wipeStaffMember(sid, staffUsername, reason){
+  try {
+    // 1. Write wipedAccounts record (so login shows terminal screen)
+    var wipedAt=Date.now();
+    var ttlMins=getWipeTTL();
+    var autoDeleteAt=ttlMins>0?wipedAt+ttlMins*60000:0;
+    await set(ref(db,'wipedAccounts/'+staffUsername),{
+      reason:reason||'Account wiped by administrator',
+      by:ME, date:nowStr(), wipedAt:wipedAt, autoDeleteAt:autoDeleteAt
+    });
+    // 2. Remove from staff/
+    await remove(ref(db,'staff/'+sid)).catch(()=>{});
+    // 3. Update local STAFF object
+    if(STAFF[sid]) delete STAFF[sid];
+    // 4. Purge staff name from login log references
+    var loginSnap=await get(ref(db,'logs/login')).catch(()=>null);
+    if(loginSnap&&loginSnap.exists()){
+      var upd={};
+      Object.entries(loginSnap.val()).forEach(function(e){
+        if(e[1].username===staffUsername) upd['logs/login/'+e[0]+'/username']='[WIPED]';
+      });
+      if(Object.keys(upd).length) await update(ref(db),upd).catch(()=>{});
+    }
+  } catch(e){ console.error('wipeStaffMember error:',e); throw e; }
+}
+window.wipeStaffMember=wipeStaffMember;
 function promptWipeStaff(sid){
   var s=STAFF[sid]; if(!s) return;
   openSAPanel(`
