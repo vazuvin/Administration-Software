@@ -16821,7 +16821,7 @@ function setupMenus(){
     // Close all dropdowns first
     document.querySelectorAll('.dropdown').forEach(function(d){ d.classList.remove('show'); });
     document.querySelectorAll('.menu-item').forEach(function(m){ m.classList.remove('open'); });
-    if(!isSoftwareManager()){ showToast('Operator Terminal requires Software Manager access.','error'); return; }
+    if(!isSoftwareManager()){ showToast('Operator Terminal: Software Manager access required.','error'); return; }
     var overlay=document.getElementById('term-popup-overlay');
     var card=document.getElementById('term-popup-card');
     if(!overlay||!card){ console.error('term-popup-overlay or card not found'); return; }
@@ -17929,47 +17929,67 @@ function _writeDisciplineRecord(staffId, staffUsername, punishType, reason, by, 
 window._writeDisciplineRecord=_writeDisciplineRecord;
 
 var _disciplineUnsubscribe=null;
+var _disciplinePolling=null;
 function renderDisciplineLog(c){
-  if(_disciplineUnsubscribe){ _disciplineUnsubscribe(); _disciplineUnsubscribe=null; }
+  // Clean up previous subscriptions
+  if(_disciplineUnsubscribe){ try{_disciplineUnsubscribe();}catch(e){} _disciplineUnsubscribe=null; }
+  if(_disciplinePolling){ clearInterval(_disciplinePolling); _disciplinePolling=null; }
+
   var SC={SENT:'#8b949e',LOGGED_OUT:'#e3b341',READ:'#58a6ff',ACKNOWLEDGED:'#3fb950',APPEAL_PENDING:'#a371f7',APPEAL_DENIED:'#f85149',REINSTATED:'#3fb950'};
   var PC={'Termination':'#f85149','Suspension':'#d29922','Account Secured':'#58a6ff','Staff Warning':'#3fb950','Account Wipe':'#9b1c1c'};
-  var _wipeCI=setInterval(function(){var b=document.getElementById('disc-body');if(!b||!document.body.contains(b)){clearInterval(_wipeCI);return;}b.querySelectorAll('.wipe-countdown').forEach(function(el){var exp=parseInt(el.dataset.exp||0);var rem=exp-Date.now();if(rem>0){var h=Math.floor(rem/3600000),m=Math.floor((rem%3600000)/60000),s=Math.floor((rem%60000)/1000);el.textContent='Auto-wipe in '+h+'h '+m+'m '+s+'s';}else{el.textContent='Auto-wipe executing...';}});},1000);
+
   c.innerHTML='<div class="ptitle" style="display:flex;align-items:center;gap:8px;justify-content:space-between;"><span>Discipline Status</span>'
     +'<div style="display:flex;gap:4px;align-items:center;">'
-    +'<select id="disc-filter" style="font-size:10px;background:var(--bg-tbl-odd);border:1px solid var(--c-border);color:var(--c-text);border-radius:4px;padding:2px 6px;height:24px;"><option value="">All</option><option value="SENT">Sent</option><option value="READ">Read</option><option value="APPEAL_PENDING">Appeal Pending</option><option value="ACKNOWLEDGED">Acknowledged</option><option value="REINSTATED">Reinstated</option><option value="APPEAL_DENIED">Appeal Denied</option></select>'
-    +'<button class="btn small" id="disc-refresh" style="display:flex;align-items:center;gap:3px;height:24px;font-size:10px;">Refresh</button>'
+    +'<select id="disc-filter" style="font-size:10px;background:var(--bg-tbl-odd);border:1px solid var(--c-border);color:var(--c-text);border-radius:4px;padding:2px 6px;height:24px;"><option value="">All statuses</option><option value="SENT">Sent</option><option value="READ">Read</option><option value="APPEAL_PENDING">Appeal Pending</option><option value="ACKNOWLEDGED">Acknowledged</option><option value="REINSTATED">Reinstated</option><option value="APPEAL_DENIED">Appeal Denied</option></select>'
+    +'<button class="btn small" id="disc-refresh" style="height:24px;font-size:10px;">Refresh</button>'
     +'</div></div>'
-    +'<div id="disc-body" style="margin-top:4px;"></div>';
-  var _snap=null;
-  function draw(){
-    var body=document.getElementById('disc-body'); if(!body) return;
-    if(!_snap||!_snap.exists()){ body.innerHTML='<div style="text-align:center;padding:30px;color:var(--c-text2);font-size:12px;">No discipline records yet.</div>'; return; }
+    +'<div id="disc-body" style="margin-top:4px;padding:20px;text-align:center;color:var(--c-text2);font-size:11px;">Loading discipline records...</div>';
+
+  function draw(snap){
+    var body=document.getElementById('disc-body');
+    if(!body||!document.getElementById('disc-body')) return; // page changed
+    if(!snap||!snap.exists()){
+      body.innerHTML='<div style="text-align:center;padding:30px;color:var(--c-text2);font-size:12px;">No discipline records yet.<br><span style="font-size:10px;opacity:0.6;">Records appear here when staff are punished.</span></div>';
+      return;
+    }
     var filter=(document.getElementById('disc-filter')||{value:''}).value;
-    var entries=Object.entries(_snap.val()).map(function(e){ return Object.assign({_key:e[0]},e[1]); }).sort(function(a,b){ return (b.issuedAt||0)-(a.issuedAt||0); });
+    var entries=Object.entries(snap.val()).map(function(e){ return Object.assign({_key:e[0]},e[1]); })
+      .sort(function(a,b){ return (b.issuedAt||0)-(a.issuedAt||0); });
     if(filter) entries=entries.filter(function(r){ return r.status===filter; });
-    if(!entries.length){ body.innerHTML='<div style="text-align:center;padding:20px;color:var(--c-text2);font-size:11px;">No records match the selected filter.</div>'; return; }
+    if(!entries.length){
+      body.innerHTML='<div style="text-align:center;padding:20px;color:var(--c-text2);font-size:11px;">No records match this filter.</div>';
+      return;
+    }
     body.innerHTML=entries.map(function(r){
       var sc=SC[r.status]||'#8b949e', pc=PC[r.punishType]||'#3fb950';
       var isAppeal=r.status==='APPEAL_PENDING';
       var appealNote=isAppeal&&r.timeline?r.timeline.filter(function(t){return t.status==='APPEAL_PENDING';}).map(function(t){return t.note||'';}).join('').replace('Appeal: ',''):'';
+      var wipeExp=r.wipeScheduledAt?r.wipeScheduledAt+86400000:0;
       return '<div style="border:1px solid var(--c-border);border-left:3px solid '+pc+';border-radius:0 8px 8px 0;margin-bottom:6px;overflow:hidden;background:var(--bg-tbl-odd);">'
         +'<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;" onclick="var d=this.nextElementSibling;d.style.display=d.style.display===\'none\'?\'block\':\'none\';">'
         +tinyAvatarOnly((STAFF[r.staffId]||{}).avatarUrl||'',r.staffUsername||'?',26)
-        +'<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:700;color:var(--c-text);">'+(r.staffUsername||'?')+'</div><div style="font-size:10px;color:'+pc+';font-weight:600;">'+r.punishType+(r.punishType==='Account Wipe'&&r.wipeScheduledAt?'<span class="wipe-countdown" data-exp="'+(r.wipeScheduledAt+86400000)+'" style="margin-left:6px;font-size:9px;color:#dc2626;"></span>':'')+'</div></div>'
-        +(isAppeal?'<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(163,113,247,0.15);color:#a371f7;border:1px solid rgba(163,113,247,0.4);">APPEAL</span>':'')
-        +'<div style="text-align:right;flex-shrink:0;">'
-        +'<div style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:'+sc+'18;color:'+sc+';border:1px solid '+sc+'44;">'+r.status+'</div>'
-        +'<div style="font-size:9px;color:var(--c-text2);margin-top:1px;">'+(r.issuedDate||'')+'</div>'
+        +'<div style="flex:1;min-width:0;">'
+        +'<div style="font-size:12px;font-weight:700;color:var(--c-text);">'+(r.staffUsername||'Unknown')+'</div>'
+        +'<div style="font-size:10px;color:'+pc+';font-weight:600;">'+r.punishType
+        +(r.punishType==='Account Wipe'&&wipeExp>Date.now()?'<span class="wipe-countdown" data-exp="'+wipeExp+'" style="margin-left:6px;font-size:9px;color:#dc2626;font-weight:400;"></span>':'')
         +'</div></div>'
+        +(isAppeal?'<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(163,113,247,0.15);color:#a371f7;border:1px solid rgba(163,113,247,0.4);flex-shrink:0;">APPEAL</span>':'')
+        +'<div style="text-align:right;flex-shrink:0;margin-left:8px;">'
+        +'<div style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:'+sc+'18;color:'+sc+';border:1px solid '+sc+'44;white-space:nowrap;">'+r.status+'</div>'
+        +'<div style="font-size:9px;color:var(--c-text2);margin-top:2px;">'+(r.issuedDate||'')+'</div>'
+        +'</div></div>'
+        // Expanded detail panel
         +'<div style="display:none;padding:10px 14px;border-top:1px solid var(--c-border);background:var(--bg-content);">'
-        +'<div style="font-size:11px;color:var(--c-text);padding:6px 8px;background:var(--bg-tbl-odd);border-radius:4px;border-left:3px solid '+pc+';margin-bottom:8px;">'+(r.reason||'No reason')+'</div>'
+        +'<div style="font-size:11px;color:var(--c-text);padding:6px 8px;background:var(--bg-tbl-odd);border-radius:4px;border-left:3px solid '+pc+';margin-bottom:8px;">'+(r.reason||'No reason provided')+'</div>'
+        // Appeal section
         +(isAppeal&&appealNote?'<div style="padding:8px 10px;background:rgba(163,113,247,0.06);border:1px solid rgba(163,113,247,0.25);border-radius:6px;margin-bottom:8px;">'
           +'<div style="font-size:10px;font-weight:700;color:#a371f7;margin-bottom:3px;">APPEAL TEXT</div>'
-          +'<div style="font-size:11px;color:var(--c-text);">'+appealNote+'</div>'
-          +'<div style="display:flex;gap:4px;margin-top:6px;">'
+          +'<div style="font-size:11px;color:var(--c-text);margin-bottom:6px;">'+appealNote+'</div>'
+          +'<div style="display:flex;gap:4px;">'
           +'<button class="btn small disc-btn" data-k="'+r._key+'" data-s="REINSTATED" style="background:rgba(63,185,80,0.08);border-color:var(--c-ok);color:var(--c-ok);">Accept Appeal</button>'
           +'<button class="btn small disc-btn" data-k="'+r._key+'" data-s="APPEAL_DENIED" style="background:rgba(248,81,73,0.08);border-color:var(--c-ban);color:var(--c-ban);">Deny Appeal</button>'
           +'</div></div>':'')
+        // Timeline
         +'<div style="font-size:10px;font-weight:700;color:var(--c-text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Timeline</div>'
         +'<div style="padding-left:10px;">'+(r.timeline||[]).map(function(t,i,a){
           var tc=SC[t.status]||'#8b949e';
@@ -17977,54 +17997,80 @@ function renderDisciplineLog(c){
             +'<div style="position:absolute;left:-5px;top:3px;width:8px;height:8px;border-radius:50%;background:'+tc+';box-shadow:0 0 5px '+tc+'88;"></div>'
             +'<div style="font-size:10px;font-weight:700;color:'+tc+';">'+t.status+'</div>'
             +'<div style="font-size:9px;color:var(--c-text2);">'+(t.date||'')+'</div>'
-            +(t.note&&t.note!==t.status?'<div style="font-size:10px;color:var(--c-text);margin-top:1px;">'+t.note+'</div>':'')
+            +(t.note&&t.note!==t.status?'<div style="font-size:10px;color:var(--c-text);">'+t.note+'</div>':'')
             +'</div>';
         }).join('')+'</div>'
+        // SM actions
         +(isSoftwareManager()?'<div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;">'
-          +(r.status==='APPEAL_PENDING'&&appealNote?'<button class="btn small disc-btn" data-k="'+r._key+'" data-s="REINSTATED" style="background:rgba(63,185,80,0.08);border-color:var(--c-ok);color:var(--c-ok);">Accept Appeal</button>':'')
-          +(r.status==='APPEAL_PENDING'&&appealNote?'<button class="btn small disc-btn" data-k="'+r._key+'" data-s="APPEAL_DENIED" style="background:rgba(248,81,73,0.08);border-color:var(--c-ban);color:var(--c-ban);">Deny Appeal</button>':'')
+          +(isAppeal&&appealNote?'<button class="btn small disc-btn" data-k="'+r._key+'" data-s="REINSTATED" style="background:rgba(63,185,80,0.08);border-color:var(--c-ok);color:var(--c-ok);">Accept Appeal</button>':'')
+          +(isAppeal&&appealNote?'<button class="btn small disc-btn" data-k="'+r._key+'" data-s="APPEAL_DENIED" style="background:rgba(248,81,73,0.08);border-color:var(--c-ban);color:var(--c-ban);">Deny Appeal</button>':'')
           +'<button class="btn small disc-del" data-k="'+r._key+'" style="opacity:0.5;font-size:9px;">Delete</button>'
           +'</div>':'')
         +'</div></div>';
     }).join('');
+
+    // Wire buttons
     body.querySelectorAll('.disc-btn').forEach(function(btn){
       btn.onclick=async function(){
-        var k=this.dataset.k, s=this.dataset.s;
-        var rec=_snap.val()[k]; if(!rec) return;
+        var k=this.dataset.k; var st=this.dataset.s;
+        var dsnap=await get(ref(db,'discipline/'+k)).catch(()=>null);
+        if(!dsnap||!dsnap.exists()) return;
+        var rec=dsnap.val();
         var tl=(rec.timeline||[]).slice();
-        tl.push({status:s,ts:Date.now(),date:new Date().toLocaleString(),note:'Updated by '+ME});
-        await update(ref(db,'discipline/'+k),{status:s,timeline:tl,statusUpdatedAt:Date.now()});
-        showToast('Status → '+s,'success');
+        tl.push({status:st,ts:Date.now(),date:new Date().toLocaleString(),note:'Updated by '+ME});
+        await update(ref(db,'discipline/'+k),{status:st,timeline:tl,statusUpdatedAt:Date.now()});
+        machineLog('SUSPEND','Discipline status: '+(rec.staffUsername||'?')+' → '+st,'by '+ME);
+        showToast('Status updated to '+st,'success');
       };
     });
     body.querySelectorAll('.disc-del').forEach(function(btn){
-      btn.onclick=async function(){ if(!confirm('Delete record?')) return; await remove(ref(db,'discipline/'+this.dataset.k)).catch(()=>{}); showToast('Deleted','success'); };
+      btn.onclick=async function(){
+        if(!confirm('Delete this discipline record?')) return;
+        await remove(ref(db,'discipline/'+this.dataset.k)).catch(()=>{});
+        showToast('Record deleted','success');
+      };
     });
+    // Wipe countdown
+    var _wci=setInterval(function(){
+      if(!document.getElementById('disc-body')){ clearInterval(_wci); return; }
+      document.querySelectorAll('.wipe-countdown').forEach(function(el){
+        var rem=parseInt(el.dataset.exp||0)-Date.now();
+        if(rem>0){ var h=Math.floor(rem/3600000),m=Math.floor((rem%3600000)/60000),s=Math.floor((rem%60000)/1000);
+          el.textContent='Auto-wipe in '+h+'h '+m+'m '+s+'s'; }
+        else { el.textContent='Auto-wipe executing...'; }
+      });
+    },1000);
   }
-  // Use onValue but with robust fallback - if it errors, poll every 5s
-  function _discLoad(){
-    get(ref(db,'discipline')).then(function(s){ _snap=s; draw(); }).catch(function(e2){
-      console.warn('discipline get error:',e2);
-      var b=document.getElementById('disc-body');
-      if(b&&b.textContent==='Loading...') b.innerHTML='<div style="text-align:center;padding:30px;color:var(--c-text2);font-size:12px;">No discipline records yet.</div>';
-    });
-  }
+
+  // Wire filter and refresh
+  setTimeout(function(){
+    var fi=document.getElementById('disc-filter');
+    if(fi) fi.onchange=function(){ if(_lastDiscSnap) draw(_lastDiscSnap); };
+    var rf=document.getElementById('disc-refresh');
+    if(rf) rf.onclick=function(){
+      get(ref(db,'discipline')).then(function(s){ _lastDiscSnap=s; draw(s); }).catch(()=>{});
+    };
+  },50);
+
+  // Load immediately with get(), then subscribe for live updates
+  var _lastDiscSnap=null;
+  get(ref(db,'discipline')).then(function(snap){
+    _lastDiscSnap=snap; draw(snap);
+  }).catch(function(e){ console.warn('discipline initial get error:',e); });
+
+  // Live updates via onValue
   try {
     _disciplineUnsubscribe=onValue(ref(db,'discipline'),function(snap){
-      _snap=snap; draw();
+      _lastDiscSnap=snap; draw(snap);
     },function(e){
-      console.warn('discipline onValue error, using polling:',e);
-      _discLoad();
-      // Poll every 5s as fallback
-      var _pollId=setInterval(function(){ if(!document.getElementById('disc-body')){clearInterval(_pollId);return;} _discLoad(); },5000);
+      console.warn('discipline onValue error, polling:',e);
+      // Poll every 4s as fallback
+      _disciplinePolling=setInterval(function(){
+        if(!document.getElementById('disc-body')){ clearInterval(_disciplinePolling); return; }
+        get(ref(db,'discipline')).then(function(s){ _lastDiscSnap=s; draw(s); }).catch(()=>{});
+      },4000);
     });
-  } catch(e3) {
-    _discLoad();
-  }
-  setTimeout(function(){
-    var rf=document.getElementById('disc-refresh'); if(rf) rf.onclick=function(){ if(_snap) draw(); };
-    var fi=document.getElementById('disc-filter'); if(fi) fi.onchange=function(){ if(_snap) draw(); };
-  },100);
+  } catch(e){ console.warn('discipline onValue setup error:',e); }
 }
 
 
@@ -18682,6 +18728,8 @@ function wireTopbar(){
   const notifClear=_g('notifClearBtn'); if(notifClear) notifClear.onclick=()=>{ NOTIFICATIONS=[]; renderNotifDropdown(); saveNotifPrefs(); };
   const notifSettingsLink=_g('notifSettingsLink');
   if(notifSettingsLink) notifSettingsLink.onclick=(e)=>{ e.stopPropagation(); const nd=_g('notifDropdown'); if(nd) nd.style.display='none'; openNotifSettings(); };
+  // Wire individual menu items
+  setupMenus();
   // Menu dropdowns
   [['export','drop-export'],['prefs','drop-prefs'],['tools','drop-tools'],['help','drop-help']].forEach(([mid,did])=>{
     const trigger=_g('menu-'+mid); const drop=_g(did);
