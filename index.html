@@ -8963,82 +8963,52 @@ function renderUserConfig(c){
   }
 }
 
-window.openUserConfigDialog=function openUserConfigDialog(uid){
-  const u=USERS[uid]; if(!u) return;
-  openDialog(`User Config - ${u.username}`,'',`
-    <div style="font-size:11px;color:var(--c-text2);margin-bottom:6px;">Configure variables and settings for <b>${u.username}</b>.</div>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;">
-      <div style="flex:1;min-width:130px;">
-        <div style="font-size:11px;font-weight:bold;color:var(--c-text);margin-bottom:4px;">Variables</div>
-        <div style="margin-bottom:4px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:1px;">Points:</label>
-          <input type="number" id="ucfPoints" style="width:80px;" value="${u.points||0}" min="0"/></div>
-        <div style="margin-bottom:4px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:1px;">Reputation Override:</label>
-          <input type="number" id="ucfRepOverride" style="width:80px;" value="${u.repOverride??''}" placeholder="Auto"/></div>
-        <div style="margin-bottom:4px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:1px;">Warning Count:</label>
-          <input type="number" id="ucfWarnings" style="width:80px;" value="${u.warningCount||0}" min="0"/></div>
-      </div>
-      <div style="flex:1;min-width:130px;">
-        <div style="font-size:11px;font-weight:bold;color:var(--c-text);margin-bottom:4px;">Access Flags</div>
-        <div style="margin-bottom:5px;display:flex;align-items:center;gap:6px;">
-          <input type="checkbox" id="ucfProtected" ${u.protected?'checked':''} ${rankOf(MY_LEVEL)<rankOf(BUILTIN_BADGE_CONFIG.protected.assignLevel||'MODERATOR')&&!isSoftwareManager()?'disabled':''}/>
-          <label for="ucfProtected" style="font-size:11px;color:var(--c-text);cursor:pointer;"><span style="font-size:10px;font-weight:bold;color:${BUILTIN_BADGE_CONFIG.protected.textColor};background:${BUILTIN_BADGE_CONFIG.protected.bgColor};padding:0 3px;border:1px solid ${BUILTIN_BADGE_CONFIG.protected.borderColor};">${BUILTIN_BADGE_CONFIG.protected.label}</span> <b>Protected User</b></label>
-        </div>
-        <div style="font-size:10px;color:var(--c-text2);margin-bottom:8px;">Protected users require an escalated request before any moderation action can be taken.</div>
-        <div style="margin-bottom:5px;display:flex;align-items:center;gap:6px;">
-          <input type="checkbox" id="ucfVip" ${u.vip?'checked':''} ${rankOf(MY_LEVEL)<rankOf(BUILTIN_BADGE_CONFIG.vip.assignLevel||'MODERATOR')&&!isSoftwareManager()?'disabled':''}/>
-          <label for="ucfVip" style="font-size:11px;color:var(--c-text);cursor:pointer;"><span style="font-size:10px;font-weight:bold;color:${BUILTIN_BADGE_CONFIG.vip.textColor};background:${BUILTIN_BADGE_CONFIG.vip.bgColor};padding:0 3px;border:1px solid ${BUILTIN_BADGE_CONFIG.vip.borderColor};">${BUILTIN_BADGE_CONFIG.vip.label}</span> VIP Status</label>
-        </div>
-        <div style="font-size:10px;color:var(--c-text2);margin-bottom:6px;">VIP users trigger a confirmation notice before moderation.</div>
-        <div style="margin-bottom:5px;display:flex;align-items:center;gap:6px;">
-          <input type="checkbox" id="ucfWatched" ${u.watched?'checked':''} ${rankOf(MY_LEVEL)<rankOf(BUILTIN_BADGE_CONFIG.watched.assignLevel||'MODERATOR')&&!isSoftwareManager()?'disabled':''}/>
-          <label for="ucfWatched" style="font-size:11px;color:var(--c-text);cursor:pointer;"><span style="font-size:10px;font-weight:bold;color:${BUILTIN_BADGE_CONFIG.watched.textColor};background:${BUILTIN_BADGE_CONFIG.watched.bgColor};padding:0 3px;border:1px solid ${BUILTIN_BADGE_CONFIG.watched.borderColor};">${BUILTIN_BADGE_CONFIG.watched.label}</span> Under Observation</label>
-        </div>
-        <div style="font-size:10px;color:var(--c-text2);margin-bottom:6px;">Watched users get a [WATCHED] tag automatically added to all mod log entries.</div>
-        <div style="margin-bottom:5px;display:flex;align-items:center;gap:6px;">
-          <input type="checkbox" id="ucfMuted" ${u.muted?'checked':''} ${rankOf(MY_LEVEL)<rankOf(BUILTIN_BADGE_CONFIG.muted.assignLevel||'MODERATOR')&&!isSoftwareManager()?'disabled':''}/>
-          <label for="ucfMuted" style="font-size:11px;color:var(--c-text);cursor:pointer;"><span style="font-size:10px;font-weight:bold;color:${BUILTIN_BADGE_CONFIG.muted.textColor};background:${BUILTIN_BADGE_CONFIG.muted.bgColor};padding:0 3px;border:1px solid ${BUILTIN_BADGE_CONFIG.muted.borderColor};">${BUILTIN_BADGE_CONFIG.muted.label}</span> Muted</label>
-        </div>
-        <div style="font-size:10px;color:var(--c-text2);">Muted flag visible on user profile for staff reference.</div>
-        ${CUSTOM_BADGES.length&&CUSTOM_BADGES.filter(cb=>canDo('canManageUserConfig')||rankOf(MY_LEVEL)>=rankOf(cb.assignLevel||'MODERATOR')).length?`
-        <div style="font-size:11px;font-weight:bold;color:var(--c-text);margin:8px 0 4px;">Custom Badges</div>
-        ${CUSTOM_BADGES.filter(cb=>rankOf(MY_LEVEL)>=rankOf(cb.assignLevel||'MODERATOR')||isSoftwareManager()).map(cb=>`
-          <div style="margin-bottom:4px;display:flex;align-items:center;gap:6px;">
-            <input type="checkbox" id="ucfbadge-${cb.key}" ${u.customBadges&&u.customBadges[cb.key]?'checked':''}/>
-            <label for="ucfbadge-${cb.key}" style="font-size:11px;color:var(--c-text);cursor:pointer;">
-              <span style="font-size:10px;font-weight:bold;padding:0 3px;border:1px solid ${cb.borderColor||'#808080'};background:${cb.bgColor||'#e0e0e0'};color:${cb.textColor||'#000'};">${cb.label}</span>
-              ${cb.desc?`<span style="color:var(--c-text2);font-size:10px;margin-left:3px;">${cb.desc}</span>`:''}
-            </label>
-          </div>`).join('')}
-        `:''}
-      </div>
-    </div>`,
-    async()=>{
-      const updates={
-        points:parseInt(document.getElementById('ucfPoints').value)||0,
-        warningCount:parseInt(document.getElementById('ucfWarnings').value)||0,
-        protected:document.getElementById('ucfProtected').checked,
-        vip:document.getElementById('ucfVip').checked,
-        watched:document.getElementById('ucfWatched').checked,
-        muted:document.getElementById('ucfMuted').checked,
-      };
-      // Custom badges - read fresh from USERS to avoid stale closure
-      if(CUSTOM_BADGES.length){
-        const freshU=USERS[uid]||u;
-        const customBadges=Object.assign({},freshU.customBadges||{});
-        CUSTOM_BADGES.forEach(cb=>{
-          const el=document.getElementById('ucfbadge-'+cb.key);
-          if(el) customBadges[cb.key]=el.checked;
-        });
-        updates.customBadges=customBadges;
-      }
-      const repOvr=document.getElementById('ucfRepOverride').value.trim();
-      if(repOvr!=='') updates.repOverride=parseInt(repOvr)||0;
-      else updates.repOverride=null;
-      await update(ref(db,`users/${uid}`),updates);
-      auditLog('User Config Updated',`${u.username}: protected=${updates.protected}, points=${updates.points}`);
+window.openUserConfigDialog=function(uid){
+  var u=USERS[uid]; if(!u) return;
+  if(!CUSTOM_FIELDS||!CUSTOM_FIELDS.length){ showToast('No custom fields defined. Go to Staff Config to add fields.','warning'); return; }
+  var existing=u.customData||{};
+  var rows=CUSTOM_FIELDS.map(function(f){
+    var fid=f.id||f.name; var val=existing[fid]!=null?existing[fid]:'';
+    if(f.type==='select'){
+      var opts=(f.options||[]).map(function(o){ return '<option value="'+o+'"'+(val===o?' selected':'')+'>'+o+'</option>'; }).join('');
+      return '<div style="margin-bottom:8px;"><label style="font-size:11px;color:var(--c-text2);display:block;margin-bottom:3px;">'+(f.label||f.name)+'</label>'
+        +'<select data-fid="'+fid+'" style="width:100%;box-sizing:border-box;background:#0d1117;border:1px solid var(--c-border);border-radius:6px;color:var(--c-text);font-size:12px;padding:6px 8px;"><option value="">— Select —</option>'+opts+'</select></div>';
+    } else if(f.type==='toggle'){
+      return '<div style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:var(--bg-tbl-odd);border-radius:6px;">'
+        +'<label style="font-size:11px;color:var(--c-text2);">'+(f.label||f.name)+'</label>'
+        +'<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:var(--c-text);">'
+        +'<input type="checkbox" data-fid="'+fid+'"'+(val?' checked':'')+' style="width:14px;height:14px;"> '+(val?'Yes':'No')+'</label></div>';
+    } else {
+      return '<div style="margin-bottom:8px;"><label style="font-size:11px;color:var(--c-text2);display:block;margin-bottom:3px;">'+(f.label||f.name)+'</label>'
+        +'<input type="text" data-fid="'+fid+'" value="'+(val||'')+'" style="width:100%;box-sizing:border-box;background:#0d1117;border:1px solid var(--c-border);border-radius:6px;color:var(--c-text);font-size:12px;padding:6px 8px;" placeholder="Enter value..."/></div>';
+    }
+  }).join('');
+  openDialog('Edit Fields: '+u.username,
+    '<div style="font-size:11px;color:var(--c-text2);margin-bottom:10px;">Editing custom field values for <b style="color:var(--c-text);">'+u.username+'</b></div>'+rows,
+    '',async function(){
+      var newData={};
+      CUSTOM_FIELDS.forEach(function(f){
+        var fid=f.id||f.name;
+        var el=document.querySelector('[data-fid="'+fid+'"]');
+        if(!el) return;
+        newData[fid]=(f.type==='toggle')?el.checked:el.value||'';
+      });
+      await update(ref(db,'users/'+uid),{customData:newData});
+      if(USERS[uid]) USERS[uid].customData=newData;
+      CUSTOM_FIELDS.forEach(function(f){
+        var fid=f.id||f.name;
+        var ov=String(existing[fid]||''); var nv=String(newData[fid]||'');
+        if(ov!==nv) logCustomFieldChange(u.username,f.label||f.name,'set',ov,nv);
+      });
+      showToast('Fields saved.','success'); safeRender();
     }
   );
-}
+  setTimeout(function(){
+    document.querySelectorAll('[data-fid]').forEach(function(el){
+      if(el.type==='checkbox') el.onchange=function(){ this.nextSibling.textContent=' '+(this.checked?'Yes':'No'); };
+    });
+  },50);
+};
 
 // ── LEAK IDENTIFIER ──
 function renderLeakIdentifier(c){
@@ -14337,39 +14307,7 @@ function renderAdminLog(c){
         <button class="btn" id="btn-addtpl">Add Template</button>
         <div id="tplMsg2" style="font-size:11px;margin-top:3px;color:var(--c-ok);"></div>
       </div></div>
-      ${canDo('canManageCustomFields')?`
-      <div class="sbox"><div class="stitle">Custom User Fields</div><div class="sbody">
-        <div style="font-size:11px;color:var(--c-text2);margin-bottom:6px;">Add custom fields that appear on every player profile under "Manage User".</div>
-        <div id="cfList">
-          ${CUSTOM_FIELDS.length===0?'<i style="color:var(--c-text2);font-size:11px;">No custom fields yet.</i>':
-            CUSTOM_FIELDS.map((f,i)=>`
-            <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;font-size:11px;flex-wrap:wrap;">
-              <b style="width:85px;overflow:hidden;flex-shrink:0;color:var(--c-text);">${f.name}</b>
-              <span style="color:var(--c-text2);width:45px;flex-shrink:0;">${f.type}</span>
-              ${f.type==='select'?`<span style="color:var(--c-text2);font-size:10px;flex:1;min-width:0;overflow:hidden;">${(f.options||[]).join(', ')}</span>`:'<span style="flex:1;"></span>'}
-              <div style="display:flex;gap:3px;margin-left:auto;flex-shrink:0;">
-                ${f.type==='select'?`<button class="btn small edit-cf-btn" data-idx="${i}">Edit</button>`:''}
-                <button class="btn red small del-cf-btn" data-idx="${i}">Remove</button>
-              </div>
-            </div>`).join('')}
-        </div>
-        <hr style="border:none;border-top:1px solid var(--c-border);margin:6px 0;">
-        <div style="font-size:11px;font-weight:bold;color:var(--c-text);margin-bottom:4px;">Add New Field</div>
-        <div class="row"><label style="color:var(--c-text);">Field Name:</label><input type="text" id="cfName" style="width:110px;" placeholder="e.g. Rank"/></div>
-        <div class="row"><label style="color:var(--c-text);">Type:</label>
-          <select id="cfType" style="width:100px;" onchange="toggleCFOptions(this.value)">
-            <option value="select">Dropdown (select)</option>
-            <option value="text">Text</option>
-            <option value="toggle">Yes/No Toggle</option>
-          </select>
-        </div>
-        <div id="cfOptionsRow" style="margin-bottom:3px;">
-          <div style="font-size:11px;color:var(--c-text);margin-bottom:2px;">Options (comma separated):</div>
-          <input type="text" id="cfOptions" style="width:100%;" placeholder="e.g. Rookie, Veteran, Elite"/>
-        </div>
-        <button class="btn" id="btn-addcf" style="margin-top:3px;">Add Field</button>
-        <div id="cfMsg" style="font-size:11px;margin-top:3px;color:var(--c-ok);"></div>
-      </div></div>`:''}
+      ${canDo('canManageCustomFields')?cf2ConfigHtml():''}
     </div>
     <div style="flex:2;min-width:260px;">
       <div class="sbox"><div class="stitle">Permission Settings</div><div class="sbody">
@@ -14431,46 +14369,49 @@ function renderAdminLog(c){
     };
   });
   if(canDo('canManageCustomFields')){
-    window.toggleCFOptions=function(val){
-      const row=document.getElementById('cfOptionsRow');
-      if(row) row.style.display=val==='select'?'':'none';
+    function renderCF2List(){
+      var list=document.getElementById('cf2-list'); if(!list) return;
+      if(!CUSTOM_FIELDS.length){ list.innerHTML='<i style="color:var(--c-text2);font-size:11px;">No fields yet.</i>'; return; }
+      list.innerHTML=CUSTOM_FIELDS.map(function(f,i){
+        return '<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--c-border);">'
+          +'<div style="flex:1;min-width:0;"><div style="font-size:11px;color:var(--c-text);font-weight:600;">'+(f.label||f.name)+'</div>'
+          +(f.type==='select'?'<div style="font-size:10px;color:var(--c-text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+(f.options||[]).join(', ')+'</div>':'')+'</div>'
+          +'<span style="font-size:10px;color:var(--c-text2);flex-shrink:0;width:55px;">'+f.type+'</span>'
+          +'<button class="btn red small cf2-del" data-i="'+i+'" style="flex-shrink:0;">Remove</button>'
+          +'</div>';
+      }).join('');
+      list.querySelectorAll('.cf2-del').forEach(function(btn){
+        btn.onclick=async function(){
+          var idx=parseInt(this.dataset.i);
+          if(!confirm('Remove field "'+CUSTOM_FIELDS[idx].label+'"?')) return;
+          var nf=CUSTOM_FIELDS.filter(function(_,ii){ return ii!==idx; });
+          await set(ref(db,'meta/customFields'),nf); CUSTOM_FIELDS=nf;
+          renderCF2List(); showToast('Field removed.','success');
+        };
+      });
+    }
+    window.cf2TypeChange=function(val){
+      var w=document.getElementById('cf2-opts-wrap'); if(w) w.style.display=val==='select'?'flex':'none';
     };
-    const addCF=document.getElementById('btn-addcf');
-    if(addCF) addCF.onclick=addCustomField;
-    document.querySelectorAll('.del-cf-btn').forEach(btn=>{
-      btn.onclick=async()=>{
-        const idx=parseInt(btn.dataset.idx);
-        const newFields=[...CUSTOM_FIELDS];
-        newFields.splice(idx,1);
-        await set(ref(db,'meta/customFields'),newFields);
-        CUSTOM_FIELDS=newFields;
-        auditLog('Custom Field Removed',`Index ${idx}`);
-        nav('adminlog');
-      };
-    });
-    document.querySelectorAll('.edit-cf-btn').forEach(btn=>{
-      btn.onclick=()=>{
-        const idx=parseInt(btn.dataset.idx);
-        const f=CUSTOM_FIELDS[idx]; if(!f) return;
-        openDialog(`Edit Field - ${f.name}`,'',`
-          <div style="margin-bottom:4px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Options (comma separated):</label>
-            <input type="text" id="editCfOptions" style="width:100%;" value="${(f.options||[]).join(', ')}"/></div>
-          <div style="margin-bottom:0;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;">Field Name:</label>
-            <input type="text" id="editCfName" style="width:100%;" value="${f.name}"/></div>`,
-          async()=>{
-            const newName=document.getElementById('editCfName').value.trim()||f.name;
-            const newOpts=document.getElementById('editCfOptions').value.split(',').map(o=>o.trim()).filter(o=>o);
-            if(!newOpts.length) return;
-            const newFields=[...CUSTOM_FIELDS];
-            newFields[idx]={...f,name:newName,options:newOpts};
-            await set(ref(db,'meta/customFields'),newFields);
-            CUSTOM_FIELDS=newFields;
-            auditLog('Custom Field Edited',`${f.name} -> ${newName}`);
-            nav('adminlog');
-          }
-        );
-      };
-    });
+    renderCF2List();
+    var addBtn=document.getElementById('cf2-add-btn');
+    if(addBtn) addBtn.onclick=async function(){
+      var label=(document.getElementById('cf2-label')||{value:''}).value.trim();
+      var type=(document.getElementById('cf2-type')||{value:'text'}).value;
+      var optsRaw=(document.getElementById('cf2-opts')||{value:''}).value;
+      var msg=document.getElementById('cf2-msg');
+      if(!label){ if(msg){msg.style.color='var(--c-ban)';msg.textContent='Label required.';} return; }
+      if(CUSTOM_FIELDS.find(function(f){ return (f.label||f.name||'').toLowerCase()===label.toLowerCase(); })){ if(msg){msg.style.color='var(--c-ban)';msg.textContent='Field already exists.';} return; }
+      var opts=type==='select'?optsRaw.split(',').map(function(s){ return s.trim(); }).filter(Boolean):[];
+      if(type==='select'&&!opts.length){ if(msg){msg.style.color='var(--c-ban)';msg.textContent='Dropdown needs options.';} return; }
+      var nf2={id:'cf_'+Date.now(),label:label,name:label,type:type,options:opts};
+      var nfa=[...CUSTOM_FIELDS,nf2];
+      await set(ref(db,'meta/customFields'),nfa); CUSTOM_FIELDS=nfa;
+      if(document.getElementById('cf2-label')) document.getElementById('cf2-label').value='';
+      if(document.getElementById('cf2-opts')) document.getElementById('cf2-opts').value='';
+      if(msg){msg.style.color='var(--c-ok)';msg.textContent='"'+label+'" added!';}
+      renderCF2List();
+    };
   }
 }
 
@@ -15763,6 +15704,22 @@ function renderSuggestions(c){
 }
 
 // ── STAFF CONFIG ──
+
+function cf2ConfigHtml(){
+  return '<div class="sbox" style="margin-top:8px;"><div class="stitle">Custom User Fields</div><div class="sbody">'
+    +'<div style="font-size:11px;color:var(--c-text2);margin-bottom:8px;">Define custom fields shown on every player profile. Types: Dropdown, Text, Yes/No Toggle.</div>'
+    +'<div id="cf2-list"></div>'
+    +'<div style="border-top:1px solid var(--c-border);margin:8px 0;padding-top:8px;">'
+    +'<div style="font-size:11px;font-weight:700;color:var(--c-text);margin-bottom:6px;">Add New Field</div>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;">'
+    +'<div><label style="font-size:10px;color:var(--c-text2);display:block;margin-bottom:2px;">Label</label><input type="text" id="cf2-label" style="width:110px;" placeholder="e.g. Rank"/></div>'
+    +'<div><label style="font-size:10px;color:var(--c-text2);display:block;margin-bottom:2px;">Type</label><select id="cf2-type" style="width:100px;" onchange="cf2TypeChange(this.value)"><option value="select">Dropdown</option><option value="text">Text</option><option value="toggle">Yes/No</option></select></div>'
+    +'<div id="cf2-opts-wrap" style="display:flex;flex-direction:column;"><label style="font-size:10px;color:var(--c-text2);margin-bottom:2px;">Options (comma separated)</label><input type="text" id="cf2-opts" style="width:170px;" placeholder="e.g. Intern, Junior"/></div>'
+    +'<button class="btn" id="cf2-add-btn">Add</button>'
+    +'</div>'
+    +'<div id="cf2-msg" style="font-size:11px;margin-top:4px;min-height:14px;"></div>'
+    +'</div></div></div>';
+}
 function renderStaffConfig(c){
   const sArr=Object.entries(STAFF).filter(([,s])=>s&&s.username);
   const canSuperAdmin=isSuperAdmin();
@@ -17859,8 +17816,8 @@ function promptWipeStaff(sid){
       var opcode=(document.getElementById('sa-opcode')||{value:''}).value.trim();
       if(!reason||!opcode){showToast('Reason and operator code required.','error');return;}
       var opcSnap=await get(ref(db,'meta/operatorCode')).catch(()=>null);
-      var validCode=opcSnap&&opcSnap.exists()?opcSnap.val():'SAMARITAN_DELETE';
-      if(opcode!==validCode){showToast('Invalid operator code.','error');machineLog('DELETE_ATTEMPT','Wipe failed - wrong code for '+s.username,'');return;}
+      var validCode=opcSnap&&opcSnap.exists()?String(opcSnap.val()).trim():'SAMARITAN_DELETE';
+      if(String(opcode).trim()!==validCode){showToast('Invalid operator code.','error');machineLog('DELETE_ATTEMPT','Wipe failed - wrong code for '+s.username,'');return;}
       // Write discipline record
       _writeDisciplineRecord(sid,s.username,'Account Wipe',reason,ME);
       // Force logout
@@ -17928,67 +17885,84 @@ window._writeDisciplineRecord=_writeDisciplineRecord;
 
 var _disciplineUnsubscribe=null;
 function renderDisciplineLog(c){
-  c.innerHTML='<div class="ptitle" style="display:flex;align-items:center;gap:8px;justify-content:space-between;"><span style="display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2" width="13" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3"/><line x1="4" y1="6" x2="12" y2="6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4" y1="9" x2="8" y2="9" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg> Discipline Status</span><button class="btn small" id="disc-refresh" style="display:flex;align-items:center;gap:3px;"><svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2 7a5 5 0 1 0 1-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><polyline points="1,2.5 2,7 6.5,5.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>Refresh</button></div>'
-  +'<div id="disc-body" style="margin-top:4px;"><div style="text-align:center;padding:20px;color:var(--c-text2);">Loading...</div></div>';
-  function loadDisc(){
+  if(_disciplineUnsubscribe){ _disciplineUnsubscribe(); _disciplineUnsubscribe=null; }
+  var SC={SENT:'#8b949e',LOGGED_OUT:'#e3b341',READ:'#58a6ff',ACKNOWLEDGED:'#3fb950',APPEAL_PENDING:'#a371f7',APPEAL_DENIED:'#f85149',REINSTATED:'#3fb950'};
+  var PC={'Termination':'#f85149','Suspension':'#d29922','Account Secured':'#58a6ff','Staff Warning':'#3fb950','Account Wipe':'#9b1c1c'};
+  c.innerHTML='<div class="ptitle" style="display:flex;align-items:center;gap:8px;justify-content:space-between;"><span>Discipline Status</span>'
+    +'<div style="display:flex;gap:4px;align-items:center;">'
+    +'<select id="disc-filter" style="font-size:10px;background:var(--bg-tbl-odd);border:1px solid var(--c-border);color:var(--c-text);border-radius:4px;padding:2px 6px;height:24px;"><option value="">All</option><option value="SENT">Sent</option><option value="READ">Read</option><option value="APPEAL_PENDING">Appeal Pending</option><option value="ACKNOWLEDGED">Acknowledged</option><option value="REINSTATED">Reinstated</option><option value="APPEAL_DENIED">Appeal Denied</option></select>'
+    +'<button class="btn small" id="disc-refresh" style="display:flex;align-items:center;gap:3px;height:24px;font-size:10px;">Refresh</button>'
+    +'</div></div>'
+    +'<div id="disc-body" style="margin-top:4px;"></div>';
+  var _snap=null;
+  function draw(){
     var body=document.getElementById('disc-body'); if(!body) return;
-    if(_disciplineUnsubscribe) _disciplineUnsubscribe();
-    _disciplineUnsubscribe=onValue(ref(db,'discipline'),function(snap){
-      var STATUS_COLORS={SENT:'#8b949e',LOGGED_OUT:'#e3b341',READ:'#58a6ff',ACKNOWLEDGED:'#3fb950',APPEAL_PENDING:'#a371f7',APPEAL_DENIED:'#f85149',REINSTATED:'#3fb950'};
-      var entries=snap.exists()?Object.values(snap.val()).sort(function(a,b){ return (b.issuedAt||0)-(a.issuedAt||0); }):[];
-      if(!entries.length){ body.innerHTML='<div style="text-align:center;padding:30px;color:var(--c-text2);font-size:12px;">No discipline records yet.</div>'; return; }
-      body.innerHTML=entries.map(function(r){
-        var sc=STATUS_COLORS[r.status]||'#8b949e';
-        var ptColor=r.punishType==='Termination'?'#f85149':r.punishType==='Suspension'?'#d29922':r.punishType==='Account Secured'?'#58a6ff':'#3fb950';
-        var staffS=STAFF[r.staffId]||{};
-        return '<div style="border:1px solid var(--c-border);border-radius:8px;margin-bottom:6px;overflow:hidden;background:var(--bg-tbl-odd);">'
-          +'<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'block\':\'none\'">'
-          +tinyAvatarOnly(staffS.avatarUrl||'',r.staffUsername,28)
-          +'<div style="flex:1;min-width:0;">'
-          +'<div style="font-size:12px;font-weight:700;color:var(--c-text);">'+r.staffUsername+'</div>'
-          +'<div style="font-size:10px;color:'+ptColor+';font-weight:600;">'+r.punishType+'</div>'
-          +'</div>'
-          +'<div style="text-align:right;flex-shrink:0;">'
-          +'<div style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:'+sc+'18;color:'+sc+';border:1px solid '+sc+'44;display:inline-block;">'+r.status+'</div>'
-          +'<div style="font-size:9px;color:var(--c-text2);margin-top:2px;">'+r.issuedDate+'</div>'
-          +'</div>'
-          +'</div>'
-          +'<div style="display:none;padding:10px 14px;border-top:1px solid var(--c-border);background:var(--bg-content);">'
-          +'<div style="font-size:11px;color:var(--c-text);margin-bottom:8px;padding:6px 8px;background:var(--bg-tbl-odd);border-radius:4px;border-left:3px solid '+ptColor+';">'+( r.reason||'No reason')+'</div>'
-          +'<div style="font-size:10px;font-weight:700;color:var(--c-text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Status Timeline</div>'
-          +'<div style="position:relative;padding-left:16px;">'
-          +(r.timeline||[]).map(function(t,i){
-            var tc=STATUS_COLORS[t.status]||'#8b949e';
-            return '<div style="position:relative;padding-bottom:10px;padding-left:12px;border-left:1.5px solid '+(i<(r.timeline||[]).length-1?'var(--c-border)':'transparent')+';">'
-              +'<div style="position:absolute;left:-5px;top:2px;width:8px;height:8px;border-radius:50%;background:'+tc+';box-shadow:0 0 6px '+tc+'88;"></div>'
-              +'<div style="font-size:10px;font-weight:700;color:'+tc+';">'+t.status+'</div>'
-              +'<div style="font-size:9px;color:var(--c-text2);">'+t.date+'</div>'
-              +(t.note?'<div style="font-size:10px;color:var(--c-text);margin-top:1px;">'+t.note+'</div>':'')
-              +'</div>';
-          }).join('')
-          +'</div>'
-          +(isSoftwareManager()?'<div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;">'
-            +'<button class="btn small disc-status-btn" data-key="'+r.key+'" data-status="REINSTATED" style="background:rgba(63,185,80,0.08);border-color:var(--c-ok);color:var(--c-ok);">Mark Reinstated</button>'
-            +'<button class="btn small disc-status-btn" data-key="'+r.key+'" data-status="APPEAL_DENIED" style="background:rgba(248,81,73,0.08);border-color:var(--c-ban);color:var(--c-ban);">Deny Appeal</button>'
-            +'</div>':'')
-          +'</div></div>';
-      }).join('');
-      body.querySelectorAll('.disc-status-btn').forEach(function(btn){
-        btn.onclick=async function(){
-          var key=this.dataset.key; var st=this.dataset.status;
-          var ts={status:st,ts:Date.now(),date:nowStr(),note:'Updated by '+ME};
-          var rec=snap.val()[key];
-          var timeline=(rec&&rec.timeline)||[];
-          timeline.push(ts);
-          await update(ref(db,'discipline/'+key),{status:st,timeline:timeline,statusUpdatedAt:Date.now()});
-          showToast('Status updated to '+st,'success');
-          loadDisc();
-        };
-      });
-    },function(e){ var b=document.getElementById('disc-body'); if(b) b.innerHTML='<div style="text-align:center;padding:30px;color:var(--c-text2);">No discipline records yet.</div>'; });
+    if(!_snap||!_snap.exists()){ body.innerHTML='<div style="text-align:center;padding:30px;color:var(--c-text2);font-size:12px;">No discipline records yet.</div>'; return; }
+    var filter=(document.getElementById('disc-filter')||{value:''}).value;
+    var entries=Object.entries(_snap.val()).map(function(e){ return Object.assign({_key:e[0]},e[1]); }).sort(function(a,b){ return (b.issuedAt||0)-(a.issuedAt||0); });
+    if(filter) entries=entries.filter(function(r){ return r.status===filter; });
+    if(!entries.length){ body.innerHTML='<div style="text-align:center;padding:20px;color:var(--c-text2);font-size:11px;">No records match the selected filter.</div>'; return; }
+    body.innerHTML=entries.map(function(r){
+      var sc=SC[r.status]||'#8b949e', pc=PC[r.punishType]||'#3fb950';
+      var isAppeal=r.status==='APPEAL_PENDING';
+      var appealNote=isAppeal&&r.timeline?r.timeline.filter(function(t){return t.status==='APPEAL_PENDING';}).map(function(t){return t.note||'';}).join('').replace('Appeal: ',''):'';
+      return '<div style="border:1px solid var(--c-border);border-left:3px solid '+pc+';border-radius:0 8px 8px 0;margin-bottom:6px;overflow:hidden;background:var(--bg-tbl-odd);">'
+        +'<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;" onclick="var d=this.nextElementSibling;d.style.display=d.style.display===\'none\'?\'block\':\'none\';">'
+        +tinyAvatarOnly((STAFF[r.staffId]||{}).avatarUrl||'',r.staffUsername||'?',26)
+        +'<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:700;color:var(--c-text);">'+(r.staffUsername||'?')+'</div><div style="font-size:10px;color:'+pc+';font-weight:600;">'+r.punishType+'</div></div>'
+        +(isAppeal?'<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(163,113,247,0.15);color:#a371f7;border:1px solid rgba(163,113,247,0.4);">APPEAL</span>':'')
+        +'<div style="text-align:right;flex-shrink:0;">'
+        +'<div style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:'+sc+'18;color:'+sc+';border:1px solid '+sc+'44;">'+r.status+'</div>'
+        +'<div style="font-size:9px;color:var(--c-text2);margin-top:1px;">'+(r.issuedDate||'')+'</div>'
+        +'</div></div>'
+        +'<div style="display:none;padding:10px 14px;border-top:1px solid var(--c-border);background:var(--bg-content);">'
+        +'<div style="font-size:11px;color:var(--c-text);padding:6px 8px;background:var(--bg-tbl-odd);border-radius:4px;border-left:3px solid '+pc+';margin-bottom:8px;">'+(r.reason||'No reason')+'</div>'
+        +(isAppeal&&appealNote?'<div style="padding:8px 10px;background:rgba(163,113,247,0.06);border:1px solid rgba(163,113,247,0.25);border-radius:6px;margin-bottom:8px;">'
+          +'<div style="font-size:10px;font-weight:700;color:#a371f7;margin-bottom:3px;">APPEAL TEXT</div>'
+          +'<div style="font-size:11px;color:var(--c-text);">'+appealNote+'</div>'
+          +'<div style="display:flex;gap:4px;margin-top:6px;">'
+          +'<button class="btn small disc-btn" data-k="'+r._key+'" data-s="REINSTATED" style="background:rgba(63,185,80,0.08);border-color:var(--c-ok);color:var(--c-ok);">Accept Appeal</button>'
+          +'<button class="btn small disc-btn" data-k="'+r._key+'" data-s="APPEAL_DENIED" style="background:rgba(248,81,73,0.08);border-color:var(--c-ban);color:var(--c-ban);">Deny Appeal</button>'
+          +'</div></div>':'')
+        +'<div style="font-size:10px;font-weight:700;color:var(--c-text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Timeline</div>'
+        +'<div style="padding-left:10px;">'+(r.timeline||[]).map(function(t,i,a){
+          var tc=SC[t.status]||'#8b949e';
+          return '<div style="position:relative;padding:0 0 8px 14px;border-left:1.5px solid '+(i<a.length-1?'var(--c-border)':'transparent')+';">'
+            +'<div style="position:absolute;left:-5px;top:3px;width:8px;height:8px;border-radius:50%;background:'+tc+';box-shadow:0 0 5px '+tc+'88;"></div>'
+            +'<div style="font-size:10px;font-weight:700;color:'+tc+';">'+t.status+'</div>'
+            +'<div style="font-size:9px;color:var(--c-text2);">'+(t.date||'')+'</div>'
+            +(t.note&&t.note!==t.status?'<div style="font-size:10px;color:var(--c-text);margin-top:1px;">'+t.note+'</div>':'')
+            +'</div>';
+        }).join('')+'</div>'
+        +(isSoftwareManager()?'<div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;">'
+          +(r.status!=='REINSTATED'?'<button class="btn small disc-btn" data-k="'+r._key+'" data-s="REINSTATED" style="background:rgba(63,185,80,0.08);border-color:var(--c-ok);color:var(--c-ok);">Reinstate</button>':'')
+          +(r.status==='APPEAL_PENDING'?'<button class="btn small disc-btn" data-k="'+r._key+'" data-s="APPEAL_DENIED" style="background:rgba(248,81,73,0.08);border-color:var(--c-ban);color:var(--c-ban);">Deny Appeal</button>':'')
+          +'<button class="btn small disc-btn" data-k="'+r._key+'" data-s="READ" style="opacity:0.6;">Mark Read</button>'
+          +'<button class="btn small disc-del" data-k="'+r._key+'" style="opacity:0.4;">Delete</button>'
+          +'</div>':'')
+        +'</div></div>';
+    }).join('');
+    body.querySelectorAll('.disc-btn').forEach(function(btn){
+      btn.onclick=async function(){
+        var k=this.dataset.k, s=this.dataset.s;
+        var rec=_snap.val()[k]; if(!rec) return;
+        var tl=(rec.timeline||[]).slice();
+        tl.push({status:s,ts:Date.now(),date:new Date().toLocaleString(),note:'Updated by '+ME});
+        await update(ref(db,'discipline/'+k),{status:s,timeline:tl,statusUpdatedAt:Date.now()});
+        showToast('Status → '+s,'success');
+      };
+    });
+    body.querySelectorAll('.disc-del').forEach(function(btn){
+      btn.onclick=async function(){ if(!confirm('Delete record?')) return; await remove(ref(db,'discipline/'+this.dataset.k)).catch(()=>{}); showToast('Deleted','success'); };
+    });
   }
-  loadDisc();
-  var rb=document.getElementById('disc-refresh'); if(rb) rb.onclick=loadDisc;
+  _disciplineUnsubscribe=onValue(ref(db,'discipline'),function(snap){
+    _snap=snap; draw();
+  },function(){ var b=document.getElementById('disc-body'); if(b) b.innerHTML='<div style="text-align:center;padding:20px;color:var(--c-text2);">Could not load records.</div>'; });
+  setTimeout(function(){
+    var rf=document.getElementById('disc-refresh'); if(rf) rf.onclick=function(){ if(_snap) draw(); };
+    var fi=document.getElementById('disc-filter'); if(fi) fi.onchange=function(){ if(_snap) draw(); };
+  },100);
 }
 
 
@@ -18003,6 +17977,206 @@ function _updateDisciplineStatus(staffId, status){
   }).catch(()=>{});
 }
 window._updateDisciplineStatus=_updateDisciplineStatus;
+
+
+function renderOperatorTerminal(c){
+  var _unlocked=false, _hist=[], _histIdx=-1;
+  c.innerHTML='';
+  var wrap=document.createElement('div');
+  wrap.style.cssText='display:flex;flex-direction:column;height:calc(100vh - 130px);min-height:420px;background:#010409;border-radius:8px;border:1px solid #21262d;overflow:hidden;font-family:"SF Mono","Fira Code","Consolas",monospace;';
+  var titleBar=document.createElement('div');
+  titleBar.style.cssText='background:#161b22;padding:8px 14px;border-bottom:1px solid #21262d;display:flex;align-items:center;gap:6px;';
+  titleBar.innerHTML='<div style="width:10px;height:10px;border-radius:50%;background:#f85149;"></div><div style="width:10px;height:10px;border-radius:50%;background:#d29922;"></div><div style="width:10px;height:10px;border-radius:50%;background:#3fb950;"></div><span style="font-size:11px;color:#8b949e;margin:0 auto;">Samaritan Systems \u2014 Operator Terminal</span><span style="font-size:10px;color:#30363d;" id="term-lock-ind">LOCKED</span>';
+  var out=document.createElement('div');
+  out.id='term-out'; out.style.cssText='flex:1;overflow-y:auto;padding:14px 16px;font-size:12px;line-height:1.75;color:#e6edf3;';
+  var row=document.createElement('div');
+  row.style.cssText='display:flex;align-items:center;padding:8px 14px;border-top:1px solid #21262d;background:#0d1117;gap:0;';
+  var pr=document.createElement('span');
+  pr.style.cssText='color:#58a6ff;font-size:12px;white-space:nowrap;user-select:none;';
+  pr.textContent='PS C:\\Software\\Operator> ';
+  var inp=document.createElement('input');
+  inp.id='term-inp'; inp.type='text';
+  inp.style.cssText='flex:1;background:transparent;border:none;outline:none;color:#e6edf3;font-size:12px;font-family:inherit;caret-color:#58a6ff;';
+  inp.autocomplete='off'; inp.spellcheck=false;
+  row.appendChild(pr); row.appendChild(inp);
+  wrap.appendChild(titleBar); wrap.appendChild(out); wrap.appendChild(row);
+  c.appendChild(wrap);
+
+  function pr2(text,color){ var d=document.createElement('div'); d.style.color=color||'#e6edf3'; d.innerHTML=text; out.appendChild(d); out.scrollTop=out.scrollHeight; }
+  function blank(){ pr2('&nbsp;',''); }
+
+  pr2('Samaritan Systems Operator Terminal <span style="color:#3fb950;">v2.0</span>','#8b949e');
+  pr2('Use <span style="color:#58a6ff;">UNLOCK &lt;code&gt;</span> to authenticate. Type <span style="color:#58a6ff;">HELP</span> for commands.','#8b949e');
+  blank();
+
+  inp.addEventListener('keydown',async function(e){
+    if(e.key==='ArrowUp'){ if(_histIdx<_hist.length-1){_histIdx++;inp.value=_hist[_hist.length-1-_histIdx]||'';} e.preventDefault(); return; }
+    if(e.key==='ArrowDown'){ if(_histIdx>0){_histIdx--;inp.value=_hist[_hist.length-1-_histIdx]||'';}else{_histIdx=-1;inp.value='';} e.preventDefault(); return; }
+    if(e.key!=='Enter') return;
+    var raw=inp.value.trim(); inp.value=''; _histIdx=-1;
+    if(!raw) return;
+    _hist.push(raw);
+    pr2('<span style="color:#30363d;">PS C:\\Software\\Operator&gt;</span> '+raw.replace(/</g,'&lt;').replace(/>/g,'&gt;'),'');
+
+    var parts=raw.match(/(?:[^\s"]+|"[^"]*")+/g)||[];
+    var cmd=(parts[0]||'').toUpperCase();
+    var args=parts.slice(1).map(function(a){return a.replace(/^"|"$/g,'');});
+
+    if(cmd==='UNLOCK'){
+      var code=args[0]||'';
+      var snap=await get(ref(db,'meta/operatorCode')).catch(()=>null);
+      var valid=snap&&snap.exists()?String(snap.val()).trim():'SAMARITAN_DELETE';
+      if(String(code).trim()===valid){
+        _unlocked=true;
+        var li=document.getElementById('term-lock-ind'); if(li){li.textContent='UNLOCKED';li.style.color='#3fb950';}
+        pr2('<span style="color:#3fb950;">\u2713 Operator code accepted. Terminal unlocked.</span>','');
+        machineLog('ACTION_RATE','Operator terminal unlocked','');
+      } else {
+        pr2('<span style="color:#f85149;">\u2717 Invalid operator code.</span>','');
+        machineLog('DELETE_ATTEMPT','Failed terminal unlock','');
+      }
+      return;
+    }
+    if(cmd==='CLEAR'||cmd==='CLS'){out.innerHTML='';return;}
+    if(!_unlocked&&cmd!=='HELP'){pr2('<span style="color:#d29922;">\u26a0 Terminal locked. UNLOCK &lt;code&gt; to authenticate.</span>','');return;}
+
+    if(cmd==='HELP'){
+      blank();
+      pr2('<span style="color:#58a6ff;">\u2550\u2550\u2550 SAMARITAN OPERATOR COMMANDS \u2550\u2550\u2550</span>','');
+      blank();
+      pr2('<span style="color:#8b949e;">AUTH &amp; SYSTEM</span>','');
+      pr2('  UNLOCK &lt;code&gt;                 Authenticate','#e6edf3');
+      pr2('  CLEAR / CLS                    Clear screen','#e6edf3');
+      pr2('  WHOAMI                         Show identity','#e6edf3');
+      pr2('  STAFFLIST                      All active staff','#e6edf3');
+      pr2('  STATUS &lt;username&gt;              Staff member status','#e6edf3');
+      pr2('  DISCLOG                        Recent discipline records','#e6edf3');
+      blank();
+      pr2('<span style="color:#8b949e;">STAFF ACTIONS</span>','');
+      pr2('  SUSPEND &lt;user&gt; &lt;dur&gt; [reason]  Suspend staff','#e6edf3');
+      pr2('  UNSUSPEND &lt;user&gt;               Lift suspension','#e6edf3');
+      pr2('  WARN &lt;user&gt; &lt;reason...&gt;        Issue warning','#e6edf3');
+      pr2('  SECURE &lt;user&gt; [reason...]      Lock account','#e6edf3');
+      pr2('  UNSECURE &lt;user&gt;                Remove lock','#e6edf3');
+      pr2('  FORCELOGOUT &lt;user&gt;             Kill session','#e6edf3');
+      pr2('  TERMINATE &lt;user&gt; &lt;reason...&gt;   Terminate (irreversible)','#e6edf3');
+      blank();
+      pr2('<span style="color:#8b949e;">DURATION FORMATS</span>','');
+      pr2('  1h=1hr  6h=6hr  1d=1day  3d=3days  1w=1week  perm=indefinite','#6b7280');
+      blank();
+      return;
+    }
+    if(cmd==='WHOAMI'){pr2(ME+' ['+MY_LEVEL+']','#3fb950');return;}
+    if(cmd==='STAFFLIST'){
+      var sa=Object.values(STAFF).filter(function(s){return !s.suspended&&!s.terminated;});
+      pr2('Active staff ('+sa.length+'):','#58a6ff');
+      sa.forEach(function(s){pr2('  <span style="display:inline-block;width:180px;color:#e6edf3;">'+s.username+'</span><span style="color:#8b949e;">['+s.level+']</span>','');});
+      return;
+    }
+    if(cmd==='STATUS'){
+      var tgt=args[0]; if(!tgt){pr2('Usage: STATUS &lt;username&gt;','#d29922');return;}
+      var se=Object.values(STAFF).find(function(s){return s.username.toLowerCase()===tgt.toLowerCase();});
+      if(!se){pr2('\u2717 Staff "'+tgt+'" not found.','#f85149');return;}
+      pr2('<span style="color:#58a6ff;">'+se.username+'</span> ['+se.level+']','');
+      pr2('  Suspended: '+(se.suspended?'<span style="color:#d29922;">YES</span>':'no'),'');
+      pr2('  Secured:   '+(se.secured?'<span style="color:#58a6ff;">YES</span>':'no'),'');
+      pr2('  Warned:    '+(se.warned&&!se.warnAcknowledged?'<span style="color:#3fb950;">YES (pending ack)</span>':'no'),'');
+      return;
+    }
+    if(cmd==='DISCLOG'){
+      var dsnap=await get(ref(db,'discipline')).catch(()=>null);
+      if(!dsnap||!dsnap.exists()){pr2('No records.','#8b949e');return;}
+      var drecs=Object.values(dsnap.val()).sort(function(a,b){return (b.issuedAt||0)-(a.issuedAt||0);}).slice(0,10);
+      pr2('Recent discipline (10):','#58a6ff');
+      var SC2={SENT:'#8b949e',APPEAL_PENDING:'#a371f7',ACKNOWLEDGED:'#3fb950',REINSTATED:'#3fb950',APPEAL_DENIED:'#f85149'};
+      drecs.forEach(function(r){
+        var sc=SC2[r.status]||'#8b949e';
+        pr2('  <span style="display:inline-block;min-width:140px;color:#e6edf3;">'+(r.staffUsername||'?')+'</span><span style="display:inline-block;min-width:130px;color:#d29922;">'+(r.punishType||'')+'</span><span style="color:'+sc+'">['+r.status+']</span>','');
+      });
+      return;
+    }
+
+    function findS(name){ var sid=null,so=null; Object.entries(STAFF).forEach(function(e){if(e[1].username.toLowerCase()===name.toLowerCase()){sid=e[0];so=e[1];}}); return {sid:sid,s:so}; }
+    function parseDur(str){ if(!str||str==='perm'||str==='permanent') return 0; var n=parseInt(str); if(isNaN(n)) return 0; if(str.endsWith('h')) return n*3600000; if(str.endsWith('d')) return n*86400000; if(str.endsWith('w')) return n*604800000; return 0; }
+
+    if(cmd==='SUSPEND'){
+      if(args.length<2){pr2('Usage: SUSPEND &lt;user&gt; &lt;duration&gt; [reason...]','#d29922');return;}
+      var f=findS(args[0]); if(!f.s){pr2('\u2717 "'+args[0]+'" not found.','#f85149');return;}
+      var dur=parseDur(args[1]); var rsn=args.slice(2).join(' ')||'Suspended via terminal';
+      var exp=dur>0?Date.now()+dur:0;
+      await update(ref(db,'staff/'+f.sid),{suspended:true,forceLogout:true,suspendInfo:{reason:rsn,by:ME,date:new Date().toLocaleString(),expiresAt:exp,duration:dur>0?new Date(Date.now()+dur).toLocaleString():'Indefinite'}});
+      _writeDisciplineRecord(f.sid,f.s.username,'Suspension',rsn,ME);
+      pr2('\u2713 '+f.s.username+' suspended'+(dur>0?' until '+new Date(Date.now()+dur).toLocaleString():' indefinitely')+'.','#3fb950');
+      machineLog('SUSPEND','Terminal: suspended '+f.s.username,rsn);
+      return;
+    }
+    if(cmd==='UNSUSPEND'){
+      var f=findS(args[0]||''); if(!f.s){pr2('\u2717 Not found.','#f85149');return;}
+      await update(ref(db,'staff/'+f.sid),{suspended:false,forceLogout:false});
+      await remove(ref(db,'staff/'+f.sid+'/suspendInfo')).catch(()=>{});
+      if(STAFF[f.sid]){STAFF[f.sid].suspended=false;STAFF[f.sid].suspendInfo=null;}
+      pr2('\u2713 '+f.s.username+' unsuspended.','#3fb950');
+      return;
+    }
+    if(cmd==='WARN'){
+      if(args.length<2){pr2('Usage: WARN &lt;user&gt; &lt;reason...&gt;','#d29922');return;}
+      var f=findS(args[0]); if(!f.s){pr2('\u2717 Not found.','#f85149');return;}
+      var rsn2=args.slice(1).join(' ');
+      await update(ref(db,'staff/'+f.sid),{warned:true,warnAcknowledged:false,warnInfo:{reason:rsn2,by:ME,date:new Date().toLocaleString()}});
+      _writeDisciplineRecord(f.sid,f.s.username,'Staff Warning',rsn2,ME);
+      pr2('\u2713 Warning issued to '+f.s.username+'.','#3fb950');
+      machineLog('STAFF_WARN','Terminal: warned '+f.s.username,rsn2);
+      return;
+    }
+    if(cmd==='SECURE'){
+      var f=findS(args[0]||''); if(!f.s){pr2('\u2717 Not found.','#f85149');return;}
+      var rsn3=args.slice(1).join(' ')||'Secured via terminal';
+      await update(ref(db,'staff/'+f.sid),{secured:true,forceLogout:true,secureInfo:{reason:rsn3,by:ME,date:new Date().toLocaleString(),level:'Standard'}});
+      _writeDisciplineRecord(f.sid,f.s.username,'Account Secured',rsn3,ME);
+      pr2('\u2713 '+f.s.username+' secured.','#3fb950');
+      machineLog('SECURE','Terminal: secured '+f.s.username,rsn3);
+      return;
+    }
+    if(cmd==='UNSECURE'){
+      var f=findS(args[0]||''); if(!f.s){pr2('\u2717 Not found.','#f85149');return;}
+      await update(ref(db,'staff/'+f.sid),{secured:false,forceLogout:false});
+      await remove(ref(db,'staff/'+f.sid+'/secureInfo')).catch(()=>{});
+      if(STAFF[f.sid]){STAFF[f.sid].secured=false;STAFF[f.sid].secureInfo=null;}
+      pr2('\u2713 '+f.s.username+' unsecured.','#3fb950');
+      return;
+    }
+    if(cmd==='FORCELOGOUT'||cmd==='FLOGOUT'){
+      var f=findS(args[0]||''); if(!f.s){pr2('\u2717 Not found.','#f85149');return;}
+      await update(ref(db,'staff/'+f.sid),{forceLogout:true});
+      pr2('\u2713 Force logout sent to '+f.s.username+'.','#3fb950');
+      machineLog('SESSION_LOCK','Terminal: force logout '+f.s.username,'');
+      return;
+    }
+    if(cmd==='TERMINATE'){
+      if(args.length<2){pr2('Usage: TERMINATE &lt;user&gt; &lt;reason...&gt;','#d29922');pr2('\u26a0 Irreversible.','#f85149');return;}
+      var f=findS(args[0]); if(!f.s){pr2('\u2717 Not found.','#f85149');return;}
+      if(f.s.username===ME){pr2('\u2717 Cannot terminate yourself.','#f85149');return;}
+      var rsn4=args.slice(1).join(' ');
+      pr2('<span style="color:#f85149;">\u26a0 TERMINATE '+f.s.username+'?</span> Type <span style="color:#3fb950;">CONFIRM</span> to proceed:','');
+      var _ch=async function(e2){
+        if(e2.key!=='Enter') return;
+        inp.removeEventListener('keydown',_ch);
+        var conf=inp.value.trim().toUpperCase(); inp.value='';
+        if(conf!=='CONFIRM'){pr2('Cancelled.','#8b949e');return;}
+        await update(ref(db,'staff/'+f.sid),{terminated:true,forceLogout:true,terminateInfo:{reason:rsn4,by:ME,date:new Date().toLocaleString()}});
+        await new Promise(function(r){setTimeout(r,400);});
+        await remove(ref(db,'staff/'+f.sid));
+        _writeDisciplineRecord(f.sid,f.s.username,'Termination',rsn4,ME);
+        pr2('\u2713 '+f.s.username+' terminated.','#3fb950');
+        machineLog('TERMINATE','Terminal: terminated '+f.s.username,rsn4);
+      };
+      inp.addEventListener('keydown',_ch);
+      return;
+    }
+    pr2('\u2717 Unknown command: '+cmd+'. Type <span style="color:#58a6ff;">HELP</span>.','#f85149');
+  });
+  setTimeout(function(){inp.focus();},100);
+}
 
 // ── Panel background canvas (subtle ambient effect) ──
 var _panelAnimId=null;
