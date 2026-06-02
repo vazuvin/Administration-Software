@@ -4876,9 +4876,9 @@ function buildModEmbed(staffName, action, targetUser, reason, expiryStr, expiryT
   if(!isClassified){
     if(expiryTs>0){
       var _exp=new Date(expiryTs);
-      desc+=', this lasts until **'+_exp.toLocaleDateString()+', '+String(_exp.getHours()).padStart(2,'0')+':'+String(_exp.getMinutes()).padStart(2,'0')+'**';
+      desc+=', this lasts until '+_exp.toLocaleDateString()+', '+String(_exp.getHours()).padStart(2,'0')+':'+String(_exp.getMinutes()).padStart(2,'0');
     } else if(isBan||isSusp) {
-      desc+=', this lasts **indefinitely**';
+      desc+=', this lasts indefinitely';
     }
   }
   desc+='\n'+_tsStr;
@@ -6182,24 +6182,10 @@ function renderUA(c){
       </div>`).join('');
 
     // ── LOGBOOK FILTER STATE ──
-    // Reset state when switching users
-    if(!window._lbState||window._lbStateUid!==uid){ window._lbState={filter:'',sortDir:'desc'}; window._lbStateUid=uid; }
-    const _lbState=window._lbState;
 
-    // ── SORT + BULK REVERT CONTROLS ──
-    const ctrlBar=`<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
-      <button class="btn small" style="height:24px;font-size:10px;" onclick="window._lbState.sortDir=window._lbState.sortDir==='desc'?'asc':'desc';renderUA(document.getElementById('content'))">
-        ${_lbState.sortDir==='desc'?'↓ Newest first':'↑ Oldest first'}
-      </button>
-      ${canDo('canModerateUsers')&&punishments.filter(([,p])=>!p.reverted).length>1?`<button class="btn small" style="height:24px;font-size:10px;background:rgba(248,81,73,0.08);border-color:rgba(248,81,73,0.3);color:#f85149;" onclick="window._lbBulk=!window._lbBulk;renderUA(document.getElementById('content'))">
-        ${window._lbBulk?'Cancel Bulk':'Bulk Revert'}
-      </button>`:''}
-      ${window._lbBulk?`<button class="btn small" id="lb-bulk-apply" style="height:24px;font-size:10px;background:rgba(248,81,73,0.15);border-color:#f85149;color:#f85149;">Apply Revert</button>`:''}
-    </div>`;
 
-    // ── SORTED PUNISHMENTS ──
-    let shownPunishments=[...punishments];
-    if(_lbState.sortDir==='asc') shownPunishments.reverse();
+    // Punishments sorted newest first
+    const shownPunishments=[...punishments];
 
     const logHtml=shownPunishments.length===0
       ?'<div style="text-align:center;padding:24px 0;color:var(--c-text2);font-size:12px;font-style:italic;">No punishments on record.</div>'
@@ -6217,9 +6203,10 @@ function renderUA(c){
             </div>
             <div style="flex:1;min-width:0;">
               <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                <span class="up-action-chip" style="${getChipStyle(p.action,isReverted)}">${isReverted?'↩ REVERTED: ':''} ${p.action||'Action'}</span>
-                ${isLocked?'<span class="up-action-chip" style="background:rgba(248,81,73,0.1);color:var(--c-ban);border:1px solid rgba(248,81,73,0.3);">🔒 LOCKED</span>':''}
-                ${isClassified?'<span class="up-action-chip" style="background:rgba(163,113,247,0.1);color:#a371f7;border:1px solid rgba(163,113,247,0.3);">🔐 CLASSIFIED</span>':''}
+                ${isReverted?'<span class="up-action-chip" style="background:rgba(63,185,80,0.1);color:#3fb950;border:1px solid rgba(63,185,80,0.35);display:inline-flex;align-items:center;gap:3px;"><svg width="9" height="9" viewBox="0 0 12 12" fill="none"><path d="M2 6a4 4 0 1 0 1-2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><polyline points="1,2 2,6 6,5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>REVERTED</span>':''}
+                <span class="up-action-chip" style="${getChipStyle(p.action,false)}">${p.action||'Action'}</span>
+                ${isLocked?'<span class="up-action-chip" style="background:rgba(248,81,73,0.1);color:var(--c-ban);border:1px solid rgba(248,81,73,0.3);display:inline-flex;align-items:center;gap:3px;"><svg width="9" height="9" viewBox="0 0 12 12" fill="none"><rect x="2" y="5.5" width="8" height="5" rx="1" stroke="currentColor" stroke-width="1.1"/><path d="M4 5.5V3.5a2 2 0 0 1 4 0v2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>LOCKED</span>':''}
+                ${isClassified?'<span class="up-action-chip" style="background:rgba(163,113,247,0.1);color:#a371f7;border:1px solid rgba(163,113,247,0.3);display:inline-flex;align-items:center;gap:3px;"><svg width="9" height="9" viewBox="0 0 12 12" fill="none"><rect x="2" y="5.5" width="8" height="5" rx="1" stroke="currentColor" stroke-width="1.1"/><path d="M4 5.5V3.5a2 2 0 0 1 4 0v2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>CLASSIFIED</span>':''}
               </div>
             </div>
             <div style="font-size:9px;color:var(--c-text2);white-space:nowrap;">${p.created||''}</div>
@@ -6242,7 +6229,7 @@ function renderUA(c){
             <div style="font-size:12px;color:var(--c-text);margin-bottom:8px;padding:8px 10px;background:var(--bg-tbl-odd);border-radius:6px;border-left:3px solid ${ACTION_COLORS[p.action]||'#888'};">${displayReason}</div>
             ${p.expiresAt&&p.expiresAt>0?`<div style="font-size:10px;color:var(--c-text2);margin-bottom:8px;">Expires: <b>${new Date(p.expiresAt).toLocaleString()}</b>${Date.now()>p.expiresAt?' <span style="color:var(--c-ok);">(expired)</span>':''}</div>`:''}
             <div class="up-log-actions">
-              ${window._lbBulk&&!isReverted&&!isLocked?`<input type="checkbox" class="lb-bulk-cb" data-pid="${pid}" style="width:13px;height:13px;margin-right:4px;cursor:pointer;">`:''}
+
               ${!isReverted&&!isLocked&&canDo('canModerateUsers')?`<button class="btn small" onclick="revertPunishment('${uid}','${pid}')"><span style="display:flex;align-items:center;gap:3px;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 8a5 5 0 1 0 1-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><polyline points="1,3 3,8 8,6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>`:''}
               ${isSuperAdmin()?`<button class="btn small" onclick="openPunishOptions('${uid}','${pid}')"><span style="display:flex;align-items:center;gap:3px;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.1 3.1l1.4 1.4M11.5 11.5l1.4 1.4M3.1 12.9l1.4-1.4M11.5 4.5l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> Options</span></button>`:''}
 
@@ -6251,23 +6238,9 @@ function renderUA(c){
         </div>`;
       }).join('');
 
-    // Wire bulk revert
-    setTimeout(function(){
-      var bulkBtn=document.getElementById('lb-bulk-apply');
-      if(bulkBtn) bulkBtn.onclick=function(){
-        var checked=[...document.querySelectorAll('.lb-bulk-cb:checked')];
-        if(!checked.length){ showToast('Select punishments to revert.','warning'); return; }
-        if(!confirm('Revert '+checked.length+' punishment(s)?')) return;
-        Promise.all(checked.map(function(cb){ return update(ref(db,'users/'+uid+'/punishments/'+cb.dataset.pid),{reverted:true,revertedBy:ME,revertedAt:nowStr()}); })).then(function(){
-          checked.forEach(function(cb){ if(USERS[uid]&&USERS[uid].punishments&&USERS[uid].punishments[cb.dataset.pid]) USERS[uid].punishments[cb.dataset.pid].reverted=true; });
-          window._lbBulk=false; showToast('Reverted '+checked.length+' punishment(s).','success'); safeRender();
-        });
-      };
-    },50);
-    return `<div style="margin-bottom:12px;">${ctrlBar}<div style="font-size:12px;font-weight:700;color:var(--c-text);margin-bottom:8px;">New Punishment or Log</div><div class="punish-grid">${tileHtml}</div></div>
-      <div><div style="font-size:12px;font-weight:700;color:var(--c-text);margin-bottom:8px;">Existing Logs <span style="font-size:11px;font-weight:400;color:var(--c-text2);">(${punishments.length})</span>
-        <input type="text" id="log-search-input" placeholder="Search logs…" style="float:right;font-size:10px;width:140px;padding:2px 6px;" oninput="filterLogSearch(this.value)"/>
-      </div>${logHtml}</div>`;
+
+    return `<div style="margin-bottom:12px;"><div style="font-size:12px;font-weight:700;color:var(--c-text);margin-bottom:8px;">New Punishment or Log</div><div class="punish-grid">${tileHtml}</div></div>
+      <div><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;"><div style="font-size:12px;font-weight:700;color:var(--c-text);">Existing Logs <span style="font-size:11px;font-weight:400;color:var(--c-text2);">(${punishments.length})</span></div><input type="text" id="log-search-input" placeholder="Search logs…" style="font-size:10px;width:130px;padding:3px 7px;border-radius:5px;background:var(--bg-tbl-odd);border:1px solid var(--c-border);color:var(--c-text);" oninput="filterLogSearch(this.value)"/></div>${logHtml}</div>`;
   }
 
   function renderDetails(){
@@ -14714,7 +14687,7 @@ async function addStaff(){
   if(!u){ el.style.color='var(--c-ban)'; el.textContent='Username required.'; return; }
   if(!p){ el.style.color='var(--c-ban)'; el.textContent='Password required.'; return; }
   if(Object.values(STAFF).find(s=>s.username===u)){ el.style.color='var(--c-ban)'; el.textContent='Already exists.'; return; }
-  el.style.color='#000080'; el.textContent='Creating account...';
+  el.style.color='var(--c-text2)'; el.textContent='Creating account...';
 
   // Step 1: Create Firebase Auth account (this briefly signs in as new user)
   let authCreated=false;
@@ -14738,18 +14711,20 @@ async function addStaff(){
   let avatarUrl='';
   const avatarLookup=avatarUser||u; // fall back to the staff username itself
   if(avatarLookup){
-    el.textContent='Fetching avatar...';
+    el.style.color='var(--c-text2)'; el.textContent='Fetching avatar...';
     try{
       const info=await fetchRobloxInfo(avatarLookup);
       if(info&&info.avatarUrl) avatarUrl=info.avatarUrl;
     }catch(e){}
   }
+  // Always fall back to Roblox default avatar
+  if(!avatarUrl) avatarUrl=ROBLOX_DEFAULT_AVATAR;
 
   // Step 4: Write DB record as ME (authenticated admin)
   const staffRecord={
     username:u, level:l, joined:today(), notes:'',
     suspended:false, secured:false, forceLogout:false,
-    password:p, avatarRobloxUser:avatarUser, avatarUrl,
+    password:p, avatarRobloxUser:avatarUser||u, avatarUrl,
     lastActive:'Never', lastAction:'-'
   };
   try{
@@ -18090,7 +18065,8 @@ window._updateDisciplineStatus=_updateDisciplineStatus;
 function renderOperatorTerminal(c){
   var _unlocked=false, _hist=[], _hIdx=-1;
   var _auditMode=false;
-  var _awaitingConfirm=false; // blocks dispatch while confirm prompt is active
+  var _awaitingConfirm=false;
+  var _confirmCallback=null; // when set, next Enter goes here
 
   // CSS
   if(!document.getElementById('ps-style')){
@@ -18207,7 +18183,8 @@ function renderOperatorTerminal(c){
       this.contentEditable='false';
       var frozen=document.getElementById('ps-active-line'); if(frozen) frozen.removeAttribute('id');
       if(!raw){ createInputLine(); return; }
-      if(_awaitingConfirm){ return; } // waiting for confirm, don't dispatch
+      if(_confirmCallback){ var cb=_confirmCallback; _confirmCallback=null; _awaitingConfirm=false; await cb(raw); return; }
+      if(_awaitingConfirm){ return; }
       _hist.push(raw); _hIdx=-1;
       await dispatch(raw);
       createInputLine();
@@ -18419,27 +18396,17 @@ function renderOperatorTerminal(c){
       if(f.s.username===ME){writeLine('<span class="ps-err">Remove-Staff : Cannot terminate your own account.</span>');return;}
       writeLine('');writeLine('<span class="ps-err">WARNING: This action is irreversible. Type CONFIRM to proceed or anything else to cancel.</span>');
       _awaitingConfirm=true;
-      // Create a temporary confirm input
-      var old2=document.getElementById('ps-active-line'); if(old2){old2.id='ps-confirm-line';}
-      var cil=document.createElement('div');cil.className='ps-input-line';cil.id='ps-active-line';
-      var cpr=document.createElement('span');cpr.className='ps-prompt-color';cpr.textContent='PS C:\\Software\\Operator> ';
-      var csp=document.createElement('span');csp.className='ps-inp-span';csp.contentEditable='true';csp.setAttribute('spellcheck','false');
-      var ccur=document.createElement('span');ccur.className='ps-cursor-inline';
-      cil.appendChild(cpr);cil.appendChild(csp);cil.appendChild(ccur);
-      body.appendChild(cil);body.scrollTop=body.scrollHeight;csp.focus();
-      csp.addEventListener('keydown',async function(e2){
-        if(e2.key!=='Enter') return; e2.preventDefault();
-        var conf=(csp.textContent||csp.innerText||'').replace(/[\u00a0]/g,' ').trim().toUpperCase(); csp.contentEditable='false'; ccur.remove();
-        cil.id=''; _awaitingConfirm=false; writeLine('PS C:\\Software\\Operator> '+conf);
-        if(conf==='CONFIRM'){
+      _confirmCallback=async function(conf){
+        writeLine('<span class="ps-dim">PS C:\\Software\\Operator> '+conf+'</span>');
+        if(conf.toUpperCase()==='CONFIRM'){
           await update(ref(db,'staff/'+f.sid),{terminated:true,forceLogout:true,terminateInfo:{reason:rsn,by:ME,date:new Date().toLocaleString()}});
           await new Promise(function(r){setTimeout(r,400);});
           await remove(ref(db,'staff/'+f.sid));
+          delete STAFF[f.sid];
           _writeDisciplineRecord(f.sid,f.s.username,'Termination',rsn,ME);
           blank();writeTable(['Property','Value'],[['Target',f.s.username],['Action','Terminated'],['Reason',rsn],['Status','TERMINATED']]);blank();
         } else { blank();writeLine('Remove-Staff : Operation cancelled.');blank(); }
-        createInputLine();
-      });
+      };
       return;
     }
     if(cmdU==='WIPE-STAFF'||cmdU==='WIPE'){
@@ -18454,19 +18421,9 @@ function renderOperatorTerminal(c){
       if(!code||String(code).trim()!==validCode){writeLine('<span class="ps-err">Wipe-Staff : Invalid operator code. -Code <operator-code> required.</span>');machineLog('DELETE_ATTEMPT','Terminal: wipe failed - wrong code for '+f.s.username,'');return;}
       writeLine('');writeLine('<span class="ps-err">WARNING: All data for '+f.s.username+' will be permanently erased. Type CONFIRM to proceed:</span>');
       _awaitingConfirm=true;
-      var _wold=document.getElementById('ps-active-line'); if(_wold)_wold.id='';
-      var _wcil=document.createElement('div');_wcil.className='ps-input-line';_wcil.id='ps-active-line';
-      var _wpr=document.createElement('span');_wpr.className='ps-prompt-color';_wpr.textContent='PS C:\\Software\\Operator> ';
-      var _wsp=document.createElement('span');_wsp.className='ps-inp-span';_wsp.contentEditable='true';_wsp.setAttribute('spellcheck','false');
-      var _wcur=document.createElement('span');_wcur.className='ps-cursor-inline';
-      _wcil.appendChild(_wpr);_wcil.appendChild(_wsp);_wcil.appendChild(_wcur);
-      body.appendChild(_wcil);body.scrollTop=body.scrollHeight;_wsp.focus();
-      _wsp.addEventListener('keydown',async function(ew){
-        if(ew.key!=='Enter') return; ew.preventDefault();
-        var wconf=(_wsp.textContent||_wsp.innerText||'').trim().toUpperCase(); _wsp.contentEditable='false'; _wcur.remove(); _wcil.id='';
-        writeLine('PS C:\\Software\\Operator> '+wconf);
-        _awaitingConfirm=false;
-        if(wconf==='CONFIRM'){
+      _confirmCallback=async function(wconf){
+        writeLine('<span class="ps-dim">PS C:\\Software\\Operator> '+wconf+'</span>');
+        if(wconf.toUpperCase()==='CONFIRM'){
           await update(ref(db,'staff/'+f.sid),{wiped:true,forceLogout:true}).catch(()=>{});
           await new Promise(function(r){setTimeout(r,400);});
           _writeDisciplineRecord(f.sid,f.s.username,'Account Wipe','Wiped via terminal by '+ME,ME,{wipeScheduledAt:Date.now()});
@@ -18474,8 +18431,7 @@ function renderOperatorTerminal(c){
           machineLog('WIPE','[Terminal] Wiped: '+f.s.username,'');
           blank();writeTable(['Property','Value'],[['Target',f.s.username],['Action','Account Wiped'],['Status','EXECUTED']]);blank();
         } else { blank();writeLine('Wipe-Staff : Operation cancelled.');blank(); }
-        createInputLine();
-      });
+      };
       return;
     }
     if(cmdU==='GET-PLAYERS'||cmdU==='LISTUSERS'){
