@@ -4857,7 +4857,7 @@ function buildModEmbed(staffName, action, targetUser, reason, expiryStr, expiryT
   var isBan=action.toLowerCase().includes('ban');
   var isSusp=action.toLowerCase().includes('suspend');
   var isWarn=action.toLowerCase().includes('warn');
-  var displayReason=isClassified?'Classified':reason;
+  var displayReason=isClassified?'Classified':(reason||'').replace(/\*\*/g,'');
   var actionVerbs={
     'Verbal Warning':'has verbally warned','Formal Warning':'has formally warned',
     'Suspension':'has suspended','Ban':'has banned',
@@ -6283,7 +6283,7 @@ function renderUA(c){
         <div class="sbox"><div class="stitle">Reputation</div><div class="sbody">${repBar(repScore)}<button class="btn small" style="margin-top:4px;" onclick="openRepHistory('${uid}')">View History</button></div></div>
       </div>
     </div>
-    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;">
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">
       ${canDo('canModerateUsers')?'<button class="btn" onclick="document.querySelector(\'.up-tab[data-tab=logbook]\').click()"><svg width="11" height="11" viewBox="0 0 14 14" fill="none" style="vertical-align:middle;margin-right:3px;"><rect x="2" y="1.5" width="10" height="11" rx="1" stroke="currentColor" stroke-width="1.2"/><line x1="4.5" y1="5" x2="9.5" y2="5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="7.5" x2="7" y2="7.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="7" y1="9.5" x2="9.5" y2="9.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg> Add Log Entry</button>':''}
       <button class="btn" id="btn-refresh-rblx-${uid}">↻ Refresh Roblox</button>
       ${CUSTOM_FIELDS.length&&canDo('canViewCustomFields')?`<button class="btn" onclick="openUserConfigDialog('${uid}')" style="display:flex;align-items:center;gap:4px;" title="Edit custom field values for this player"><svg width="11" height="11" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="2" width="11" height="10" rx="1.2" stroke="currentColor" stroke-width="1.2"/><line x1="4.5" y1="5.5" x2="9.5" y2="5.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4.5" y1="8" x2="7.5" y2="8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="10" cy="8" r="1.5" stroke="currentColor" stroke-width="1.1"/></svg>Fields</button>`:''}
@@ -6448,7 +6448,7 @@ function renderUA(c){
             const presColor=['var(--c-text2)','var(--c-ok)','#a371f7','var(--c-text2)'];
             const presState=pres?presStates[pres.userPresenceType||0]||'Offline':'Unknown';
             const presCol=pres?presColor[pres.userPresenceType||0]||'var(--c-text2)':'var(--c-text2)';
-            const created=rblxInfo.accountCreated?new Date(rblxInfo.accountCreated):null;
+            const created=(u.robloxAccountCreated||u.accountCreated)?new Date(u.robloxAccountCreated||u.accountCreated):null;
             const ageDays=created?Math.floor((Date.now()-created.getTime())/86400000):null;
             const ageStr=ageDays!=null?(ageDays>=730?Math.floor(ageDays/365)+'y '+Math.floor((ageDays%365)/30)+'m':ageDays+'d'):'-';
             const rows=[
@@ -16500,7 +16500,7 @@ function renderBadgeMgmt(c){
     </table></div>`}
     <hr style="border:none;border-top:1px solid var(--c-border);margin:8px 0 10px;">
     <div style="font-size:11px;font-weight:bold;color:var(--c-text);margin-bottom:6px;">Add New Custom Badge</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start;">
       <div style="flex:1;min-width:180px;">
         <div style="margin-bottom:4px;"><label style="font-size:11px;color:var(--c-text);display:block;margin-bottom:2px;font-weight:bold;">Label (displayed text):</label>
           <input type="text" id="nb-label" style="width:100%;" placeholder="e.g. DONOR" maxlength="10"/></div>
@@ -18281,7 +18281,7 @@ function renderOperatorTerminal(c){
       this.contentEditable='false';
       var frozen=document.getElementById('ps-active-line'); if(frozen) frozen.removeAttribute('id');
       if(!raw){ createInputLine(); return; }
-      if(_confirmCallback){ var cb=_confirmCallback; _confirmCallback=null; _awaitingConfirm=false; await cb(raw); return; }
+      if(_confirmCallback){ var cb=_confirmCallback; _confirmCallback=null; _awaitingConfirm=false; await cb(raw); createInputLine(); return; }
       if(_awaitingConfirm){ return; }
       _hist.push(raw); _hIdx=-1;
       await dispatch(raw);
@@ -18492,18 +18492,18 @@ function renderOperatorTerminal(c){
       if(!tn||!rsn){writeLine('<span class="ps-err">Remove-Staff : -Name and -Reason required.</span>');return;}
       var f=findStaff(tn); if(!f.s){writeLine('<span class="ps-err">"'+tn+'" not found.</span>');return;}
       if(f.s.username===ME){writeLine('<span class="ps-err">Remove-Staff : Cannot terminate your own account.</span>');return;}
-      writeLine('');writeLine('<span class="ps-err">WARNING: This action is irreversible. Type CONFIRM to proceed or anything else to cancel.</span>');
+      writeLine('');writeLine('<span class="ps-err">WARNING: This action is irreversible.</span>');writeLine('<span class="ps-warn">Type Y or CONFIRM to proceed, N to cancel:</span>');
       _awaitingConfirm=true;
       _confirmCallback=async function(conf){
-        writeLine('<span class="ps-dim">PS C:\\Software\\Operator> '+conf+'</span>');
-        if(conf.toUpperCase()==='CONFIRM'){
+        var c2=conf.trim().toUpperCase();
+        if(c2==='CONFIRM'||c2==='Y'||c2==='YES'){
           await update(ref(db,'staff/'+f.sid),{terminated:true,forceLogout:true,terminateInfo:{reason:rsn,by:ME,date:new Date().toLocaleString()}});
           await new Promise(function(r){setTimeout(r,400);});
           await remove(ref(db,'staff/'+f.sid));
           delete STAFF[f.sid];
           _writeDisciplineRecord(f.sid,f.s.username,'Termination',rsn,ME);
           blank();writeTable(['Property','Value'],[['Target',f.s.username],['Action','Terminated'],['Reason',rsn],['Status','TERMINATED']]);blank();
-        } else { blank();writeLine('Remove-Staff : Operation cancelled.');blank(); }
+        } else { blank();writeLine('<span class="ps-dim">Remove-Staff : Cancelled.</span>');blank(); }
       };
       return;
     }
@@ -18517,18 +18517,18 @@ function renderOperatorTerminal(c){
       var opcSnap=await get(ref(db,'meta/operatorCode')).catch(()=>null);
       var validCode=opcSnap&&opcSnap.exists()?String(opcSnap.val()).trim():'SAMARITAN_DELETE';
       if(!code||String(code).trim()!==validCode){writeLine('<span class="ps-err">Wipe-Staff : Invalid operator code. -Code <operator-code> required.</span>');machineLog('DELETE_ATTEMPT','Terminal: wipe failed - wrong code for '+f.s.username,'');return;}
-      writeLine('');writeLine('<span class="ps-err">WARNING: All data for '+f.s.username+' will be permanently erased. Type CONFIRM to proceed:</span>');
+      writeLine('');writeLine('<span class="ps-err">WARNING: All data for '+f.s.username+' will be permanently erased.</span>');writeLine('<span class="ps-warn">Type Y or CONFIRM to proceed, N to cancel:</span>');
       _awaitingConfirm=true;
       _confirmCallback=async function(wconf){
-        writeLine('<span class="ps-dim">PS C:\\Software\\Operator> '+wconf+'</span>');
-        if(wconf.toUpperCase()==='CONFIRM'){
+        var wc2=wconf.trim().toUpperCase();
+        if(wc2==='CONFIRM'||wc2==='Y'||wc2==='YES'){
           await update(ref(db,'staff/'+f.sid),{wiped:true,forceLogout:true}).catch(()=>{});
           await new Promise(function(r){setTimeout(r,400);});
           _writeDisciplineRecord(f.sid,f.s.username,'Account Wipe','Wiped via terminal by '+ME,ME,{wipeScheduledAt:Date.now()});
           await wipeStaffMember(f.sid,f.s.username,'Wiped via terminal by '+ME).catch(()=>{});
           machineLog('WIPE','[Terminal] Wiped: '+f.s.username,'');
           blank();writeTable(['Property','Value'],[['Target',f.s.username],['Action','Account Wiped'],['Status','EXECUTED']]);blank();
-        } else { blank();writeLine('Wipe-Staff : Operation cancelled.');blank(); }
+        } else { blank();writeLine('<span class="ps-dim">Wipe-Staff : Cancelled.</span>');blank(); }
       };
       return;
     }
