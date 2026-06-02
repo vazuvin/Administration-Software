@@ -17245,7 +17245,8 @@ function renderMachineLogs(c){
     +'<div id="ml-body" style="max-height:600px;overflow-y:auto;"><div style="text-align:center;padding:20px;color:var(--c-text2);">Loading…</div></div>'
     +'</div>';
 
-  get(ref(db,'logs/machine')).then(function(snap){
+  // Use onValue for live updates on machine logs
+  onValue(ref(db,'logs/machine'),function(snap){
     allEntries=snap.exists()?Object.values(snap.val()).filter(Boolean).sort(function(a,b){ return (b.ts||0)-(a.ts||0); }):[];
     var cnt=document.getElementById('ml-count');
     if(cnt) cnt.textContent=allEntries.length+' entries';
@@ -17264,17 +17265,33 @@ function renderMachineLogs(c){
     } else {
       if(body) body.innerHTML=allEntries.map(buildRow).join('');
     }
-  }).catch(function(e){
-    console.warn('Machine logs read error:',e);
+  },function(e){
+    console.warn('Machine logs onValue error:',e.code||e.message);
     var b=document.getElementById('ml-body');
-    if(b) b.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--c-text2);font-size:12px;">No machine log entries yet.<br><span style="font-size:10px;opacity:0.6;">Events will appear here as security events occur.</span></div>';
+    if(b) b.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--c-text2);font-size:12px;">Cannot load logs.<br><small style="opacity:0.6;">'+(e.code||e.message)+'</small><br><button class="btn small" onclick="renderMachineLogs(document.getElementById(\'content\'))">Retry</button></div>';
   });
 }
 
+// ── FIREBASE RULES DIAGNOSTICS ──
+async function checkFirebaseRules(){
+  var results={};
+  // Test machine log write
+  try { await push(ref(db,'logs/machine'),{type:'RULES_CHECK',staff:ME,ts:Date.now(),date:nowStr(),detail:'Rules check',extra:''}); results.machineLogs='ok'; }
+  catch(e){ results.machineLogs='FAIL: '+e.code; console.warn('Firebase rules issue - logs/machine:',e.code); }
+  // Test discipline write
+  var testKey='_test_'+Date.now();
+  try { await set(ref(db,'discipline/'+testKey),{test:true,ts:Date.now()}); await remove(ref(db,'discipline/'+testKey)); results.discipline='ok'; }
+  catch(e){ results.discipline='FAIL: '+e.code; console.warn('Firebase rules issue - discipline/:',e.code); }
+  return results;
+}
 async function machineLog(type, detail, extra){
   if(!ME) return;
   var entry={type:type,staff:ME,date:nowStr(),ts:Date.now(),detail:detail||'',extra:extra||''};
-  await push(ref(db,'logs/machine'),entry).catch(()=>{});
+  try {
+    await push(ref(db,'logs/machine'),entry);
+  } catch(e) {
+    console.warn('machineLog write failed:',e.code||e.message,'— check Firebase rules for logs/machine');
+  }
 }
 window.machineLog=machineLog;
 
@@ -18023,7 +18040,9 @@ function _writeDisciplineRecord(staffId, staffUsername, punishType, reason, by, 
     ...(extra||{}),
     timeline:[{status:'SENT',ts:Date.now(),date:nowStr(),note:punishType+' issued by '+by}]
   };
-  set(ref(db,'discipline/'+key),record).catch(()=>{});
+  set(ref(db,'discipline/'+key),record).catch(function(e){
+    console.warn('Discipline record write failed:',e.code||e.message,'— check Firebase rules for discipline/');
+  });
   return key;
 }
 window._writeDisciplineRecord=_writeDisciplineRecord;
@@ -18154,23 +18173,43 @@ function renderDisciplineLog(c){
 
   // Load immediately with get(), then subscribe for live updates
   var _lastDiscSnap=null;
-  get(ref(db,'discipline')).then(function(snap){
-    _lastDiscSnap=snap; draw(snap);
-  }).catch(function(e){ console.warn('discipline initial get error:',e); });
 
-  // Live updates via onValue
-  try {
-    _disciplineUnsubscribe=onValue(ref(db,'discipline'),function(snap){
+  function _discLoadAndSubscribe(){
+    // Initial load
+    get(ref(db,'discipline')).then(function(snap){
       _lastDiscSnap=snap; draw(snap);
-    },function(e){
-      console.warn('discipline onValue error, polling:',e);
-      // Poll every 4s as fallback
-      _disciplinePolling=setInterval(function(){
-        if(!document.getElementById('disc-body')){ clearInterval(_disciplinePolling); return; }
-        get(ref(db,'discipline')).then(function(s){ _lastDiscSnap=s; draw(s); }).catch(()=>{});
-      },4000);
+    }).catch(function(e){
+      console.warn('discipline get error:',e.code||e.message);
+      var b=document.getElementById('disc-body');
+      if(b) b.innerHTML='<div style="text-align:center;padding:20px;color:var(--c-text2);font-size:11px;">Could not load records. Check Firebase rules: discipline/ needs .read: auth!=null<br><small style="opacity:0.6;">Error: '+(e.code||e.message)+'</small></div>';
     });
-  } catch(e){ console.warn('discipline onValue setup error:',e); }
+    // Live subscription
+    try {
+      if(_disciplineUnsubscribe){ try{_disciplineUnsubscribe();}catch(e2){} }
+      _disciplineUnsubscribe=onValue(ref(db,'discipline'),function(snap){
+        _lastDiscSnap=snap; draw(snap);
+      },function(e){
+        console.warn('discipline onValue error:',e.code||e.message);
+        // Poll as fallback
+        if(!_disciplinePolling){
+          _disciplinePolling=setInterval(function(){
+            if(!document.getElementById('disc-body')){ clearInterval(_disciplinePolling); _disciplinePolling=null; return; }
+            get(ref(db,'discipline')).then(function(s){ _lastDiscSnap=s; draw(s); }).catch(()=>{});
+          },4000);
+        }
+      });
+    } catch(e){ console.warn('discipline onValue setup error:',e); }
+  }
+
+  // Wait for auth to be confirmed, then load
+  if(ME){ _discLoadAndSubscribe(); }
+  else {
+    // If ME not set yet, wait up to 3s then try anyway
+    var _discAuthWait=setInterval(function(){
+      if(ME){ clearInterval(_discAuthWait); _discLoadAndSubscribe(); }
+    },500);
+    setTimeout(function(){ clearInterval(_discAuthWait); if(!_lastDiscSnap) _discLoadAndSubscribe(); },3000);
+  }
 }
 
 
@@ -19156,7 +19195,11 @@ function renderApplyStep3(form){
         answers:_applyAnswers, contact:_applyAnswers.contact,
         refCode:refCode, date:new Date().toISOString(), status:'Pending', reviewed:false
       };
-      await push(ref(db,'applications'),appData);
+      try {
+        await push(ref(db,'applications'),appData);
+      } catch(appErr) {
+        throw new Error('Firebase write failed: '+(appErr.code||appErr.message)+'. Check Firebase rules: applications/ needs .write: true');
+      }
       // Fire Discord webhook for application submitted
       try{
         var answersText=Object.values(_applyAnswers).filter(function(a){ return a&&a.question; }).map(function(a){ return '**'+a.question+'**\n'+a.answer; }).join('\n\n');
