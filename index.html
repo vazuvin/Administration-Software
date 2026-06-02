@@ -6654,8 +6654,17 @@ function renderTwoFactorConfig(c){
         showToast('Operator code saved: '+code,'success');
       }catch(e){ showToast('Failed to save: '+String(e),'error'); }
     };
-  }).catch(function(){
-    c.innerHTML='<div class="ptitle">2FA Config</div><div style="padding:20px;color:var(--c-ban);">Error loading config.</div>';
+  }).catch(function(e){
+    console.warn('2FA config load error:',e);
+    // Retry once after 500ms
+    setTimeout(function(){
+      get(ref(db,'meta/twoFactorConfig')).then(function(snap2){
+        var cfg2=snap2.exists()?snap2.val():{enabled:false,requiredFor:[]};
+        c.innerHTML='<div class="ptitle">2FA Config</div><div style="padding:14px;color:var(--c-text2);font-size:11px;">Retry succeeded. <button class="btn small" id="r2fa">Reload</button></div>'; var rb=document.getElementById('r2fa'); if(rb) rb.onclick=function(){ nav('twofactorconfig'); };
+      }).catch(function(){
+        c.innerHTML='<div class="ptitle">2FA Config</div><div style="padding:20px;color:var(--c-text2);font-size:11px;">Loading...<button class="btn small" id="r2fa2" style="margin-left:6px;">Retry</button></div>'; var rb2=document.getElementById('r2fa2'); if(rb2) rb2.onclick=function(){ nav('twofactorconfig'); };
+      });
+    },500);
   });
 }
 
@@ -8969,10 +8978,12 @@ window.openUserConfigDialog=function(uid){
       if(USERS[uid]) USERS[uid].customData=newData;
       CUSTOM_FIELDS.forEach(function(f){
         var fid=f.id||f.name;
-        var ov=String(existing[fid]||''); var nv=String(newData[fid]||'');
+        var ov=String(existing[fid]!=null?existing[fid]:''); var nv=String(newData[fid]!=null?newData[fid]:'');
         if(ov!==nv) logCustomFieldChange(u.username,f.label||f.name,'set',ov,nv);
       });
-      showToast('Fields saved.','success'); safeRender();
+      showToast('Fields saved for '+u.username,'success');
+      if(USERS[uid]) USERS[uid].customData=newData;
+      safeRender();
     }
   );
   setTimeout(function(){
@@ -17141,7 +17152,7 @@ function renderMachineLogs(c){
   }).catch(function(e){
     console.warn('Machine logs read error:',e);
     var b=document.getElementById('ml-body');
-    if(b) b.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--c-text2);font-size:12px;"><div style="margin-bottom:8px;font-size:22px;">&#128274;</div>No machine log entries yet.<br><span style="font-size:10px;opacity:0.6;">Events will appear here as security events occur.</span></div>';
+    if(b) b.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--c-text2);font-size:12px;">No machine log entries yet.<br><span style="font-size:10px;opacity:0.6;">Events will appear here as security events occur.</span></div>';
   });
 }
 
@@ -17989,6 +18000,7 @@ window._updateDisciplineStatus=_updateDisciplineStatus;
 function renderOperatorTerminal(c){
   var _unlocked=false, _hist=[], _hIdx=-1;
   var _auditMode=false;
+  var _awaitingConfirm=false; // blocks dispatch while confirm prompt is active
 
   // CSS
   if(!document.getElementById('ps-style')){
@@ -18105,6 +18117,7 @@ function renderOperatorTerminal(c){
       this.contentEditable='false';
       var frozen=document.getElementById('ps-active-line'); if(frozen) frozen.removeAttribute('id');
       if(!raw){ createInputLine(); return; }
+      if(_awaitingConfirm){ return; } // waiting for confirm, don't dispatch
       _hist.push(raw); _hIdx=-1;
       await dispatch(raw);
       createInputLine();
@@ -18314,6 +18327,7 @@ function renderOperatorTerminal(c){
       var f=findStaff(tn); if(!f.s){writeLine('<span class="ps-err">"'+tn+'" not found.</span>');return;}
       if(f.s.username===ME){writeLine('<span class="ps-err">Remove-Staff : Cannot terminate your own account.</span>');return;}
       writeLine('');writeLine('<span class="ps-err">WARNING: This action is irreversible. Type CONFIRM to proceed or anything else to cancel.</span>');
+      _awaitingConfirm=true;
       // Create a temporary confirm input
       var old2=document.getElementById('ps-active-line'); if(old2){old2.id='ps-confirm-line';}
       var cil=document.createElement('div');cil.className='ps-input-line';cil.id='ps-active-line';
@@ -18325,7 +18339,7 @@ function renderOperatorTerminal(c){
       csp.addEventListener('keydown',async function(e2){
         if(e2.key!=='Enter') return; e2.preventDefault();
         var conf=(csp.textContent||csp.innerText||'').replace(/[\u00a0]/g,' ').trim().toUpperCase(); csp.contentEditable='false'; ccur.remove();
-        cil.id=''; writeLine('PS C:\\Software\\Operator> '+conf);
+        cil.id=''; _awaitingConfirm=false; writeLine('PS C:\\Software\\Operator> '+conf);
         if(conf==='CONFIRM'){
           await update(ref(db,'staff/'+f.sid),{terminated:true,forceLogout:true,terminateInfo:{reason:rsn,by:ME,date:new Date().toLocaleString()}});
           await new Promise(function(r){setTimeout(r,400);});
@@ -18348,6 +18362,7 @@ function renderOperatorTerminal(c){
       var validCode=opcSnap&&opcSnap.exists()?String(opcSnap.val()).trim():'SAMARITAN_DELETE';
       if(!code||String(code).trim()!==validCode){writeLine('<span class="ps-err">Wipe-Staff : Invalid operator code. -Code <operator-code> required.</span>');machineLog('DELETE_ATTEMPT','Terminal: wipe failed - wrong code for '+f.s.username,'');return;}
       writeLine('');writeLine('<span class="ps-err">WARNING: All data for '+f.s.username+' will be permanently erased. Type CONFIRM to proceed:</span>');
+      _awaitingConfirm=true;
       var _wold=document.getElementById('ps-active-line'); if(_wold)_wold.id='';
       var _wcil=document.createElement('div');_wcil.className='ps-input-line';_wcil.id='ps-active-line';
       var _wpr=document.createElement('span');_wpr.className='ps-prompt-color';_wpr.textContent='PS C:\\Software\\Operator> ';
@@ -18359,6 +18374,7 @@ function renderOperatorTerminal(c){
         if(ew.key!=='Enter') return; ew.preventDefault();
         var wconf=(_wsp.textContent||_wsp.innerText||'').trim().toUpperCase(); _wsp.contentEditable='false'; _wcur.remove(); _wcil.id='';
         writeLine('PS C:\\Software\\Operator> '+wconf);
+        _awaitingConfirm=false;
         if(wconf==='CONFIRM'){
           await update(ref(db,'staff/'+f.sid),{wiped:true,forceLogout:true}).catch(()=>{});
           await new Promise(function(r){setTimeout(r,400);});
