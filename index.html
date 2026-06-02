@@ -1660,7 +1660,7 @@ body.gh-dark .topinfo{ background:rgba(9,13,22,0.95); border-bottom-color:rgba(8
           <div class="drop-item" id="menu-tool-banduration">Ban Duration Calculator</div>
           <div class="drop-item" id="menu-tool-repscore">Rep Score Calculator</div>
           <div class="drop-sep"></div>
-          <div class="drop-item" id="menu-tool-terminal">&#9654; Operator Terminal</div>
+          <div class="drop-item" id="menu-tool-terminal" onclick="if(window._openTerminal)window._openTerminal(event)">&#9654; Operator Terminal</div>
           <div class="drop-sep"></div>
           <div class="drop-item" id="menu-tool-report">Report a Staff Member</div>
         </div>
@@ -3416,7 +3416,7 @@ function updateSidebar(){
     'staff-section':['staff','activity','messaging','suggestions','staffconfig','evaluations','calendar','staffreports'],
     logs:['modlog','revokelog','suspendlog','terminatelog','warnlog','auditlog'],
     configuration:['alerts','adminlog'],
-    machine:['siteconfig','statuslog','wipelog','robloxlog','badgemgmt','leakid','clearance','samlog','blacklist','discordconfig','landingconfig','appsconfig','discipline','loginlog','machinelogs','twofactorconfig','terminal'],
+    machine:['siteconfig','statuslog','wipelog','robloxlog','badgemgmt','leakid','clearance','samlog','blacklist','discordconfig','landingconfig','appsconfig','discipline','loginlog','machinelogs','twofactorconfig'],
   };
   document.querySelectorAll('.sb-section-link').forEach(el=>el.classList.remove('active'));
   for(const [section, pages] of Object.entries(sectionMap)){
@@ -3446,7 +3446,7 @@ var SECTION_PAGES={
   'staff-section':['staff','activity','messaging','suggestions','staffconfig','evaluations','calendar','staffreports'],
   logs:['modlog','revokelog','suspendlog','terminatelog','warnlog','auditlog'],
   configuration:['alerts','adminlog'],
-  machine:['siteconfig','statuslog','wipelog','robloxlog','badgemgmt','leakid','clearance','samlog','blacklist','discordconfig','landingconfig','appsconfig','discipline','loginlog','machinelogs','twofactorconfig','terminal'],
+  machine:['siteconfig','statuslog','wipelog','robloxlog','badgemgmt','leakid','clearance','samlog','blacklist','discordconfig','landingconfig','appsconfig','discipline','loginlog','machinelogs','twofactorconfig'],
 };
 
 // Which section a page belongs to
@@ -3742,7 +3742,6 @@ function render(){
       {id:'discipline',    label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><rect x="1.5" y="2" width="11" height="10" rx="1.2" stroke="currentColor" stroke-width="1.2"/><line x1="4" y1="5.5" x2="10" y2="5.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4" y1="8" x2="7" y2="8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="9.5" cy="8" r="1.5" fill="currentColor" style="color:#58a6ff;"/></svg> Discipline Status',      smOnly:true},
       {id:'loginlog',      label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><rect x="2" y="2" width="7" height="10" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M9 5l3 2-3 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><line x1="6" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Login Log',      smOnly:true},
       {id:'machinelogs',   label:'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;"><path d="M8 1v6l4 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.3"/></svg> Machine Logs', smOnly:true},
-      {id:'terminal',       label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><rect x="1" y="2" width="12" height="10" rx="1.2" stroke="currentColor" stroke-width="1.2"/><path d="M3 5l2.5 2.5L3 10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><line x1="7.5" y1="10" x2="11" y2="10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg> Terminal',      smOnly:true},
       {id:'twofactorconfig', label:'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;"><rect x="2" y="7" width="12" height="8" rx="1.3" stroke="currentColor" stroke-width="1.3"/><path d="M5 7V5a3 3 0 0 1 6 0v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> 2FA Config', smOnly:true},
       {id:'discordconfig', label:'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;"><path d="M6.5 7.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2M9.5 7.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2" fill="currentColor"/><path d="M13.5 1.5A2 2 0 0 0 11.5 0h-7A2 2 0 0 0 2.5 2v8a2 2 0 0 0 2 2h7l-1-3 2.5 2.5V1.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" fill="none"/></svg>Discord Config', smOnly:true},
     ], inner=>{
@@ -3762,7 +3761,6 @@ function render(){
       else if(page==='loginlog') isSoftwareManager()?renderLoginLog(inner):inner.innerHTML=denied;
       else if(page==='machinelogs') renderMachineLogs(inner);
       else if(page==='twofactorconfig') renderTwoFactorConfig(inner);
-      else if(page==='terminal') isSoftwareManager()?renderOperatorTerminal(inner):inner.innerHTML=denied;
     }); return;
   }
 
@@ -6184,42 +6182,12 @@ function renderUA(c){
       </div>`).join('');
 
     // ── LOGBOOK FILTER STATE ──
-    const _lbState=window._lbState||{filter:'',sortDir:'desc',showBulk:false};
-    window._lbState=_lbState;
+    // Reset state when switching users
+    if(!window._lbState||window._lbStateUid!==uid){ window._lbState={filter:'',sortDir:'desc'}; window._lbStateUid=uid; }
+    const _lbState=window._lbState;
 
-    // ── SUMMARY CARD ──
-    const totalP=punishments.length;
-    const activeP=punishments.filter(([,p])=>!p.reverted&&!(p.expiresAt>0&&Date.now()>p.expiresAt)).length;
-    const revertedP=punishments.filter(([,p])=>p.reverted).length;
-    const classifiedP=punishments.filter(([,p])=>p.classified).length;
-    const typeCount={};
-    punishments.forEach(([,p])=>{ typeCount[p.action]=(typeCount[p.action]||0)+1; });
-    const topType=Object.entries(typeCount).sort((a,b)=>b[1]-a[1])[0];
-    const modCount={};
-    punishments.forEach(([,p])=>{ if(p.mod) modCount[p.mod]=(modCount[p.mod]||0)+1; });
-    const summaryHtml=totalP>0?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;padding:10px 12px;background:var(--bg-tbl-odd);border:1px solid var(--c-border);border-radius:8px;">
-      <div style="display:flex;gap:16px;flex:1;flex-wrap:wrap;">
-        <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--c-text);">${totalP}</div><div style="font-size:9px;color:var(--c-text2);text-transform:uppercase;letter-spacing:0.5px;">Total</div></div>
-        <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:#f85149;">${activeP}</div><div style="font-size:9px;color:var(--c-text2);text-transform:uppercase;letter-spacing:0.5px;">Active</div></div>
-        <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:#58a6ff;">${revertedP}</div><div style="font-size:9px;color:var(--c-text2);text-transform:uppercase;letter-spacing:0.5px;">Reverted</div></div>
-        <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:#8b949e;">${classifiedP}</div><div style="font-size:9px;color:var(--c-text2);text-transform:uppercase;letter-spacing:0.5px;">Classified</div></div>
-        ${topType?`<div style="text-align:center;"><div style="font-size:11px;font-weight:700;color:var(--c-text);white-space:nowrap;">${topType[0]}</div><div style="font-size:9px;color:var(--c-text2);">Top type (${topType[1]}x)</div></div>`:''}
-      </div>
-    </div>`:'';
-
-    // ── MODERATOR BREAKDOWN ──
-    const modBreakdown=Object.keys(modCount).length>1?`<div style="margin-bottom:8px;padding:8px 12px;background:var(--bg-tbl-odd);border:1px solid var(--c-border);border-radius:8px;">
-      <div style="font-size:10px;font-weight:700;color:var(--c-text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Moderator Breakdown</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;">${Object.entries(modCount).sort((a,b)=>b[1]-a[1]).map(([mod,cnt])=>`<span style="font-size:10px;padding:2px 8px;background:var(--bg-content);border:1px solid var(--c-border);border-radius:10px;color:var(--c-text);">${mod} <b style="color:var(--c-link);">${cnt}</b></span>`).join('')}</div>
-    </div>`:'';
-
-    // ── FILTER & SORT BAR ──
-    const actionTypes=[...new Set(punishments.map(([,p])=>p.action))];
-    const filterBar=`<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
-      <select id="lb-filter-type" style="font-size:10px;background:var(--bg-tbl-odd);border:1px solid var(--c-border);color:var(--c-text);border-radius:4px;padding:2px 6px;height:24px;" onchange="window._lbState.filter=this.value;renderUA(document.getElementById('content'))">
-        <option value="">All types</option>
-        ${actionTypes.map(t=>`<option value="${t}"${_lbState.filter===t?' selected':''}>${t}</option>`).join('')}
-      </select>
+    // ── SORT + BULK REVERT CONTROLS ──
+    const ctrlBar=`<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
       <button class="btn small" style="height:24px;font-size:10px;" onclick="window._lbState.sortDir=window._lbState.sortDir==='desc'?'asc':'desc';renderUA(document.getElementById('content'))">
         ${_lbState.sortDir==='desc'?'↓ Newest first':'↑ Oldest first'}
       </button>
@@ -6229,13 +6197,12 @@ function renderUA(c){
       ${window._lbBulk?`<button class="btn small" id="lb-bulk-apply" style="height:24px;font-size:10px;background:rgba(248,81,73,0.15);border-color:#f85149;color:#f85149;">Apply Revert</button>`:''}
     </div>`;
 
-    // ── FILTERED + SORTED PUNISHMENTS ──
-    let shownPunishments=punishments;
-    if(_lbState.filter) shownPunishments=shownPunishments.filter(([,p])=>p.action===_lbState.filter);
-    if(_lbState.sortDir==='asc') shownPunishments=[...shownPunishments].reverse();
+    // ── SORTED PUNISHMENTS ──
+    let shownPunishments=[...punishments];
+    if(_lbState.sortDir==='asc') shownPunishments.reverse();
 
     const logHtml=shownPunishments.length===0
-      ?'<div style="text-align:center;padding:24px 0;color:var(--c-text2);font-size:12px;font-style:italic;">No punishments match the filter.</div>'
+      ?'<div style="text-align:center;padding:24px 0;color:var(--c-text2);font-size:12px;font-style:italic;">No punishments on record.</div>'
       :shownPunishments.map(([pid,p])=>{
         const isReverted=p.reverted||false;
         const isLocked=p.locked||false;
@@ -6297,7 +6264,7 @@ function renderUA(c){
         });
       };
     },50);
-    return `<div style="margin-bottom:12px;">${summaryHtml}${modBreakdown}${filterBar}<div style="font-size:12px;font-weight:700;color:var(--c-text);margin-bottom:8px;">New Punishment or Log</div><div class="punish-grid">${tileHtml}</div></div>
+    return `<div style="margin-bottom:12px;">${ctrlBar}<div style="font-size:12px;font-weight:700;color:var(--c-text);margin-bottom:8px;">New Punishment or Log</div><div class="punish-grid">${tileHtml}</div></div>
       <div><div style="font-size:12px;font-weight:700;color:var(--c-text);margin-bottom:8px;">Existing Logs <span style="font-size:11px;font-weight:400;color:var(--c-text2);">(${punishments.length})</span>
         <input type="text" id="log-search-input" placeholder="Search logs…" style="float:right;font-size:10px;width:140px;padding:2px 6px;" oninput="filterLogSearch(this.value)"/>
       </div>${logHtml}</div>`;
@@ -16849,17 +16816,22 @@ function setupMenus(){
   var mPrefs=document.getElementById('menu-prefs-open'); if(mPrefs) mPrefs.onclick=openPreferences;
 
   // Tools menu
-  var mToolTerm=document.getElementById('menu-tool-terminal');
-  if(mToolTerm) mToolTerm.onclick=function(){
-    if(!isSoftwareManager()){ showToast('Operator Terminal: Software Manager access required.','error'); return; }
+  window._openTerminal=function(e){
+    if(e) e.stopPropagation();
+    // Close all dropdowns first
+    document.querySelectorAll('.dropdown').forEach(function(d){ d.classList.remove('show'); });
+    document.querySelectorAll('.menu-item').forEach(function(m){ m.classList.remove('open'); });
+    if(!isSoftwareManager()){ showToast('Operator Terminal requires Software Manager access.','error'); return; }
     var overlay=document.getElementById('term-popup-overlay');
     var card=document.getElementById('term-popup-card');
-    if(!overlay||!card) return;
+    if(!overlay||!card){ console.error('term-popup-overlay or card not found'); return; }
     card.innerHTML='';
     renderOperatorTerminal(card);
     overlay.style.display='flex';
-    overlay.onclick=function(e){ if(e.target===overlay){ overlay.style.display='none'; card.innerHTML=''; } };
+    overlay.onclick=function(ev){ if(ev.target===overlay){ overlay.style.display='none'; card.innerHTML=''; } };
   };
+  var mToolTerm=document.getElementById('menu-tool-terminal');
+  if(mToolTerm){ mToolTerm.onclick=window._openTerminal; }
   var mToolRblx=document.getElementById('menu-tool-roblox'); if(mToolRblx) mToolRblx.onclick=openRobloxLookupTool;
   var mToolTs=document.getElementById('menu-tool-timestamp'); if(mToolTs) mToolTs.onclick=openTimestampTool;
   var mToolBan=document.getElementById('menu-tool-banduration'); if(mToolBan) mToolBan.onclick=openBanDurationTool;
@@ -18266,6 +18238,7 @@ function renderOperatorTerminal(c){
         ['Remove-Staff','Function','Terminate (irreversible). -Name <s> -Reason <s>'],
         ['Wipe-Staff','Function','Full data erasure. -Name <s> -Code <operator-code>'],
         ['Set-Rank','Function','Override rank. -Name <s> -Rank <alias>'],
+        ['Update-StaffMirror','Function','Sync landing page staff list with live data'],
         ['Reset-Warnings','Function','Clear staff warnings. -Name <string>'],
         ['Get-Alerts','Function','Show active site alerts'],
         ['Clear-Alerts','Function','Remove all site alerts'],
@@ -18497,12 +18470,16 @@ function renderOperatorTerminal(c){
     }
     if(cmdU==='INVOKE-SITEREFRESH'||cmdU==='SITEREFRESH'){
       await set(ref(db,'meta/siteRefresh'),{ts:Date.now(),by:ME,message:'Operator refresh'});
-      blank();writeLine('Invoke-SiteRefresh : Reload signal sent. Clients refresh in ~30s.');blank();return;
+      blank();writeLine('Invoke-SiteRefresh : Signal sent. Other clients will reload in ~10s.');blank();
+      blank();writeLine('Reloading this client in 3s...');blank();
+      setTimeout(function(){ window.location.reload(); },3000);
+      return;
     }
     if(cmdU==='SEND-BROADCAST'||cmdU==='BROADCAST'){
       var msg=params['message']||pos.join(' '); if(!msg){writeLine('<span class="ps-err">Send-Broadcast : -Message required.</span>');return;}
-      await push(ref(db,'siteAlerts'),{message:msg,by:ME,ts:Date.now(),type:'terminal'});
-      blank();writeLine('Send-Broadcast : Alert sent.');blank();return;
+      var bType=(params['type']||params['severity']||'info').toLowerCase(); if(!['info','warning','critical'].includes(bType)) bType='info';
+      await push(ref(db,'siteAlerts'),{message:msg,type:bType,by:ME,date:nowStr(),ts:Date.now(),active:true,expiresAt:0});
+      blank();writeLine('Send-Broadcast : Alert ('+bType+') sent: '+msg);blank();return;
     }
     if(cmdU==='SET-OPERATORCODE'){
       var code=params['code']||pos[0]; if(!code||code.length<6){writeLine('<span class="ps-err">Set-OperatorCode : -Code required (min 6 chars).</span>');return;}
@@ -18540,15 +18517,34 @@ function renderOperatorTerminal(c){
       machineLog('ACTION_RATE','[Terminal] Rank: '+f.s.username+' '+oldRank+' > '+resolvedRank,'by '+ME);
       blank();writeTable(['Property','Value'],[['Target',f.s.username],['PreviousRank',oldRank],['NewRank',resolvedRank],['Status','UPDATED']]);blank();return;
     }
+    if(cmdU==='UPDATE-STAFFMIRROR'||cmdU==='REFRESH-STAFFMIRROR'||cmdU==='SYNC-STAFF'){
+      writeLine('<span class="ps-dim">Rebuilding staff mirror from live data...</span>');
+      var _smFresh={};
+      Object.entries(STAFF).forEach(function(e){
+        var s=e[1];
+        if(!s.terminated&&!s.wiped&&s.username){
+          _smFresh[e[0]]={username:s.username,level:s.level||'',avatarUrl:s.avatarUrl||''};
+        }
+      });
+      await set(ref(db,'meta/staffMirror'),_smFresh);
+      blank();writeTable(['Property','Value'],[['StaffSynced',Object.keys(_smFresh).length],['Status','MIRROR UPDATED']]);
+      blank();writeLine('<span class="ps-dim">Landing page will reflect changes within 30 seconds.</span>');blank();return;
+    }
     if(cmdU==='GET-ALERTS'){
       var asnap=await get(ref(db,'siteAlerts')).catch(()=>null);
-      if(!asnap||!asnap.exists()){writeLine('<span class="ps-dim">No active alerts.</span>');return;}
-      var alerts=Object.values(asnap.val()).sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,10);
-      blank();writeTable(['Message','Type','By'],alerts.map(function(a){return [a.message||'-',a.type||'info',a.by||'-'];}));blank();return;
+      if(!asnap||!asnap.exists()){blank();writeLine('No active alerts.');blank();return;}
+      var alerts=Object.values(asnap.val()).filter(function(a){return a.active!==false;}).sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,10);
+      if(!alerts.length){blank();writeLine('No active alerts.');blank();return;}
+      blank();writeTable(['Message','Type','By','Time'],alerts.map(function(a){return [a.message||'-',a.type||'info',a.by||'-',a.date||'-'];}));blank();return;
     }
     if(cmdU==='CLEAR-ALERTS'){
-      await remove(ref(db,'siteAlerts')).catch(()=>{});
-      blank();writeLine('Clear-Alerts : All site alerts cleared.');blank();return;
+      // Set all alerts to inactive rather than deleting
+      var _asnap=await get(ref(db,'siteAlerts')).catch(()=>null);
+      if(_asnap&&_asnap.exists()){
+        var _upd={}; Object.keys(_asnap.val()).forEach(function(k){ _upd['siteAlerts/'+k+'/active']=false; });
+        await update(ref(db),_upd).catch(()=>{});
+      }
+      blank();writeLine('Clear-Alerts : All alerts deactivated.');blank();return;
     }
     if(cmdU==='GET-APPEALS'||cmdU==='APPEALS'){
       var dsnap2=await get(ref(db,'discipline')).catch(()=>null);
