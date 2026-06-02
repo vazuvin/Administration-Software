@@ -17961,34 +17961,33 @@ window._updateDisciplineStatus=_updateDisciplineStatus;
 
 function renderOperatorTerminal(c){
   var _unlocked=false, _hist=[], _hIdx=-1;
-  var _auditMode=false, _verboseMode=false, _watchMode=false, _watchTimer=null;
+  var _auditMode=false;
 
-  // CSS inject for PS-authentic look
-  if(!document.getElementById('ps-terminal-style')){
-    var st=document.createElement('style');
-    st.id='ps-terminal-style';
+  // CSS
+  if(!document.getElementById('ps-style')){
+    var st=document.createElement('style'); st.id='ps-style';
     st.textContent=`
-      .ps-wrap{display:flex;flex-direction:column;height:calc(100vh - 130px);min-height:500px;background:#012456;font-family:Consolas,"Courier New",monospace;border-radius:6px;overflow:hidden;border:1px solid #0a3d6e;box-shadow:0 4px 32px rgba(0,0,0,0.6);}
-      .ps-titlebar{background:#0e3a6e;padding:5px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #0a3d6e;flex-shrink:0;}
-      .ps-titlebar-icon{width:16px;height:16px;}
-      .ps-titlebar-text{font-size:12px;color:#cce8ff;flex:1;text-align:center;}
-      .ps-win-btns{display:flex;gap:2px;margin-left:auto;}
-      .ps-win-btn{width:18px;height:14px;border:1px solid #0a3d6e;border-radius:2px;display:flex;align-items:center;justify-content:center;cursor:default;font-size:9px;color:#cce8ff;background:rgba(255,255,255,0.05);}
-      .ps-out{flex:1;overflow-y:auto;padding:8px 10px;font-size:13px;line-height:1.5;color:#eeedf0;scroll-behavior:smooth;}
-      .ps-out::-webkit-scrollbar{width:8px;} .ps-out::-webkit-scrollbar-track{background:#012456;} .ps-out::-webkit-scrollbar-thumb{background:#0e3a6e;border-radius:3px;}
-      .ps-input-row{display:flex;align-items:flex-start;padding:4px 10px 8px;background:#012456;border-top:1px solid #0a3d6e;flex-shrink:0;}
-      .ps-prompt{color:#ffff00;font-size:13px;white-space:nowrap;padding-top:2px;user-select:none;}
-      .ps-inp{flex:1;background:transparent;border:none;outline:none;color:#eeedf0;font-size:13px;font-family:inherit;caret-color:transparent;padding:2px 0 0 0;}
-      .ps-cursor{display:inline-block;width:9px;height:14px;background:#eeedf0;vertical-align:text-bottom;animation:psBlink 1.2s step-end infinite;}
-      @keyframes psBlink{0%,100%{opacity:1}50%{opacity:0}}
-      .ps-cmd{color:#eeedf0;} .ps-ok{color:#00ff00;} .ps-err{color:#ff6b6b;} .ps-warn{color:#ffff00;}
-      .ps-head{color:#00ffff;font-weight:bold;} .ps-prop{color:#ffff00;} .ps-val{color:#eeedf0;}
-      .ps-comment{color:#808080;} .ps-info{color:#87ceeb;}
-      .ps-tbl th{color:#00ffff;text-align:left;padding-right:24px;font-weight:normal;text-decoration:underline;}
-      .ps-tbl td{padding-right:24px;vertical-align:top;}
-      .ps-tbl .col-name{color:#ffff00;min-width:160px;}
-      .ps-tbl .col-type{color:#87ceeb;min-width:100px;}
-      .ps-tbl .col-def{color:#eeedf0;}
+      .ps-wrap{display:flex;flex-direction:column;height:calc(100vh - 130px);min-height:480px;background:#0c0c0c;font-family:Consolas,"Cascadia Code","Courier New",monospace;border-radius:6px;overflow:hidden;border:1px solid #333;}
+      .ps-titlebar{background:#1a1a1a;padding:6px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #2a2a2a;flex-shrink:0;user-select:none;}
+      .ps-titlebar-icon{width:14px;height:14px;opacity:0.7;}
+      .ps-titlebar-text{font-size:12px;color:#ccc;font-family:Consolas,monospace;}
+      .ps-body{flex:1;overflow-y:auto;padding:8px 12px;font-size:13px;line-height:1.5;color:#f0f0f0;cursor:text;word-break:break-word;}
+      .ps-body::-webkit-scrollbar{width:6px;} .ps-body::-webkit-scrollbar-track{background:#0c0c0c;} .ps-body::-webkit-scrollbar-thumb{background:#333;border-radius:3px;}
+      .ps-line{min-height:1.5em;}
+      .ps-prompt-color{color:#f0f0f0;}
+      .ps-err{color:#ff6b6b;}
+      .ps-dim{color:#888;}
+      .ps-tbl{border-collapse:collapse;margin:2px 0 4px 0;font-size:13px;}
+      .ps-tbl th{color:#f0f0f0;text-align:left;padding-right:20px;font-weight:normal;text-decoration:underline;white-space:nowrap;}
+      .ps-tbl td{padding-right:20px;vertical-align:top;white-space:nowrap;}
+      .ps-tbl td.col-name{color:#f0f0f0;}
+      .ps-tbl td.col-type{color:#f0f0f0;opacity:0.7;}
+      .ps-tbl td.col-def{color:#f0f0f0;opacity:0.85;white-space:normal;}
+      .ps-tbl .sep{color:#888;}
+      .ps-cursor-inline{display:inline-block;width:8px;height:1.1em;background:#f0f0f0;vertical-align:text-bottom;animation:psCursorBlink 1.2s step-end infinite;margin-left:1px;}
+      @keyframes psCursorBlink{0%,100%{opacity:1}50%{opacity:0}}
+      .ps-input-line{display:flex;align-items:flex-start;min-height:1.5em;}
+      .ps-input-line .ps-inp-span{color:#f0f0f0;outline:none;white-space:pre;min-width:2px;}
     `;
     document.head.appendChild(st);
   }
@@ -17996,451 +17995,401 @@ function renderOperatorTerminal(c){
   c.innerHTML='';
   var wrap=document.createElement('div'); wrap.className='ps-wrap';
 
-  // Title bar (Windows style)
+  // Title bar
   var tb=document.createElement('div'); tb.className='ps-titlebar';
-  tb.innerHTML='<svg class="ps-titlebar-icon" viewBox="0 0 16 16"><rect x="1" y="1" width="6" height="6" fill="#00bcf2"/><rect x="9" y="1" width="6" height="6" fill="#ffb900"/><rect x="1" y="9" width="6" height="6" fill="#e81123"/><rect x="9" y="9" width="6" height="6" fill="#7fba00"/></svg><span class="ps-titlebar-text">Administrator: Samaritan Systems Terminal v2.0 (x64)</span><div class="ps-win-btns"><div class="ps-win-btn">&#8211;</div><div class="ps-win-btn">&#9633;</div><div class="ps-win-btn">&#10005;</div></div>';
+  tb.innerHTML='<svg class="ps-titlebar-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="12" rx="2" stroke="#888" stroke-width="1"/><line x1="4" y1="5" x2="8" y2="9" stroke="#888" stroke-width="1.5" stroke-linecap="round"/><line x1="4" y1="9" x2="6" y2="7" stroke="transparent"/><path d="M4 5l3 4" stroke="#888" stroke-width="1.2" stroke-linecap="round"/><line x1="9" y1="9" x2="12" y2="9" stroke="#888" stroke-width="1.2" stroke-linecap="round"/></svg>'
+    +'<span class="ps-titlebar-text">Samaritan Systems \u2014 Operator Terminal (x64)</span>';
 
-  // Output area
-  var out=document.createElement('div'); out.className='ps-out'; out.id='ps-out';
+  // Body (output + input all in one scrollable area)
+  var body=document.createElement('div'); body.className='ps-body'; body.id='ps-body';
 
-  // Input row
-  var inpRow=document.createElement('div'); inpRow.className='ps-input-row';
-  var pr=document.createElement('span'); pr.className='ps-prompt'; pr.id='ps-prompt';
-  pr.textContent='PS C:\\Software\\Operator> ';
-  var inp=document.createElement('input'); inp.className='ps-inp'; inp.id='ps-inp';
-  inp.type='text'; inp.autocomplete='off'; inp.spellcheck=false;
-  var cur=document.createElement('span'); cur.className='ps-cursor';
-  inpRow.appendChild(pr); inpRow.appendChild(inp); inpRow.appendChild(cur);
-
-  wrap.appendChild(tb); wrap.appendChild(out); wrap.appendChild(inpRow);
+  wrap.appendChild(tb); wrap.appendChild(body);
   c.appendChild(wrap);
 
-  // Hide real caret, show blinking block cursor
-  inp.style.cssText='flex:1;background:transparent;border:none;outline:none;color:transparent;font-size:13px;font-family:inherit;caret-color:transparent;text-shadow:0 0 0 #eeedf0;padding:2px 0 0 0;';
-  // Mirror text to a visible span
-  var mirror=document.createElement('span'); mirror.style.cssText='color:#eeedf0;font-size:13px;font-family:inherit;white-space:pre;padding-top:2px;';
-  inpRow.insertBefore(mirror,cur);
-  inp.addEventListener('input',function(){ mirror.textContent=this.value; });
-
-  function line(html,cls){ var d=document.createElement('div'); d.innerHTML=html; if(cls) d.className=cls; out.appendChild(d); out.scrollTop=out.scrollHeight; }
-  function blank(){ var d=document.createElement('div'); d.innerHTML='&nbsp;'; out.appendChild(d); out.scrollTop=out.scrollHeight; }
-  function tbl(headers,rows){
-    var t=document.createElement('table'); t.className='ps-tbl'; t.style.cssText='border-collapse:collapse;margin:2px 0;';
+  // ── OUTPUT helpers ──
+  function writeLine(html){
+    var d=document.createElement('div'); d.className='ps-line'; d.innerHTML=html;
+    // Insert BEFORE the active input line
+    var il=document.getElementById('ps-active-line');
+    if(il) body.insertBefore(d,il); else body.appendChild(d);
+    body.scrollTop=body.scrollHeight;
+  }
+  function writeTable(headers,rows){
+    var t=document.createElement('table'); t.className='ps-tbl';
+    // Header
     var htr=document.createElement('tr');
-    headers.forEach(function(h){ var th=document.createElement('th'); th.textContent=h; htr.appendChild(th); });
-    t.appendChild(htr);
-    // Separator row
-    var sep=document.createElement('tr');
-    headers.forEach(function(h){ var td=document.createElement('td'); td.style.color='#87ceeb'; td.textContent='-'.repeat(h.length); sep.appendChild(td); });
-    t.appendChild(sep);
+    headers.forEach(function(h){ var th=document.createElement('th'); th.innerHTML=h; htr.appendChild(th); }); t.appendChild(htr);
+    // Separator
+    var str2=document.createElement('tr');
+    headers.forEach(function(h){ var td=document.createElement('td'); td.className='sep'; td.textContent='-'.repeat(h.replace(/<[^>]+>/g,'').length+2); str2.appendChild(td); }); t.appendChild(str2);
+    // Rows
     rows.forEach(function(r){
       var tr=document.createElement('tr');
-      r.forEach(function(cell,i){ var td=document.createElement('td'); td.innerHTML=cell; if(i===0)td.className='col-name'; else if(i===1)td.className='col-type'; else td.className='col-def'; tr.appendChild(td); });
-      t.appendChild(tr);
+      r.forEach(function(cell,i){ var td=document.createElement('td'); td.innerHTML=cell; td.className=i===0?'col-name':i===1?'col-type':'col-def'; tr.appendChild(td); }); t.appendChild(tr);
     });
-    out.appendChild(t); out.scrollTop=out.scrollHeight;
+    var wrap2=document.createElement('div');wrap2.className='ps-line';wrap2.appendChild(t);
+    var il=document.getElementById('ps-active-line');
+    if(il) body.insertBefore(wrap2,il); else body.appendChild(wrap2);
+    body.scrollTop=body.scrollHeight;
+  }
+  function blank(){ writeLine('&nbsp;'); }
+
+  // ── ACTIVE INPUT LINE ──
+  function createInputLine(){
+    // Remove any existing input line
+    var old=document.getElementById('ps-active-line'); if(old) old.remove();
+    var il=document.createElement('div'); il.className='ps-input-line'; il.id='ps-active-line';
+    var pr=document.createElement('span'); pr.className='ps-prompt-color'; pr.textContent='PS C:\\Software\\Operator> ';
+    var sp=document.createElement('span'); sp.className='ps-inp-span'; sp.id='ps-inp-span'; sp.contentEditable='true'; sp.setAttribute('spellcheck','false');
+    var cur=document.createElement('span'); cur.className='ps-cursor-inline';
+    il.appendChild(pr); il.appendChild(sp); il.appendChild(cur);
+    body.appendChild(il);
+    body.scrollTop=body.scrollHeight;
+    sp.focus();
+
+    // Keep cursor at end on click
+    sp.addEventListener('focus',function(){
+      var range=document.createRange(); range.selectNodeContents(this); range.collapse(false);
+      var sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    });
+    sp.addEventListener('keydown',async function(e){
+      if(e.key==='ArrowUp'){
+        e.preventDefault();
+        if(_hIdx<_hist.length-1){_hIdx++;var t=_hist[_hist.length-1-_hIdx]||'';this.textContent=t;var r=document.createRange();r.selectNodeContents(this);r.collapse(false);var s=window.getSelection();s.removeAllRanges();s.addRange(r);}
+        return;
+      }
+      if(e.key==='ArrowDown'){
+        e.preventDefault();
+        if(_hIdx>0){_hIdx--;var t=_hist[_hist.length-1-_hIdx]||'';}else{_hIdx=-1;var t='';}
+        this.textContent=t;var r=document.createRange();r.selectNodeContents(this);r.collapse(false);var s=window.getSelection();s.removeAllRanges();s.addRange(r);
+        return;
+      }
+      if(e.key==='Enter'){
+        e.preventDefault();
+        var raw=(this.textContent||'').trim();
+        this.contentEditable='false';
+        // Finalize this line - make it static
+        var il2=document.getElementById('ps-active-line');
+        if(il2){il2.id='';var cur2=il2.querySelector('.ps-cursor-inline');if(cur2)cur2.remove();}
+        if(!raw){createInputLine();return;}
+        _hist.push(raw); _hIdx=-1;
+        await dispatch(raw);
+        createInputLine();
+        return;
+      }
+    });
+    // Prevent paste from bringing in formatted text
+    sp.addEventListener('paste',function(e){
+      e.preventDefault();
+      var text=e.clipboardData.getData('text/plain');
+      document.execCommand('insertText',false,text);
+    });
+    return sp;
   }
 
-  // Startup banner
-  line('<span class="ps-head">Windows PowerShell</span>','');
-  line('<span class="ps-comment">Samaritan Systems Operator Interface v2.0.0</span>','');
-  line('<span class="ps-comment">Copyright (C) Samaritan Systems. All rights reserved.</span>','');
-  blank();
-  line('<span class="ps-comment"># Authenticate with: </span><span class="ps-ok">Unlock-Session -Code &lt;operator-code&gt;</span>','');
-  line('<span class="ps-comment"># List commands:     </span><span class="ps-ok">Get-Command</span>','');
-  blank();
-
-  // ──────── COMMAND DISPATCH ────────
-  inp.addEventListener('keydown', async function(e){
-    if(e.key==='ArrowUp'){ if(_hIdx<_hist.length-1){_hIdx++;inp.value=_hist[_hist.length-1-_hIdx]||'';mirror.textContent=inp.value;} e.preventDefault(); return; }
-    if(e.key==='ArrowDown'){ if(_hIdx>0){_hIdx--;inp.value=_hist[_hist.length-1-_hIdx]||'';}else{_hIdx=-1;inp.value='';} mirror.textContent=inp.value; e.preventDefault(); return; }
-    if(e.key!=='Enter') return;
-    var raw=inp.value.trim(); inp.value=''; mirror.textContent=''; _hIdx=-1;
-    if(!raw) return;
-    _hist.push(raw);
-    // Echo command
-    line('<span class="ps-prompt">PS C:\\Software\\Operator&gt; </span><span class="ps-cmd">'+raw.replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</span>','');
-
-    // Parse: cmdlet -Param value or positional args
+  // ── COMMAND DISPATCH ──
+  async function dispatch(raw){
     var tokens=raw.match(/(?:[^\s"]+|"[^"]*")+/g)||[];
-    var cmdRaw=tokens[0]||''; var cmd=cmdRaw.toUpperCase();
+    var cmdRaw=tokens[0]||''; var cmdU=cmdRaw.toUpperCase();
     var args=tokens.slice(1).map(function(t){return t.replace(/^"|"$/g,'');});
-
-    // Parse named params: -Reason "x" -Duration 1h
     var params={};
     for(var pi=0;pi<args.length;pi++){
       if(args[pi].startsWith('-')){
         var key=args[pi].slice(1).toLowerCase();
-        var val=args[pi+1]&&!args[pi+1].startsWith('-')?args[pi+1]:'true';
+        var nxt=args[pi+1];
+        var val=(nxt&&!nxt.startsWith('-'))?nxt:'true';
         params[key]=val; if(val!=='true') pi++;
       }
     }
-    var posArgs=args.filter(function(a,i){return !a.startsWith('-')&&(i===0||!args[i-1].startsWith('-'));});
+    var pos=args.filter(function(a,i){return !a.startsWith('-')&&(i===0||!args[i-1].startsWith('-'));});
 
-    // AUTH CHECK
-    function needsAuth(){ if(!_unlocked){line('<span class="ps-err">Access denied. Authenticate first: Unlock-Session -Code &lt;code&gt;</span>','');return true;} return false; }
-    function findStaff(name){ var sid=null,so=null; Object.entries(STAFF).forEach(function(e){if(e[1].username&&e[1].username.toLowerCase()===name.toLowerCase()){sid=e[0];so=e[1];}}); return {sid:sid,s:so}; }
-    function parseDur(str){ if(!str||str==='0'||str.toLowerCase()==='indefinite'||str.toLowerCase()==='perm') return 0; var n=parseFloat(str); if(isNaN(n)) return 0; var l=str.slice(-1).toLowerCase(); if(l==='h') return Math.floor(n*3600000); if(l==='d') return Math.floor(n*86400000); if(l==='w') return Math.floor(n*604800000); if(l==='m') return Math.floor(n*60000); return Math.floor(n*86400000); }
-    function durStr(ms){ if(!ms) return 'Indefinite'; var h=Math.floor(ms/3600000),d=Math.floor(ms/86400000); return d>=1?d+'d '+(Math.floor((ms%86400000)/3600000))+'h':h+'h'; }
+    function needAuth(){ if(!_unlocked){writeLine('<span class="ps-err">Access denied : Run Unlock-Session -Code &lt;code&gt; first.</span>');return true;} return false; }
+    function findStaff(name){ var r={sid:null,s:null}; Object.entries(STAFF).forEach(function(e){if(e[1].username&&e[1].username.toLowerCase()===name.toLowerCase()){r.sid=e[0];r.s=e[1];}}); return r; }
+    function parseDur(str){ if(!str||str==='0'||/^(perm|indefinite|indef)$/i.test(str)) return 0; var n=parseFloat(str); if(isNaN(n)) return 0; var l=str.slice(-1).toLowerCase(); return l==='h'?Math.floor(n*3600000):l==='d'?Math.floor(n*86400000):l==='w'?Math.floor(n*604800000):l==='m'?Math.floor(n*60000):Math.floor(n*86400000); }
 
-    // ── UNLOCK-SESSION ──
-    if(cmd==='UNLOCK-SESSION'||cmd==='UNLOCK'){
-      var code=params['code']||posArgs[0]||'';
+    // CLEAR
+    if(cmdU==='CLEAR'||cmdU==='CLS'||cmdU==='CLEAR-HOST'){body.innerHTML='';return;}
+    if(cmdU==='EXIT'||cmdU==='QUIT'){writeLine('<span class="ps-dim">Closing session...</span>');setTimeout(function(){nav('siteconfig');},600);return;}
+
+    // UNLOCK-SESSION
+    if(cmdU==='UNLOCK-SESSION'||cmdU==='UNLOCK'){
+      var code=params['code']||pos[0]||'';
       var snap=await get(ref(db,'meta/operatorCode')).catch(()=>null);
       var valid=snap&&snap.exists()?String(snap.val()).trim():'SAMARITAN_DELETE';
       if(String(code).trim()===valid){
         _unlocked=true;
-        pr.style.color='#00ff00';
-        line('<span class="ps-ok">Authentication successful. Session unlocked for '+ME+'.</span>','');
-        line('<span class="ps-comment">Run Get-Command to list available cmdlets.</span>','');
+        writeLine('');
+        writeLine('Authentication successful.');
+        writeLine('<span class="ps-dim">Type Get-Command to list available cmdlets.</span>');
+        blank();
         machineLog('ACTION_RATE','Terminal: session unlocked','');
-      } else { line('<span class="ps-err">Unlock-Session: Authentication failed. Incorrect operator code.</span>',''); machineLog('DELETE_ATTEMPT','Terminal: failed auth attempt',''); }
-      blank(); return;
+      } else { writeLine('<span class="ps-err">Unlock-Session : Authentication failed. Incorrect operator code.</span>'); machineLog('DELETE_ATTEMPT','Terminal: failed auth',''); }
+      return;
     }
+    if(cmdU==='LOCK-SESSION'||cmdU==='LOCK'){_unlocked=false;writeLine('<span class="ps-dim">Session locked.</span>');return;}
 
-    // ── CLEAR / CLS ──
-    if(cmd==='CLEAR'||cmd==='CLS'||cmd==='CLEAR-HOST'){ out.innerHTML=''; return; }
-
-    // ── EXIT ──
-    if(cmd==='EXIT'||cmd==='QUIT'){ line('<span class="ps-comment">Closing session...</span>',''); setTimeout(function(){nav('siteconfig');},600); return; }
-
-    // ── GET-COMMAND (help) ──
-    if(cmd==='GET-COMMAND'||cmd==='HELP'||cmd==='?'){
-      var filter=(params['name']||params['module']||posArgs[0]||'').toLowerCase();
-      var allCmds=[
-        // Auth
-        ['Unlock-Session','Function','Authenticate terminal with operator code. -Code <string>'],
-        ['Lock-Session','Function','Lock the terminal session'],
-        // Info
-        ['Get-Date','Cmdlet','Display current date and time'],
-        ['Get-Uptime','Function','Show panel session statistics'],
-        ['Get-Version','Function','Show build and version information'],
-        ['Measure-Latency','Function','Test Firebase round-trip latency (alias: ping)'],
-        ['Get-CurrentUser','Function','Display current authenticated operator (alias: whoami)'],
-        // Staff
-        ['Get-StaffList','Function','List all staff members. -Filter <status>'],
-        ['Get-StaffStatus','Function','Show detailed status for a staff member. -Name <string>'],
-        ['Suspend-Staff','Function','Suspend a staff member. -Name <string> -Duration <time> -Reason <string>'],
-        ['Resume-Staff','Function','Lift a staff suspension. -Name <string>'],
-        ['Invoke-Warning','Function','Issue a formal staff warning. -Name <string> -Reason <string>'],
-        ['Lock-Account','Function','Secure a staff account. -Name <string> -Level <Standard|High|Critical>'],
-        ['Unlock-Account','Function','Remove account security lock. -Name <string>'],
-        ['Stop-Session','Function','Force logout a staff member. -Name <string>'],
-        ['Remove-Staff','Function','Terminate a staff member permanently. -Name <string> -Reason <string>'],
-        // Players
-        ['Get-Players','Function','List players. -Limit <int>'],
-        ['Get-Player','Function','Look up a player. -Name <string>'],
-        ['Get-PlayerRep','Function','Show reputation for a player. -Name <string>'],
-        // Logs
-        ['Get-DisciplineLog','Function','Show discipline records. -Limit <int> -Status <string>'],
-        ['Get-ModerationLog','Function','Show recent moderation log. -Limit <int>'],
-        ['Get-MachineLog','Function','Show machine security log. -Limit <int>'],
-        ['Get-LoginLog','Function','Show login history. -Limit <int>'],
-        // Site
-        ['Invoke-SiteRefresh','Function','Push reload signal to all connected clients'],
-        ['Send-Broadcast','Function','Send site-wide staff alert. -Message <string>'],
+    // GET-COMMAND
+    if(cmdU==='GET-COMMAND'||cmdU==='HELP'||cmdU==='?'){
+      var filt=(params['name']||params['module']||pos[0]||'').toLowerCase();
+      var all=[
+        ['Unlock-Session','Function','Authenticate. -Code <string>'],
+        ['Lock-Session','Function','Lock the session'],
+        ['Get-Command','Cmdlet','List cmdlets. -Name <filter>'],
+        ['Get-Date','Cmdlet','Current date/time'],
+        ['Get-Uptime','Function','Panel session statistics'],
+        ['Get-Version','Function','Build and version info'],
+        ['Measure-Latency','Function','Test Firebase RTT (ping)'],
+        ['Get-CurrentUser','Function','Show authenticated operator (whoami)'],
+        ['Get-SessionInfo','Function','Current session properties'],
+        ['Get-DurationHelp','Function','Duration format reference'],
+        ['Get-StaffActions','Function','Staff action categories'],
+        ['Enable-AuditMode','Function','Enable verbose machine logging'],
+        ['Disable-AuditMode','Function','Disable verbose machine logging'],
+        ['Get-StaffList','Function','List staff. -Filter <active|suspended|secured|warned>'],
+        ['Get-StaffStatus','Function','Staff member detail. -Name <string>'],
+        ['Suspend-Staff','Function','Suspend staff. -Name <s> -Duration <time> -Reason <s>'],
+        ['Resume-Staff','Function','Lift suspension. -Name <string>'],
+        ['Invoke-Warning','Function','Issue warning. -Name <s> -Reason <s>'],
+        ['Lock-Account','Function','Secure account. -Name <s> -Level <Standard|High|Critical>'],
+        ['Unlock-Account','Function','Remove security lock. -Name <string>'],
+        ['Stop-Session','Function','Force logout. -Name <string>'],
+        ['Remove-Staff','Function','Terminate (irreversible). -Name <s> -Reason <s>'],
+        ['Get-Players','Function','Player list. -Limit <int>'],
+        ['Get-Player','Function','Player lookup. -Name <string>'],
+        ['Get-DisciplineLog','Function','Discipline records. -Limit <int> -Status <string>'],
+        ['Get-ModerationLog','Function','Moderation log. -Limit <int>'],
+        ['Get-MachineLog','Function','Machine security log. -Limit <int>'],
+        ['Get-LoginLog','Function','Login history. -Limit <int>'],
+        ['Invoke-SiteRefresh','Function','Push reload to all clients'],
+        ['Send-Broadcast','Function','Site-wide staff alert. -Message <string>'],
         ['Set-OperatorCode','Function','Change operator code. -Code <string>'],
-        ['Get-SiteStatus','Function','Show current site operational status'],
-        ['Set-SiteStatus','Function','Update site status. -Status <Operational|Degraded|Maintenance>'],
-        // Processes
-        ['Enable-AuditMode','Function','Enable verbose audit logging for this session'],
-        ['Disable-AuditMode','Function','Disable verbose audit logging'],
-        ['Get-SessionInfo','Function','Show info about the current operator session'],
-        ['Get-DurationHelp','Function','Show duration format reference'],
-        ['Get-StaffActions','Function','Show all available staff action categories'],
-        ['Format-Table','Alias','Alias for table output mode'],
-        ['Write-Log','Function','Manually write an entry to machine log. -Type <string> -Detail <string>'],
+        ['Get-SiteStatus','Function','Site operational status'],
+        ['Set-SiteStatus','Function','Update status. -Status <Operational|Degraded|Maintenance>'],
+        ['Write-Log','Function','Manual machine log entry. -Type <s> -Detail <s>'],
       ];
-      var shown=filter?allCmds.filter(function(r){return r[0].toLowerCase().includes(filter);}):allCmds;
+      var shown=filt?all.filter(function(r){return r[0].toLowerCase().includes(filt);}):all;
       blank();
-      if(!filter){ line('<span class="ps-comment">TypeName: SamaritanSystems.OperatorTerminal</span>',''); blank(); }
-      tbl(['Name','CommandType','Definition'],shown.map(function(r){ return ['<span style="color:#ffff00;">'+r[0]+'</span>',r[1],'<span style="color:#eeedf0;">'+r[2]+'</span>']; }));
+      if(!filt) writeLine('<span class="ps-dim">TypeName: SamaritanSystems.OperatorTerminal</span>');
+      blank();
+      writeTable(['Name','CommandType','Definition'],shown.map(function(r){return [r[0],r[1],r[2]];}));
       blank(); return;
     }
 
-    // ── LOCK-SESSION ──
-    if(cmd==='LOCK-SESSION'||cmd==='LOCK'){ _unlocked=false; pr.style.color='#ffff00'; line('<span class="ps-warn">Session locked. Re-authenticate to continue.</span>',''); blank(); return; }
+    if(needAuth()) return;
 
-    // Auth wall
-    if(needsAuth()) return;
-
-    // ── GET-DATE ──
-    if(cmd==='GET-DATE'||cmd==='DATE'){
-      var now=new Date();
-      blank();
-      line('Saturday, June  1, 2026 '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')+':'+now.getSeconds().toString().padStart(2,'0'),'ps-ok');
-      blank(); return;
-    }
-    // ── GET-UPTIME / STATS ──
-    if(cmd==='GET-UPTIME'||cmd==='UPTIME'||cmd==='STATS'||cmd==='GET-STATS'){
+    if(cmdU==='GET-DATE'){blank();writeLine(new Date().toLocaleString());blank();return;}
+    if(cmdU==='GET-UPTIME'||cmdU==='UPTIME'){
       var ms2=window._loginTimestamp?Date.now()-window._loginTimestamp:0;
-      var sc2=Object.values(STAFF).filter(function(s){return !s.terminated;}).length;
-      var susp2=Object.values(STAFF).filter(function(s){return s.suspended;}).length;
-      blank();
-      tbl(['Property','Value'],[
-        ['<span class="ps-prop">CurrentUser</span>',ME+' ['+MY_LEVEL+']'],
-        ['<span class="ps-prop">SessionDuration</span>',ms2>0?Math.floor(ms2/3600000)+'h '+Math.floor((ms2%3600000)/60000)+'m':'Active'],
-        ['<span class="ps-prop">StaffCount</span>',sc2+' active ('+susp2+' suspended)'],
-        ['<span class="ps-prop">PlayerCount</span>',Object.keys(USERS).length],
-        ['<span class="ps-prop">AuditMode</span>',_auditMode?'Enabled':'Disabled'],
-        ['<span class="ps-prop">VerboseMode</span>',_verboseMode?'Enabled':'Disabled'],
-      ]);
-      blank(); return;
+      blank(); writeTable(['Property','Value'],[
+        ['CurrentUser',ME+' ['+MY_LEVEL+']'],
+        ['SessionDuration',ms2>0?Math.floor(ms2/3600000)+'h '+Math.floor((ms2%3600000)/60000)+'m':'Active'],
+        ['StaffCount',Object.values(STAFF).filter(function(s){return !s.terminated;}).length+' active'],
+        ['PlayerCount',Object.keys(USERS).length],
+        ['AuditMode',_auditMode?'Enabled':'Disabled'],
+      ]); blank(); return;
     }
-    // ── GET-VERSION ──
-    if(cmd==='GET-VERSION'||cmd==='VERSION'||cmd==='VER'){
-      blank();
-      tbl(['Property','Value'],[
-        ['<span class="ps-prop">ProductName</span>','Samaritan Systems Administration Panel'],
-        ['<span class="ps-prop">Version</span>','2.0.0'],
-        ['<span class="ps-prop">BuildID</span>',(document.getElementById('sb-build-id')&&document.getElementById('sb-build-id').textContent)||'Unknown'],
-        ['<span class="ps-prop">Runtime</span>','Firebase Realtime Database'],
-        ['<span class="ps-prop">Operator</span>',ME+' ['+MY_LEVEL+']'],
-      ]);
-      blank(); return;
+    if(cmdU==='GET-VERSION'||cmdU==='VER'){
+      blank(); writeTable(['Property','Value'],[
+        ['ProductName','Samaritan Systems Administration Panel'],
+        ['Version','2.0.0'],
+        ['Build',(document.getElementById('sb-build-id')&&document.getElementById('sb-build-id').textContent)||'Unknown'],
+        ['Operator',ME+' ['+MY_LEVEL+']'],
+      ]); blank(); return;
     }
-    // ── MEASURE-LATENCY / PING ──
-    if(cmd==='MEASURE-LATENCY'||cmd==='PING'){
-      line('<span class="ps-comment">Measuring Firebase round-trip latency...</span>','');
+    if(cmdU==='MEASURE-LATENCY'||cmdU==='PING'){
+      writeLine('<span class="ps-dim">Testing Firebase latency...</span>');
       var t0=Date.now(); await get(ref(db,'meta/ping')).catch(()=>null); var rtt=Date.now()-t0;
-      var color=rtt<100?'ps-ok':rtt<300?'ps-warn':'ps-err';
-      blank(); tbl(['Property','Value'],[['<span class="ps-prop">RoundTripTime</span>','<span class="'+color+'">'+rtt+'ms</span>'],['<span class="ps-prop">Source</span>','Firebase RTDB'],['<span class="ps-prop">Status</span>',rtt<500?'<span class="ps-ok">OK</span>':'<span class="ps-err">SLOW</span>']]); blank(); return;
+      blank(); writeTable(['Property','Value'],[['RoundTripTime',rtt+'ms'],['Status',rtt<300?'OK':'SLOW']]); blank(); return;
     }
-    // ── GET-CURRENTUSER / WHOAMI ──
-    if(cmd==='GET-CURRENTUSER'||cmd==='WHOAMI'){
-      blank(); tbl(['Property','Value'],[['<span class="ps-prop">Username</span>',ME],['<span class="ps-prop">Level</span>',MY_LEVEL],['<span class="ps-prop">SessionLocked</span>',_unlocked?'False':'True'],['<span class="ps-prop">AuditMode</span>',_auditMode?'True':'False']]); blank(); return;
+    if(cmdU==='GET-CURRENTUSER'||cmdU==='WHOAMI'){blank();writeTable(['Property','Value'],[['Username',ME],['Level',MY_LEVEL],['Locked',_unlocked?'False':'True']]);blank();return;}
+    if(cmdU==='GET-SESSIONINFO'){blank();writeTable(['Property','Value'],[['Operator',ME],['Level',MY_LEVEL],['AuditMode',_auditMode?'On':'Off'],['History',_hist.length+' entries']]);blank();return;}
+    if(cmdU==='GET-DURATIONHELP'){
+      blank();writeLine('<span class="ps-dim"># Duration format reference</span>');
+      writeTable(['Format','Unit','Example','Resolves To'],[['Nh','Hours','1h','1 hour'],['Nd','Days','3d','3 days'],['Nw','Weeks','2w','2 weeks'],['Nm','Minutes','30m','30 minutes'],['perm / indefinite','No expiry','perm','Indefinite']]);blank();return;
     }
-    // ── GET-SESSIONINFO ──
-    if(cmd==='GET-SESSIONINFO'){
-      blank(); tbl(['Property','Value'],[['<span class="ps-prop">Operator</span>',ME],['<span class="ps-prop">Level</span>',MY_LEVEL],['<span class="ps-prop">Terminal</span>','Samaritan Operator v2.0'],['<span class="ps-prop">AuditMode</span>',_auditMode?'Enabled':'Disabled'],['<span class="ps-prop">VerboseMode</span>',_verboseMode?'Enabled':'Disabled'],['<span class="ps-prop">CommandHistory</span>',_hist.length+' entries']]); blank(); return;
+    if(cmdU==='GET-STAFFACTIONS'){
+      blank();writeTable(['Category','Cmdlet','Description'],[['Suspension','Suspend-Staff','Temp revoke access'],['Suspension','Resume-Staff','Lift suspension'],['Warning','Invoke-Warning','Formal warning'],['Security','Lock-Account','Secure account'],['Security','Unlock-Account','Remove lock'],['Session','Stop-Session','Force logout'],['Termination','Remove-Staff','Permanent (irreversible)']]);blank();return;
     }
-    // ── GET-DURATIONHELP ──
-    if(cmd==='GET-DURATIONHELP'||cmd==='HELP-DURATION'||cmd==='DURATION'){
-      blank(); line('<span class="ps-comment"># Duration format reference for -Duration parameter</span>','');
-      tbl(['Format','Unit','Example','Result'],[
-        ['<span class="ps-prop">Nh</span>','Hours','1h','1 hour'],
-        ['<span class="ps-prop">Nd</span>','Days','3d','3 days'],
-        ['<span class="ps-prop">Nw</span>','Weeks','2w','2 weeks'],
-        ['<span class="ps-prop">Nm</span>','Minutes','30m','30 minutes (testing)'],
-        ['<span class="ps-prop">indefinite</span>','Permanent','indefinite','No expiry'],
-        ['<span class="ps-prop">perm</span>','Permanent','perm','No expiry'],
-      ]); blank(); return;
+    if(cmdU==='ENABLE-AUDITMODE'){_auditMode=true;blank();writeLine('Audit mode enabled.');blank();return;}
+    if(cmdU==='DISABLE-AUDITMODE'){_auditMode=false;blank();writeLine('Audit mode disabled.');blank();return;}
+
+    if(cmdU==='GET-STAFFLIST'||cmdU==='STAFFLIST'){
+      var filt2=(params['filter']||pos[0]||'').toLowerCase();
+      var sa=Object.values(STAFF).filter(function(s){ if(!s.username)return false; if(filt2==='suspended')return s.suspended; if(filt2==='secured')return s.secured; if(filt2==='warned')return s.warned&&!s.warnAcknowledged; if(filt2==='active')return !s.suspended&&!s.secured&&!s.terminated; return !s.terminated; });
+      blank();writeTable(['Username','Level','Status'],sa.map(function(s){ return [s.username,s.level||'-',s.suspended?'Suspended':s.secured?'Secured':s.warned&&!s.warnAcknowledged?'Warned':'Active']; }));blank();return;
     }
-    // ── GET-STAFFACTIONS ──
-    if(cmd==='GET-STAFFACTIONS'){
-      blank(); line('<span class="ps-comment"># Available staff action categories</span>','');
-      tbl(['Category','Cmdlet','Description'],[
-        ['Suspension','Suspend-Staff','Temporarily revoke access'],
-        ['Suspension','Resume-Staff','Restore suspended access'],
-        ['Warning','Invoke-Warning','Issue formal warning to record'],
-        ['Security','Lock-Account','Secure account pending review'],
-        ['Security','Unlock-Account','Remove security lock'],
-        ['Session','Stop-Session','Force terminate active session'],
-        ['Termination','Remove-Staff','Permanent removal (irreversible)'],
-      ]); blank(); return;
+    if(cmdU==='GET-STAFFSTATUS'||cmdU==='STATUS'){
+      var tn=params['name']||pos[0]; if(!tn){writeLine('<span class="ps-err">Get-StaffStatus : -Name required.</span>');return;}
+      var f=findStaff(tn); if(!f.s){writeLine('<span class="ps-err">Get-StaffStatus : "'+tn+'" not found.</span>');return;}
+      blank(); writeTable(['Property','Value'],[['Username',f.s.username],['Level',f.s.level||'-'],['Suspended',f.s.suspended?'True':'False'],['SuspendReason',f.s.suspendInfo&&f.s.suspendInfo.reason||'N/A'],['Expiry',f.s.suspendInfo&&f.s.suspendInfo.expiresAt?new Date(f.s.suspendInfo.expiresAt).toLocaleString():'N/A'],['Secured',f.s.secured?'True':'False'],['Warned',f.s.warned&&!f.s.warnAcknowledged?'True (pending)':'False']]); blank();return;
     }
-    // ── GET-STAFFLIST ──
-    if(cmd==='GET-STAFFLIST'||cmd==='STAFFLIST'){
-      var filt=(params['filter']||posArgs[0]||'').toLowerCase();
-      var sarr=Object.values(STAFF).filter(function(s){ if(!s.username) return false; if(filt==='suspended') return s.suspended; if(filt==='secured') return s.secured; if(filt==='warned') return s.warned&&!s.warnAcknowledged; if(filt==='active') return !s.suspended&&!s.secured&&!s.terminated; return !s.terminated; });
-      blank(); line('<span class="ps-comment"># Staff Members'+(filt?' (filter: '+filt+')':'')+'</span>','');
-      tbl(['Username','Level','Status'],[
-        ...sarr.map(function(s){
-          var st=s.suspended?'<span class="ps-warn">Suspended</span>':s.secured?'<span class="ps-info">Secured</span>':s.warned&&!s.warnAcknowledged?'<span class="ps-ok">Warned</span>':'<span style="color:#888;">Active</span>';
-          return ['<span class="ps-prop">'+s.username+'</span>',s.level||'-',st];
-        })
-      ]); blank(); return;
-    }
-    // ── GET-STAFFSTATUS ──
-    if(cmd==='GET-STAFFSTATUS'||cmd==='STATUS'){
-      var tname=params['name']||posArgs[0]; if(!tname){line('<span class="ps-err">Get-StaffStatus: -Name parameter required.</span>','');return;}
-      var f=null; Object.entries(STAFF).forEach(function(e){if(e[1].username&&e[1].username.toLowerCase()===tname.toLowerCase())f=e[1];});
-      if(!f){line('<span class="ps-err">Get-StaffStatus: Staff member "'+tname+'" not found.</span>','');return;}
-      blank(); tbl(['Property','Value'],[
-        ['<span class="ps-prop">Username</span>',f.username],['<span class="ps-prop">Level</span>',f.level||'-'],
-        ['<span class="ps-prop">Suspended</span>',f.suspended?'<span class="ps-warn">True</span>':'False'],
-        ['<span class="ps-prop">Secured</span>',f.secured?'<span class="ps-info">True</span>':'False'],
-        ['<span class="ps-prop">Warned</span>',f.warned&&!f.warnAcknowledged?'<span class="ps-ok">True (pending)</span>':'False'],
-        ['<span class="ps-prop">SuspendReason</span>',f.suspendInfo&&f.suspendInfo.reason||'N/A'],
-        ['<span class="ps-prop">SuspendExpiry</span>',f.suspendInfo&&f.suspendInfo.expiresAt?new Date(f.suspendInfo.expiresAt).toLocaleString():'N/A'],
-      ]); blank(); return;
-    }
-    // ── SUSPEND-STAFF ──
-    if(cmd==='SUSPEND-STAFF'||cmd==='SUSPEND'){
-      var name=params['name']||posArgs[0]; var dur=params['duration']||params['dur']||posArgs[1]||'24h'; var rsn=params['reason']||posArgs.slice(2).join(' ')||'Suspended via operator terminal';
-      if(!name){line('<span class="ps-err">Suspend-Staff: -Name parameter required.</span>',''); return;}
-      var f={}; Object.entries(STAFF).forEach(function(e){if(e[1].username&&e[1].username.toLowerCase()===name.toLowerCase()){f.sid=e[0];f.s=e[1];}});
-      if(!f.s){line('<span class="ps-err">Suspend-Staff: "'+name+'" not found.</span>',''); return;}
-      var durMs=parseDur(dur); var exp=durMs>0?Date.now()+durMs:0;
-      var si={reason:rsn,by:ME,date:new Date().toLocaleString(),expiresAt:exp,duration:durMs>0?new Date(Date.now()+durMs).toLocaleString():'Indefinite'};
+    if(cmdU==='SUSPEND-STAFF'||cmdU==='SUSPEND'){
+      var tn=params['name']||pos[0]; var dur=params['duration']||params['dur']||pos[1]||'24h'; var rsn=params['reason']||pos.slice(2).join(' ')||'Suspended via terminal';
+      if(!tn){writeLine('<span class="ps-err">Suspend-Staff : -Name required.</span>');return;}
+      var f=findStaff(tn); if(!f.s){writeLine('<span class="ps-err">Suspend-Staff : "'+tn+'" not found.</span>');return;}
+      var durMs=parseDur(dur); var exp=durMs?Date.now()+durMs:0;
+      var si={reason:rsn,by:ME,date:new Date().toLocaleString(),expiresAt:exp,duration:durMs?new Date(Date.now()+durMs).toLocaleString():'Indefinite'};
       await update(ref(db,'staff/'+f.sid),{suspended:true,forceLogout:true,suspendInfo:si});
       if(STAFF[f.sid]){STAFF[f.sid].suspended=true;STAFF[f.sid].suspendInfo=si;}
       _writeDisciplineRecord(f.sid,f.s.username,'Suspension',rsn,ME);
-      if(_auditMode) machineLog('SUSPEND','[Terminal] '+f.s.username+': '+rsn,'');
-      blank(); tbl(['Property','Value'],[['<span class="ps-prop">Target</span>',f.s.username],['<span class="ps-prop">Duration</span>',durMs?durStr(durMs):'Indefinite'],['<span class="ps-prop">Expiry</span>',exp?new Date(exp).toLocaleString():'None'],['<span class="ps-prop">Reason</span>',rsn],['<span class="ps-prop">Status</span>','<span class="ps-ok">SUCCESS</span>']]);
-      blank(); return;
+      if(_auditMode) machineLog('SUSPEND','[Terminal] '+f.s.username,rsn);
+      blank();writeTable(['Property','Value'],[['Target',f.s.username],['Duration',durMs?(Math.floor(durMs/3600000))+'h':'Indefinite'],['Expiry',exp?new Date(exp).toLocaleString():'None'],['Status','SUCCESS']]);blank();return;
     }
-    // ── RESUME-STAFF ──
-    if(cmd==='RESUME-STAFF'||cmd==='UNSUSPEND'){
-      var name=params['name']||posArgs[0]; if(!name){line('<span class="ps-err">Resume-Staff: -Name required.</span>','');return;}
-      var f={}; Object.entries(STAFF).forEach(function(e){if(e[1].username&&e[1].username.toLowerCase()===name.toLowerCase()){f.sid=e[0];f.s=e[1];}});
-      if(!f.s){line('<span class="ps-err">"'+name+'" not found.</span>','');return;}
+    if(cmdU==='RESUME-STAFF'||cmdU==='UNSUSPEND'){
+      var tn=params['name']||pos[0]; if(!tn){writeLine('<span class="ps-err">Resume-Staff : -Name required.</span>');return;}
+      var f=findStaff(tn); if(!f.s){writeLine('<span class="ps-err">"'+tn+'" not found.</span>');return;}
       await update(ref(db,'staff/'+f.sid),{suspended:false,forceLogout:false});
       await remove(ref(db,'staff/'+f.sid+'/suspendInfo')).catch(()=>{});
       if(STAFF[f.sid]){STAFF[f.sid].suspended=false;STAFF[f.sid].suspendInfo=null;}
-      blank(); line('<span class="ps-ok">Resume-Staff: '+f.s.username+' suspension lifted.</span>',''); blank(); return;
+      blank();writeLine('Resume-Staff : '+f.s.username+' suspension lifted.');blank();return;
     }
-    // ── INVOKE-WARNING ──
-    if(cmd==='INVOKE-WARNING'||cmd==='WARN'){
-      var name=params['name']||posArgs[0]; var rsn=params['reason']||posArgs.slice(1).join(' ');
-      if(!name||!rsn){line('<span class="ps-err">Invoke-Warning: -Name and -Reason required.</span>','');return;}
-      var f={}; Object.entries(STAFF).forEach(function(e){if(e[1].username&&e[1].username.toLowerCase()===name.toLowerCase()){f.sid=e[0];f.s=e[1];}});
-      if(!f.s){line('<span class="ps-err">"'+name+'" not found.</span>','');return;}
+    if(cmdU==='INVOKE-WARNING'||cmdU==='WARN'){
+      var tn=params['name']||pos[0]; var rsn=params['reason']||pos.slice(1).join(' ');
+      if(!tn||!rsn){writeLine('<span class="ps-err">Invoke-Warning : -Name and -Reason required.</span>');return;}
+      var f=findStaff(tn); if(!f.s){writeLine('<span class="ps-err">"'+tn+'" not found.</span>');return;}
       await update(ref(db,'staff/'+f.sid),{warned:true,warnAcknowledged:false,warnInfo:{reason:rsn,by:ME,date:new Date().toLocaleString()}});
       _writeDisciplineRecord(f.sid,f.s.username,'Staff Warning',rsn,ME);
-      blank(); tbl(['Property','Value'],[['<span class="ps-prop">Target</span>',f.s.username],['<span class="ps-prop">Reason</span>',rsn],['<span class="ps-prop">Status</span>','<span class="ps-ok">WARNING ISSUED</span>']]); blank(); return;
+      blank();writeTable(['Property','Value'],[['Target',f.s.username],['Reason',rsn],['Status','WARNING ISSUED']]);blank();return;
     }
-    // ── LOCK-ACCOUNT ──
-    if(cmd==='LOCK-ACCOUNT'||cmd==='SECURE'){
-      var name=params['name']||posArgs[0]; var lvl=params['level']||params['l']||'Standard'; var rsn=params['reason']||posArgs.slice(1).join(' ')||'Secured via operator terminal';
-      if(!name){line('<span class="ps-err">Lock-Account: -Name required.</span>','');return;}
-      var f={}; Object.entries(STAFF).forEach(function(e){if(e[1].username&&e[1].username.toLowerCase()===name.toLowerCase()){f.sid=e[0];f.s=e[1];}});
-      if(!f.s){line('<span class="ps-err">"'+name+'" not found.</span>','');return;}
+    if(cmdU==='LOCK-ACCOUNT'||cmdU==='SECURE'){
+      var tn=params['name']||pos[0]; var lvl=params['level']||'Standard'; var rsn=params['reason']||pos.slice(1).join(' ')||'Secured via terminal';
+      if(!tn){writeLine('<span class="ps-err">Lock-Account : -Name required.</span>');return;}
+      var f=findStaff(tn); if(!f.s){writeLine('<span class="ps-err">"'+tn+'" not found.</span>');return;}
       await update(ref(db,'staff/'+f.sid),{secured:true,forceLogout:true,secureInfo:{reason:rsn,level:lvl,by:ME,date:new Date().toLocaleString()}});
-      if(STAFF[f.sid]){STAFF[f.sid].secured=true;}
+      if(STAFF[f.sid])STAFF[f.sid].secured=true;
       _writeDisciplineRecord(f.sid,f.s.username,'Account Secured',rsn,ME);
-      blank(); tbl(['Property','Value'],[['<span class="ps-prop">Target</span>',f.s.username],['<span class="ps-prop">Level</span>',lvl],['<span class="ps-prop">Reason</span>',rsn],['<span class="ps-prop">Status</span>','<span class="ps-info">ACCOUNT LOCKED</span>']]); blank(); return;
+      blank();writeTable(['Property','Value'],[['Target',f.s.username],['Level',lvl],['Status','ACCOUNT LOCKED']]);blank();return;
     }
-    // ── UNLOCK-ACCOUNT ──
-    if(cmd==='UNLOCK-ACCOUNT'||cmd==='UNSECURE'){
-      var name=params['name']||posArgs[0]; if(!name){line('<span class="ps-err">Unlock-Account: -Name required.</span>','');return;}
-      var f={}; Object.entries(STAFF).forEach(function(e){if(e[1].username&&e[1].username.toLowerCase()===name.toLowerCase()){f.sid=e[0];f.s=e[1];}});
-      if(!f.s){line('<span class="ps-err">"'+name+'" not found.</span>','');return;}
+    if(cmdU==='UNLOCK-ACCOUNT'||cmdU==='UNSECURE'){
+      var tn=params['name']||pos[0]; if(!tn){writeLine('<span class="ps-err">Unlock-Account : -Name required.</span>');return;}
+      var f=findStaff(tn); if(!f.s){writeLine('<span class="ps-err">"'+tn+'" not found.</span>');return;}
       await update(ref(db,'staff/'+f.sid),{secured:false,forceLogout:false});
       await remove(ref(db,'staff/'+f.sid+'/secureInfo')).catch(()=>{});
-      if(STAFF[f.sid]){STAFF[f.sid].secured=false;}
-      blank(); line('<span class="ps-ok">Unlock-Account: '+f.s.username+' security lock removed.</span>',''); blank(); return;
+      if(STAFF[f.sid])STAFF[f.sid].secured=false;
+      blank();writeLine('Unlock-Account : '+f.s.username+' security lock removed.');blank();return;
     }
-    // ── STOP-SESSION ──
-    if(cmd==='STOP-SESSION'||cmd==='FORCELOGOUT'){
-      var name=params['name']||posArgs[0]; if(!name){line('<span class="ps-err">Stop-Session: -Name required.</span>','');return;}
-      var f={}; Object.entries(STAFF).forEach(function(e){if(e[1].username&&e[1].username.toLowerCase()===name.toLowerCase()){f.sid=e[0];f.s=e[1];}});
-      if(!f.s){line('<span class="ps-err">"'+name+'" not found.</span>','');return;}
+    if(cmdU==='STOP-SESSION'||cmdU==='FORCELOGOUT'){
+      var tn=params['name']||pos[0]; if(!tn){writeLine('<span class="ps-err">Stop-Session : -Name required.</span>');return;}
+      var f=findStaff(tn); if(!f.s){writeLine('<span class="ps-err">"'+tn+'" not found.</span>');return;}
       await update(ref(db,'staff/'+f.sid),{forceLogout:true});
-      blank(); line('<span class="ps-ok">Stop-Session: Force logout signal sent to '+f.s.username+'.</span>',''); blank(); return;
+      blank();writeLine('Stop-Session : Force logout sent to '+f.s.username+'.');blank();return;
     }
-    // ── REMOVE-STAFF ──
-    if(cmd==='REMOVE-STAFF'||cmd==='TERMINATE'){
-      var name=params['name']||posArgs[0]; var rsn=params['reason']||posArgs.slice(1).join(' ');
-      if(!name||!rsn){line('<span class="ps-err">Remove-Staff: -Name and -Reason are required.</span>','');return;}
-      var f={}; Object.entries(STAFF).forEach(function(e){if(e[1].username&&e[1].username.toLowerCase()===name.toLowerCase()){f.sid=e[0];f.s=e[1];}});
-      if(!f.s){line('<span class="ps-err">"'+name+'" not found.</span>','');return;}
-      if(f.s.username===ME){line('<span class="ps-err">Remove-Staff: Cannot terminate your own account.</span>','');return;}
-      line('<span class="ps-warn">WARNING: This action is irreversible. Type CONFIRM to proceed:</span>','');
-      var _ch=async function(e2){
-        if(e2.key!=='Enter') return; inp.removeEventListener('keydown',_ch);
-        var conf=inp.value.trim().toUpperCase(); inp.value=''; mirror.textContent='';
-        line('<span class="ps-prompt">PS C:\\Software\\Operator&gt; </span><span class="ps-cmd">'+conf+'</span>','');
-        if(conf!=='CONFIRM'){line('<span class="ps-warn">Remove-Staff: Operation cancelled.</span>','');blank();return;}
-        await update(ref(db,'staff/'+f.sid),{terminated:true,forceLogout:true,terminateInfo:{reason:rsn,by:ME,date:new Date().toLocaleString()}});
-        await new Promise(function(r){setTimeout(r,400);});
-        await remove(ref(db,'staff/'+f.sid));
-        _writeDisciplineRecord(f.sid,f.s.username,'Termination',rsn,ME);
-        blank(); tbl(['Property','Value'],[['<span class="ps-prop">Target</span>',f.s.username],['<span class="ps-prop">Action</span>','Terminated'],['<span class="ps-prop">Reason</span>',rsn],['<span class="ps-prop">Status</span>','<span class="ps-err">TERMINATED</span>']]);
-        blank();
-      };
-      inp.addEventListener('keydown',_ch); return;
+    if(cmdU==='REMOVE-STAFF'||cmdU==='TERMINATE'){
+      var tn=params['name']||pos[0]; var rsn=params['reason']||pos.slice(1).join(' ');
+      if(!tn||!rsn){writeLine('<span class="ps-err">Remove-Staff : -Name and -Reason required.</span>');return;}
+      var f=findStaff(tn); if(!f.s){writeLine('<span class="ps-err">"'+tn+'" not found.</span>');return;}
+      if(f.s.username===ME){writeLine('<span class="ps-err">Remove-Staff : Cannot terminate your own account.</span>');return;}
+      writeLine('');writeLine('<span class="ps-err">WARNING: This action is irreversible. Type CONFIRM to proceed or anything else to cancel.</span>');
+      // Create a temporary confirm input
+      var old2=document.getElementById('ps-active-line'); if(old2){old2.id='ps-confirm-line';}
+      var cil=document.createElement('div');cil.className='ps-input-line';cil.id='ps-active-line';
+      var cpr=document.createElement('span');cpr.className='ps-prompt-color';cpr.textContent='PS C:\\Software\\Operator> ';
+      var csp=document.createElement('span');csp.className='ps-inp-span';csp.contentEditable='true';csp.setAttribute('spellcheck','false');
+      var ccur=document.createElement('span');ccur.className='ps-cursor-inline';
+      cil.appendChild(cpr);cil.appendChild(csp);cil.appendChild(ccur);
+      body.appendChild(cil);body.scrollTop=body.scrollHeight;csp.focus();
+      csp.addEventListener('keydown',async function(e2){
+        if(e2.key!=='Enter') return; e2.preventDefault();
+        var conf=(csp.textContent||'').trim().toUpperCase(); csp.contentEditable='false'; ccur.remove();
+        cil.id=''; writeLine('PS C:\\Software\\Operator> '+conf);
+        if(conf==='CONFIRM'){
+          await update(ref(db,'staff/'+f.sid),{terminated:true,forceLogout:true,terminateInfo:{reason:rsn,by:ME,date:new Date().toLocaleString()}});
+          await new Promise(function(r){setTimeout(r,400);});
+          await remove(ref(db,'staff/'+f.sid));
+          _writeDisciplineRecord(f.sid,f.s.username,'Termination',rsn,ME);
+          blank();writeTable(['Property','Value'],[['Target',f.s.username],['Action','Terminated'],['Reason',rsn],['Status','TERMINATED']]);blank();
+        } else { blank();writeLine('Remove-Staff : Operation cancelled.');blank(); }
+        createInputLine();
+      });
+      return;
     }
-    // ── PLAYERS ──
-    if(cmd==='GET-PLAYERS'||cmd==='LISTUSERS'){
-      var lim=parseInt(params['limit']||posArgs[0]||'25'); var all=Object.values(USERS).slice(0,lim);
-      blank(); line('<span class="ps-comment"># Players (showing '+all.length+' of '+Object.keys(USERS).length+')</span>','');
-      tbl(['#','Username','RobloxID','Status','Rep'],all.map(function(u){return [u.playerId||'-','<span class="ps-prop">'+u.username+'</span>',u.robloxId||'-',u.status||'active',u.rep||0];}));
-      blank(); return;
+    if(cmdU==='GET-PLAYERS'||cmdU==='LISTUSERS'){
+      var lim=parseInt(params['limit']||pos[0]||'20'); var pl=Object.values(USERS).slice(0,lim);
+      blank();writeLine('<span class="ps-dim"># Players ('+pl.length+' of '+Object.keys(USERS).length+')</span>');
+      writeTable(['#','Username','Status','Rep'],pl.map(function(u){return [u.playerId||'-',u.username||'?',u.status||'active',String(u.rep||0)];}));blank();return;
     }
-    if(cmd==='GET-PLAYER'||cmd==='LOOKUP'){
-      var tname=params['name']||posArgs[0]; if(!tname){line('<span class="ps-err">Get-Player: -Name required.</span>','');return;}
-      var pu=Object.values(USERS).find(function(u){return (u.username||'').toLowerCase()===tname.toLowerCase();});
-      if(!pu){line('<span class="ps-err">Get-Player: "'+tname+'" not found.</span>','');return;}
-      blank(); tbl(['Property','Value'],[['<span class="ps-prop">Username</span>',pu.username],['<span class="ps-prop">PlayerId</span>',pu.playerId||'-'],['<span class="ps-prop">RobloxId</span>',pu.robloxId||'N/A'],['<span class="ps-prop">Status</span>',pu.status||'active'],['<span class="ps-prop">Reputation</span>',pu.rep||0],['<span class="ps-prop">Punishments</span>',Object.keys(pu.punishments||{}).length],['<span class="ps-prop">SystemEntry</span>',pu.created||'-']]); blank(); return;
+    if(cmdU==='GET-PLAYER'||cmdU==='LOOKUP'){
+      var tn=params['name']||pos[0]; if(!tn){writeLine('<span class="ps-err">Get-Player : -Name required.</span>');return;}
+      var pu=Object.values(USERS).find(function(u){return (u.username||'').toLowerCase()===tn.toLowerCase();});
+      if(!pu){writeLine('<span class="ps-err">Get-Player : "'+tn+'" not found.</span>');return;}
+      blank();writeTable(['Property','Value'],[['Username',pu.username],['PlayerId',String(pu.playerId||'-')],['RobloxId',pu.robloxId||'N/A'],['Status',pu.status||'active'],['Punishments',String(Object.keys(pu.punishments||{}).length)],['SystemEntry',pu.created||'-']]);blank();return;
     }
-    // ── LOGS ──
-    if(cmd==='GET-DISCIPLINELOG'){
-      var lim=parseInt(params['limit']||'10'); var filt=(params['status']||'').toUpperCase();
+    if(cmdU==='GET-DISCIPLINELOG'){
+      var lim=parseInt(params['limit']||'10'); var filt3=(params['status']||'').toUpperCase();
       var dsnap=await get(ref(db,'discipline')).catch(()=>null);
-      if(!dsnap||!dsnap.exists()){line('<span class="ps-warn">No discipline records found.</span>','');return;}
-      var recs=Object.values(dsnap.val()).sort(function(a,b){return (b.issuedAt||0)-(a.issuedAt||0);});
-      if(filt) recs=recs.filter(function(r){return r.status===filt;});
-      recs=recs.slice(0,lim);
-      blank(); tbl(['Username','Type','Status','Issued'],[...recs.map(function(r){
-        var sc=r.status==='APPEAL_PENDING'?'<span class="ps-warn">'+r.status+'</span>':r.status==='REINSTATED'?'<span class="ps-ok">'+r.status+'</span>':r.status==='APPEAL_DENIED'?'<span class="ps-err">'+r.status+'</span>':r.status; return ['<span class="ps-prop">'+r.staffUsername+'</span>',r.punishType||'-',sc,r.issuedDate||'-'];
-      })]); blank(); return;
+      if(!dsnap||!dsnap.exists()){writeLine('<span class="ps-dim">No discipline records.</span>');return;}
+      var recs=Object.values(dsnap.val()).sort(function(a,b){return (b.issuedAt||0)-(a.issuedAt||0);}); if(filt3)recs=recs.filter(function(r){return r.status===filt3;}); recs=recs.slice(0,lim);
+      blank();writeTable(['Username','Type','Status','Issued'],recs.map(function(r){return [r.staffUsername||'-',r.punishType||'-',r.status||'-',r.issuedDate||'-'];}));blank();return;
     }
-    if(cmd==='GET-MODERATIONLOG'||cmd==='MODLOG'){
+    if(cmdU==='GET-MODERATIONLOG'||cmdU==='MODLOG'){
       var lim=parseInt(params['limit']||'10');
-      var mlsnap=await get(ref(db,'logs/moderation')).catch(()=>null);
-      if(!mlsnap||!mlsnap.exists()){line('<span class="ps-warn">No moderation logs.</span>','');return;}
-      var recs=Object.values(mlsnap.val()).sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,lim);
-      blank(); tbl(['Action','User','Moderator','Date'],[...recs.map(function(l){return ['<span class="ps-warn">'+l.action+'</span>',l.user||'-',l.mod||'-',l.date||'-'];})]);blank();return;
+      var s2=await get(ref(db,'logs/moderation')).catch(()=>null); if(!s2||!s2.exists()){writeLine('<span class="ps-dim">No logs.</span>');return;}
+      var r2=Object.values(s2.val()).sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,lim);
+      blank();writeTable(['Action','User','By','Date'],r2.map(function(l){return [l.action||'-',l.user||'-',l.mod||'-',l.date||'-'];}));blank();return;
     }
-    if(cmd==='GET-MACHINELOG'||cmd==='MACHLOG'){
+    if(cmdU==='GET-MACHINELOG'||cmdU==='MACHLOG'){
       var lim=parseInt(params['limit']||'10');
-      var msnap=await get(ref(db,'logs/machine')).catch(()=>null);
-      if(!msnap||!msnap.exists()){line('<span class="ps-warn">No machine logs.</span>','');return;}
-      var recs=Object.values(msnap.val()).sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,lim);
-      blank(); tbl(['Type','Staff','Detail','Date'],[...recs.map(function(l){return ['<span class="ps-err">['+l.type+']</span>',l.staff||'-',l.detail||'-',l.date||'-'];})]);blank();return;
+      var s3=await get(ref(db,'logs/machine')).catch(()=>null); if(!s3||!s3.exists()){writeLine('<span class="ps-dim">No logs.</span>');return;}
+      var r3=Object.values(s3.val()).sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,lim);
+      blank();writeTable(['Type','Staff','Detail','Date'],r3.map(function(l){return [l.type||'-',l.staff||'-',l.detail||'-',l.date||'-'];}));blank();return;
     }
-    if(cmd==='GET-LOGINLOG'||cmd==='LOGINLOG'){
+    if(cmdU==='GET-LOGINLOG'||cmdU==='LOGINLOG'){
       var lim=parseInt(params['limit']||'10');
-      var lsnap=await get(ref(db,'logs/login')).catch(()=>null);
-      if(!lsnap||!lsnap.exists()){line('<span class="ps-warn">No login logs.</span>','');return;}
-      var recs=Object.values(lsnap.val()).sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,lim);
-      blank(); tbl(['Username','Level','Result','Date'],[...recs.map(function(l){var rc=l.result==='success'?'<span class="ps-ok">success</span>':'<span class="ps-err">'+l.result+'</span>';return ['<span class="ps-prop">'+l.username+'</span>',l.level||'-',rc,l.date||'-'];})]);blank();return;
+      var s4=await get(ref(db,'logs/login')).catch(()=>null); if(!s4||!s4.exists()){writeLine('<span class="ps-dim">No logs.</span>');return;}
+      var r4=Object.values(s4.val()).sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,lim);
+      blank();writeTable(['Username','Level','Result','Date'],r4.map(function(l){return [l.username||'-',l.level||'-',l.result||'-',l.date||'-'];}));blank();return;
     }
-    // ── SITE COMMANDS ──
-    if(cmd==='INVOKE-SITEREFRESH'||cmd==='SITEREFRESH'){
+    if(cmdU==='INVOKE-SITEREFRESH'||cmdU==='SITEREFRESH'){
       await set(ref(db,'meta/siteRefresh'),{ts:Date.now(),by:ME,message:'Operator refresh'});
-      blank(); line('<span class="ps-ok">Invoke-SiteRefresh: Reload signal sent. All clients will refresh in ~30s.</span>',''); blank(); return;
+      blank();writeLine('Invoke-SiteRefresh : Reload signal sent. Clients refresh in ~30s.');blank();return;
     }
-    if(cmd==='SEND-BROADCAST'||cmd==='BROADCAST'){
-      var msg=params['message']||posArgs.join(' ');
-      if(!msg){line('<span class="ps-err">Send-Broadcast: -Message required.</span>','');return;}
+    if(cmdU==='SEND-BROADCAST'||cmdU==='BROADCAST'){
+      var msg=params['message']||pos.join(' '); if(!msg){writeLine('<span class="ps-err">Send-Broadcast : -Message required.</span>');return;}
       await push(ref(db,'siteAlerts'),{message:msg,by:ME,ts:Date.now(),type:'terminal'});
-      blank(); line('<span class="ps-ok">Send-Broadcast: Alert sent to all staff.</span>',''); blank(); return;
+      blank();writeLine('Send-Broadcast : Alert sent.');blank();return;
     }
-    if(cmd==='SET-OPERATORCODE'){
-      var code=params['code']||posArgs[0];
-      if(!code||code.length<6){line('<span class="ps-err">Set-OperatorCode: -Code required (minimum 6 characters).</span>','');return;}
+    if(cmdU==='SET-OPERATORCODE'){
+      var code=params['code']||pos[0]; if(!code||code.length<6){writeLine('<span class="ps-err">Set-OperatorCode : -Code required (min 6 chars).</span>');return;}
       await set(ref(db,'meta/operatorCode'),code);
-      blank(); line('<span class="ps-ok">Set-OperatorCode: Operator code updated successfully.</span>',''); blank(); return;
+      blank();writeLine('Set-OperatorCode : Code updated.');blank();return;
     }
-    if(cmd==='GET-SITESTATUS'||cmd==='SITESTATUS'){
-      var ssnap=await get(ref(db,'meta/siteStatus')).catch(()=>null);
-      var st=ssnap&&ssnap.exists()?ssnap.val():{status:'Operational'};
-      blank(); tbl(['Property','Value'],[['<span class="ps-prop">Status</span>',st.status||'Operational'],['<span class="ps-prop">UpdatedBy</span>',st.by||'N/A'],['<span class="ps-prop">UpdatedAt</span>',st.date||'N/A']]); blank(); return;
+    if(cmdU==='GET-SITESTATUS'||cmdU==='SITESTATUS'){
+      var ss=await get(ref(db,'meta/siteStatus')).catch(()=>null); var sv=ss&&ss.exists()?ss.val():{status:'Operational'};
+      blank();writeTable(['Property','Value'],[['Status',sv.status||'Operational'],['UpdatedBy',sv.by||'N/A'],['UpdatedAt',sv.date||'N/A']]);blank();return;
     }
-    if(cmd==='SET-SITESTATUS'){
-      var st2=params['status']||posArgs[0]||'Operational';
-      if(!['Operational','Degraded','Maintenance','Offline'].includes(st2)){line('<span class="ps-err">Set-SiteStatus: Valid values: Operational, Degraded, Maintenance, Offline</span>','');return;}
-      await update(ref(db,'meta/siteStatus'),{status:st2,by:ME,date:new Date().toLocaleString()});
-      blank(); line('<span class="ps-ok">Set-SiteStatus: Status updated to '+st2+'.</span>',''); blank(); return;
+    if(cmdU==='SET-SITESTATUS'){
+      var st=params['status']||pos[0]||'Operational';
+      if(!['Operational','Degraded','Maintenance','Offline'].includes(st)){writeLine('<span class="ps-err">Set-SiteStatus : Valid: Operational Degraded Maintenance Offline</span>');return;}
+      await update(ref(db,'meta/siteStatus'),{status:st,by:ME,date:new Date().toLocaleString()});
+      blank();writeLine('Set-SiteStatus : Status set to '+st+'.');blank();return;
     }
-    // ── PROCESS TOGGLES ──
-    if(cmd==='ENABLE-AUDITMODE'){ _auditMode=true; blank(); line('<span class="ps-ok">Enable-AuditMode: Verbose audit logging enabled for this session.</span>',''); blank(); return; }
-    if(cmd==='DISABLE-AUDITMODE'){ _auditMode=false; blank(); line('<span class="ps-warn">Disable-AuditMode: Audit logging disabled.</span>',''); blank(); return; }
-    // ── WRITE-LOG ──
-    if(cmd==='WRITE-LOG'){
-      var type2=params['type']||posArgs[0]||'MANUAL'; var detail=params['detail']||posArgs.slice(1).join(' ')||'Manual log entry';
-      await machineLog(type2,detail,'via terminal by '+ME);
-      blank(); line('<span class="ps-ok">Write-Log: Entry written to machine log.</span>',''); blank(); return;
+    if(cmdU==='WRITE-LOG'){
+      var type2=params['type']||pos[0]||'MANUAL'; var detail=params['detail']||pos.slice(1).join(' ')||'Manual entry';
+      await machineLog(type2,detail,'terminal by '+ME);
+      blank();writeLine('Write-Log : Entry written.');blank();return;
     }
 
-    // Unknown
-    line('<span class="ps-err">'+cmdRaw+': The term \''+cmdRaw+'\' is not recognized as the name of a cmdlet, function,</span>','');
-    line('<span class="ps-err">script file, or operable program. Check the spelling of the name, or run Get-Command.</span>','');
+    // Unknown command - PS-style error
+    writeLine('<span class="ps-err">'+cmdRaw+' : The term is not recognized as a cmdlet, function, script, or program. Run Get-Command.</span>');
+    writeLine('<span class="ps-err">script file, or operable program. Check the spelling of the name, or run Get-Command.</span>');
+    writeLine('<span class="ps-dim">At line:1 char:1</span>');
+    writeLine('<span class="ps-dim">+ CategoryInfo : ObjectNotFound</span>');
     blank();
-  });
-  setTimeout(function(){inp.focus();},100);
+  }
+
+  // ── INIT ──
+  writeLine('');
+  writeLine('<span class="ps-dim">Samaritan Systems Operator Terminal v2.0</span>');
+  writeLine('<span class="ps-dim">Copyright (C) Samaritan Systems. All rights reserved.</span>');
+  blank();
+  writeLine('Authenticate with: <span style="font-style:italic;">Unlock-Session -Code &lt;operator-code&gt;</span>');
+  writeLine('List commands:     <span style="font-style:italic;">Get-Command</span>');
+  blank();
+
+  // Click body to focus input
+  body.addEventListener('click',function(){ var sp=document.getElementById('ps-inp-span'); if(sp)sp.focus(); });
+
+  createInputLine();
 }
 
 // ── Panel background canvas (subtle ambient effect) ──
