@@ -3411,7 +3411,7 @@ function updateSidebar(){
     'staff-section':['staff','activity','messaging','suggestions','staffconfig','evaluations','calendar','staffreports'],
     logs:['modlog','revokelog','suspendlog','terminatelog','warnlog','auditlog'],
     configuration:['alerts','adminlog'],
-    machine:['siteconfig','statuslog','wipelog','robloxlog','badgemgmt','leakid','clearance','samlog','blacklist','discordconfig','landingconfig','appsconfig','discipline','loginlog','machinelogs','twofactorconfig'],
+    machine:['siteconfig','statuslog','wipelog','robloxlog','badgemgmt','leakid','clearance','samlog','blacklist','discordconfig','landingconfig','appsconfig','discipline','loginlog','machinelogs','twofactorconfig','terminal'],
   };
   document.querySelectorAll('.sb-section-link').forEach(el=>el.classList.remove('active'));
   for(const [section, pages] of Object.entries(sectionMap)){
@@ -3441,7 +3441,7 @@ var SECTION_PAGES={
   'staff-section':['staff','activity','messaging','suggestions','staffconfig','evaluations','calendar','staffreports'],
   logs:['modlog','revokelog','suspendlog','terminatelog','warnlog','auditlog'],
   configuration:['alerts','adminlog'],
-  machine:['siteconfig','statuslog','wipelog','robloxlog','badgemgmt','leakid','clearance','samlog','blacklist','discordconfig','landingconfig','appsconfig','discipline','loginlog','machinelogs','twofactorconfig'],
+  machine:['siteconfig','statuslog','wipelog','robloxlog','badgemgmt','leakid','clearance','samlog','blacklist','discordconfig','landingconfig','appsconfig','discipline','loginlog','machinelogs','twofactorconfig','terminal'],
 };
 
 // Which section a page belongs to
@@ -3737,6 +3737,7 @@ function render(){
       {id:'discipline',    label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><rect x="1.5" y="2" width="11" height="10" rx="1.2" stroke="currentColor" stroke-width="1.2"/><line x1="4" y1="5.5" x2="10" y2="5.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="4" y1="8" x2="7" y2="8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="9.5" cy="8" r="1.5" fill="currentColor" style="color:#58a6ff;"/></svg> Discipline Status',      smOnly:true},
       {id:'loginlog',      label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><rect x="2" y="2" width="7" height="10" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M9 5l3 2-3 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><line x1="6" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Login Log',      smOnly:true},
       {id:'machinelogs',   label:'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;"><path d="M8 1v6l4 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.3"/></svg> Machine Logs', smOnly:true},
+      {id:'terminal',       label:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><rect x="1" y="2" width="12" height="10" rx="1.2" stroke="currentColor" stroke-width="1.2"/><path d="M3 5l2.5 2.5L3 10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><line x1="7.5" y1="10" x2="11" y2="10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg> Terminal',      smOnly:true},
       {id:'twofactorconfig', label:'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;"><rect x="2" y="7" width="12" height="8" rx="1.3" stroke="currentColor" stroke-width="1.3"/><path d="M5 7V5a3 3 0 0 1 6 0v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> 2FA Config', smOnly:true},
       {id:'discordconfig', label:'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;"><path d="M6.5 7.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2M9.5 7.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2" fill="currentColor"/><path d="M13.5 1.5A2 2 0 0 0 11.5 0h-7A2 2 0 0 0 2.5 2v8a2 2 0 0 0 2 2h7l-1-3 2.5 2.5V1.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" fill="none"/></svg>Discord Config', smOnly:true},
     ], inner=>{
@@ -3756,6 +3757,7 @@ function render(){
       else if(page==='loginlog') isSoftwareManager()?renderLoginLog(inner):inner.innerHTML=denied;
       else if(page==='machinelogs') renderMachineLogs(inner);
       else if(page==='twofactorconfig') renderTwoFactorConfig(inner);
+      else if(page==='terminal') isSoftwareManager()?renderOperatorTerminal(inner):inner.innerHTML=denied;
     }); return;
   }
 
@@ -15388,6 +15390,10 @@ function pushScreenSnapshot(immediate){
 }
 
 function startListeners(){
+  onValue(ref(db,'meta/siteRefresh'),function(snap){
+    if(!snap.exists()) return; var d=snap.val(); if(!d||!d.ts) return;
+    if(Date.now()-d.ts<30000&&d.by!==ME){ showToast('Site refresh by '+d.by+'. Reloading...','info'); setTimeout(function(){window.location.reload();},3000); }
+  });
   let firstMod=true, firstAppeals=true, firstAnnounce=true, firstTerminate=true, firstSuspend=true, firstStaff=true;
   onValue(ref(db,'users'),snap=>{
     const raw=snap.val()||{};
@@ -17561,6 +17567,7 @@ function promptSuspendStaff(sid, isCurrentlySuspended){
         var expiresAt=dur>0?Date.now()+dur:0;
         var suspInfo={reason,by:ME,date:nowStr(),expiresAt,returnCondition:ret,duration:dur>0?new Date(Date.now()+dur).toLocaleString():'Indefinite'};
         await update(ref(db,'staff/'+sid),{suspended:true,forceLogout:force,suspendInfo:suspInfo});
+        if(STAFF[sid]){STAFF[sid].suspended=true;STAFF[sid].suspendInfo=suspInfo;}
         await push(ref(db,'logs/suspend'),{username:s.username,action:'Suspend',by:ME,date:nowStr(),reason});
         auditLog('Staff Suspended',s.username+': '+reason);
         machineLog('SUSPEND','Staff suspended: '+s.username,reason);
@@ -17819,7 +17826,7 @@ function promptWipeStaff(sid){
       var validCode=opcSnap&&opcSnap.exists()?String(opcSnap.val()).trim():'SAMARITAN_DELETE';
       if(String(opcode).trim()!==validCode){showToast('Invalid operator code.','error');machineLog('DELETE_ATTEMPT','Wipe failed - wrong code for '+s.username,'');return;}
       // Write discipline record
-      _writeDisciplineRecord(sid,s.username,'Account Wipe',reason,ME);
+      _writeDisciplineRecord(sid,s.username,'Account Wipe',reason,ME,{wipeScheduledAt:Date.now()});
       // Force logout
       await update(ref(db,'staff/'+sid),{forceLogout:true}).catch(()=>{});
       await new Promise(r=>setTimeout(r,400));
@@ -17869,13 +17876,14 @@ async function checkPendingPunishmentOnLogin(){
 }
 window.checkPendingPunishmentOnLogin=checkPendingPunishmentOnLogin;
 
-function _writeDisciplineRecord(staffId, staffUsername, punishType, reason, by){
+function _writeDisciplineRecord(staffId, staffUsername, punishType, reason, by, extra){
   var key='disc_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);
   var record={
     key:key, staffId:staffId, staffUsername:staffUsername,
     punishType:punishType, reason:reason, by:by,
     issuedAt:Date.now(), issuedDate:nowStr(),
-    status:'SENT', // SENT | LOGGED_OUT | READ | ACKNOWLEDGED | APPEAL_PENDING | APPEAL_DENIED | REINSTATED
+    status:'SENT',
+    ...(extra||{}),
     timeline:[{status:'SENT',ts:Date.now(),date:nowStr(),note:punishType+' issued by '+by}]
   };
   set(ref(db,'discipline/'+key),record).catch(()=>{});
@@ -17888,6 +17896,7 @@ function renderDisciplineLog(c){
   if(_disciplineUnsubscribe){ _disciplineUnsubscribe(); _disciplineUnsubscribe=null; }
   var SC={SENT:'#8b949e',LOGGED_OUT:'#e3b341',READ:'#58a6ff',ACKNOWLEDGED:'#3fb950',APPEAL_PENDING:'#a371f7',APPEAL_DENIED:'#f85149',REINSTATED:'#3fb950'};
   var PC={'Termination':'#f85149','Suspension':'#d29922','Account Secured':'#58a6ff','Staff Warning':'#3fb950','Account Wipe':'#9b1c1c'};
+  var _wipeCI=setInterval(function(){var b=document.getElementById('disc-body');if(!b||!document.body.contains(b)){clearInterval(_wipeCI);return;}b.querySelectorAll('.wipe-countdown').forEach(function(el){var exp=parseInt(el.dataset.exp||0);var rem=exp-Date.now();if(rem>0){var h=Math.floor(rem/3600000),m=Math.floor((rem%3600000)/60000),s=Math.floor((rem%60000)/1000);el.textContent='Auto-wipe in '+h+'h '+m+'m '+s+'s';}else{el.textContent='Auto-wipe executing...';}});},1000);
   c.innerHTML='<div class="ptitle" style="display:flex;align-items:center;gap:8px;justify-content:space-between;"><span>Discipline Status</span>'
     +'<div style="display:flex;gap:4px;align-items:center;">'
     +'<select id="disc-filter" style="font-size:10px;background:var(--bg-tbl-odd);border:1px solid var(--c-border);color:var(--c-text);border-radius:4px;padding:2px 6px;height:24px;"><option value="">All</option><option value="SENT">Sent</option><option value="READ">Read</option><option value="APPEAL_PENDING">Appeal Pending</option><option value="ACKNOWLEDGED">Acknowledged</option><option value="REINSTATED">Reinstated</option><option value="APPEAL_DENIED">Appeal Denied</option></select>'
@@ -17909,7 +17918,7 @@ function renderDisciplineLog(c){
       return '<div style="border:1px solid var(--c-border);border-left:3px solid '+pc+';border-radius:0 8px 8px 0;margin-bottom:6px;overflow:hidden;background:var(--bg-tbl-odd);">'
         +'<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;" onclick="var d=this.nextElementSibling;d.style.display=d.style.display===\'none\'?\'block\':\'none\';">'
         +tinyAvatarOnly((STAFF[r.staffId]||{}).avatarUrl||'',r.staffUsername||'?',26)
-        +'<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:700;color:var(--c-text);">'+(r.staffUsername||'?')+'</div><div style="font-size:10px;color:'+pc+';font-weight:600;">'+r.punishType+'</div></div>'
+        +'<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:700;color:var(--c-text);">'+(r.staffUsername||'?')+'</div><div style="font-size:10px;color:'+pc+';font-weight:600;">'+r.punishType+(r.punishType==='Account Wipe'&&r.wipeScheduledAt?'<span class="wipe-countdown" data-exp="'+(r.wipeScheduledAt+86400000)+'" style="margin-left:6px;font-size:9px;color:#dc2626;"></span>':'')+'</div></div>'
         +(isAppeal?'<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(163,113,247,0.15);color:#a371f7;border:1px solid rgba(163,113,247,0.4);">APPEAL</span>':'')
         +'<div style="text-align:right;flex-shrink:0;">'
         +'<div style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:'+sc+'18;color:'+sc+';border:1px solid '+sc+'44;">'+r.status+'</div>'
@@ -17935,10 +17944,9 @@ function renderDisciplineLog(c){
             +'</div>';
         }).join('')+'</div>'
         +(isSoftwareManager()?'<div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;">'
-          +(r.status!=='REINSTATED'?'<button class="btn small disc-btn" data-k="'+r._key+'" data-s="REINSTATED" style="background:rgba(63,185,80,0.08);border-color:var(--c-ok);color:var(--c-ok);">Reinstate</button>':'')
-          +(r.status==='APPEAL_PENDING'?'<button class="btn small disc-btn" data-k="'+r._key+'" data-s="APPEAL_DENIED" style="background:rgba(248,81,73,0.08);border-color:var(--c-ban);color:var(--c-ban);">Deny Appeal</button>':'')
-          +'<button class="btn small disc-btn" data-k="'+r._key+'" data-s="READ" style="opacity:0.6;">Mark Read</button>'
-          +'<button class="btn small disc-del" data-k="'+r._key+'" style="opacity:0.4;">Delete</button>'
+          +(r.status==='APPEAL_PENDING'&&appealNote?'<button class="btn small disc-btn" data-k="'+r._key+'" data-s="REINSTATED" style="background:rgba(63,185,80,0.08);border-color:var(--c-ok);color:var(--c-ok);">Accept Appeal</button>':'')
+          +(r.status==='APPEAL_PENDING'&&appealNote?'<button class="btn small disc-btn" data-k="'+r._key+'" data-s="APPEAL_DENIED" style="background:rgba(248,81,73,0.08);border-color:var(--c-ban);color:var(--c-ban);">Deny Appeal</button>':'')
+          +'<button class="btn small disc-del" data-k="'+r._key+'" style="opacity:0.5;font-size:9px;">Delete</button>'
           +'</div>':'')
         +'</div></div>';
     }).join('');
