@@ -4874,12 +4874,14 @@ function buildModEmbed(staffName, action, targetUser, reason, expiryStr, expiryT
   var _militaryTime=_hh+':'+_mm;
   var _dateStr=_now.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   var _tsStr='Time || '+_dateStr+' '+_militaryTime;
-  var desc=staffName+' **'+verb.replace('has ','')+'** '+targetUser+' for reason **'+displayReason+'**';
-  if(!isClassified&&expiryTs>0){
-    var _exp=new Date(expiryTs);
-    var _eh=String(_exp.getHours()).padStart(2,'0');
-    var _em=String(_exp.getMinutes()).padStart(2,'0');
-    desc+=', this lasts until '+_exp.toLocaleDateString()+' '+_eh+':'+_em+'!';
+  var desc=staffName+' '+verb+' **'+targetUser+'** for reason **'+displayReason+'**';
+  if(!isClassified){
+    if(expiryTs>0){
+      var _exp=new Date(expiryTs);
+      desc+=', this lasts until **'+_exp.toLocaleDateString()+', '+String(_exp.getHours()).padStart(2,'0')+':'+String(_exp.getMinutes()).padStart(2,'0')+'**';
+    } else if(isBan||isSusp) {
+      desc+=', this lasts **indefinitely**';
+    }
   }
   desc+='\n'+_tsStr;
   var colors={ban:0xcf222e,suspend:0x9a6700,warn:0xe3b341,note:0x0969da};
@@ -6181,9 +6183,60 @@ function renderUA(c){
         <div style="color:${t.col};font-size:10px;font-weight:700;">${t.type}</div>
       </div>`).join('');
 
-    const logHtml=punishments.length===0
-      ?'<div style="text-align:center;padding:24px 0;color:var(--c-text2);font-size:12px;font-style:italic;">No punishments on record.</div>'
-      :punishments.map(([pid,p])=>{
+    // ── LOGBOOK FILTER STATE ──
+    const _lbState=window._lbState||{filter:'',sortDir:'desc',showBulk:false};
+    window._lbState=_lbState;
+
+    // ── SUMMARY CARD ──
+    const totalP=punishments.length;
+    const activeP=punishments.filter(([,p])=>!p.reverted&&!(p.expiresAt>0&&Date.now()>p.expiresAt)).length;
+    const revertedP=punishments.filter(([,p])=>p.reverted).length;
+    const classifiedP=punishments.filter(([,p])=>p.classified).length;
+    const typeCount={};
+    punishments.forEach(([,p])=>{ typeCount[p.action]=(typeCount[p.action]||0)+1; });
+    const topType=Object.entries(typeCount).sort((a,b)=>b[1]-a[1])[0];
+    const modCount={};
+    punishments.forEach(([,p])=>{ if(p.mod) modCount[p.mod]=(modCount[p.mod]||0)+1; });
+    const summaryHtml=totalP>0?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;padding:10px 12px;background:var(--bg-tbl-odd);border:1px solid var(--c-border);border-radius:8px;">
+      <div style="display:flex;gap:16px;flex:1;flex-wrap:wrap;">
+        <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--c-text);">${totalP}</div><div style="font-size:9px;color:var(--c-text2);text-transform:uppercase;letter-spacing:0.5px;">Total</div></div>
+        <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:#f85149;">${activeP}</div><div style="font-size:9px;color:var(--c-text2);text-transform:uppercase;letter-spacing:0.5px;">Active</div></div>
+        <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:#58a6ff;">${revertedP}</div><div style="font-size:9px;color:var(--c-text2);text-transform:uppercase;letter-spacing:0.5px;">Reverted</div></div>
+        <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:#8b949e;">${classifiedP}</div><div style="font-size:9px;color:var(--c-text2);text-transform:uppercase;letter-spacing:0.5px;">Classified</div></div>
+        ${topType?`<div style="text-align:center;"><div style="font-size:11px;font-weight:700;color:var(--c-text);white-space:nowrap;">${topType[0]}</div><div style="font-size:9px;color:var(--c-text2);">Top type (${topType[1]}x)</div></div>`:''}
+      </div>
+    </div>`:'';
+
+    // ── MODERATOR BREAKDOWN ──
+    const modBreakdown=Object.keys(modCount).length>1?`<div style="margin-bottom:8px;padding:8px 12px;background:var(--bg-tbl-odd);border:1px solid var(--c-border);border-radius:8px;">
+      <div style="font-size:10px;font-weight:700;color:var(--c-text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Moderator Breakdown</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">${Object.entries(modCount).sort((a,b)=>b[1]-a[1]).map(([mod,cnt])=>`<span style="font-size:10px;padding:2px 8px;background:var(--bg-content);border:1px solid var(--c-border);border-radius:10px;color:var(--c-text);">${mod} <b style="color:var(--c-link);">${cnt}</b></span>`).join('')}</div>
+    </div>`:'';
+
+    // ── FILTER & SORT BAR ──
+    const actionTypes=[...new Set(punishments.map(([,p])=>p.action))];
+    const filterBar=`<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
+      <select id="lb-filter-type" style="font-size:10px;background:var(--bg-tbl-odd);border:1px solid var(--c-border);color:var(--c-text);border-radius:4px;padding:2px 6px;height:24px;" onchange="window._lbState.filter=this.value;renderUA(document.getElementById('content'))">
+        <option value="">All types</option>
+        ${actionTypes.map(t=>`<option value="${t}"${_lbState.filter===t?' selected':''}>${t}</option>`).join('')}
+      </select>
+      <button class="btn small" style="height:24px;font-size:10px;" onclick="window._lbState.sortDir=window._lbState.sortDir==='desc'?'asc':'desc';renderUA(document.getElementById('content'))">
+        ${_lbState.sortDir==='desc'?'↓ Newest first':'↑ Oldest first'}
+      </button>
+      ${canDo('canModerateUsers')&&punishments.filter(([,p])=>!p.reverted).length>1?`<button class="btn small" style="height:24px;font-size:10px;background:rgba(248,81,73,0.08);border-color:rgba(248,81,73,0.3);color:#f85149;" onclick="window._lbBulk=!window._lbBulk;renderUA(document.getElementById('content'))">
+        ${window._lbBulk?'Cancel Bulk':'Bulk Revert'}
+      </button>`:''}
+      ${window._lbBulk?`<button class="btn small" id="lb-bulk-apply" style="height:24px;font-size:10px;background:rgba(248,81,73,0.15);border-color:#f85149;color:#f85149;">Apply Revert</button>`:''}
+    </div>`;
+
+    // ── FILTERED + SORTED PUNISHMENTS ──
+    let shownPunishments=punishments;
+    if(_lbState.filter) shownPunishments=shownPunishments.filter(([,p])=>p.action===_lbState.filter);
+    if(_lbState.sortDir==='asc') shownPunishments=[...shownPunishments].reverse();
+
+    const logHtml=shownPunishments.length===0
+      ?'<div style="text-align:center;padding:24px 0;color:var(--c-text2);font-size:12px;font-style:italic;">No punishments match the filter.</div>'
+      :shownPunishments.map(([pid,p])=>{
         const isReverted=p.reverted||false;
         const isLocked=p.locked||false;
         const isClassified=p.classified||false;
@@ -6203,6 +6256,7 @@ function renderUA(c){
               </div>
             </div>
             <div style="font-size:9px;color:var(--c-text2);white-space:nowrap;">${p.created||''}</div>
+            ${p.expiresAt>0&&!p.reverted?`<div style="font-size:9px;color:${Date.now()<p.expiresAt?'var(--c-link)':'var(--c-text2)'};margin-top:1px;">${Date.now()<p.expiresAt?'Expires '+new Date(p.expiresAt).toLocaleString()+' ('+Math.floor((p.expiresAt-Date.now())/3600000)+'h '+Math.floor(((p.expiresAt-Date.now())%3600000)/60000)+'m left)':'Expired '+new Date(p.expiresAt).toLocaleString()}</div>`:''}
             <div style="font-size:11px;color:var(--c-text2);margin-left:4px;">▾</div>
           </div>
           <div class="up-log-body">
@@ -6221,6 +6275,7 @@ function renderUA(c){
             <div style="font-size:12px;color:var(--c-text);margin-bottom:8px;padding:8px 10px;background:var(--bg-tbl-odd);border-radius:6px;border-left:3px solid ${ACTION_COLORS[p.action]||'#888'};">${displayReason}</div>
             ${p.expiresAt&&p.expiresAt>0?`<div style="font-size:10px;color:var(--c-text2);margin-bottom:8px;">Expires: <b>${new Date(p.expiresAt).toLocaleString()}</b>${Date.now()>p.expiresAt?' <span style="color:var(--c-ok);">(expired)</span>':''}</div>`:''}
             <div class="up-log-actions">
+              ${window._lbBulk&&!isReverted&&!isLocked?`<input type="checkbox" class="lb-bulk-cb" data-pid="${pid}" style="width:13px;height:13px;margin-right:4px;cursor:pointer;">`:''}
               ${!isReverted&&!isLocked&&canDo('canModerateUsers')?`<button class="btn small" onclick="revertPunishment('${uid}','${pid}')"><span style="display:flex;align-items:center;gap:3px;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 8a5 5 0 1 0 1-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><polyline points="1,3 3,8 8,6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>`:''}
               ${isSuperAdmin()?`<button class="btn small" onclick="openPunishOptions('${uid}','${pid}')"><span style="display:flex;align-items:center;gap:3px;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.1 3.1l1.4 1.4M11.5 11.5l1.4 1.4M3.1 12.9l1.4-1.4M11.5 4.5l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> Options</span></button>`:''}
 
@@ -6229,7 +6284,20 @@ function renderUA(c){
         </div>`;
       }).join('');
 
-    return `<div style="margin-bottom:12px;"><div style="font-size:12px;font-weight:700;color:var(--c-text);margin-bottom:8px;">New Punishment or Log</div><div class="punish-grid">${tileHtml}</div></div>
+    // Wire bulk revert
+    setTimeout(function(){
+      var bulkBtn=document.getElementById('lb-bulk-apply');
+      if(bulkBtn) bulkBtn.onclick=function(){
+        var checked=[...document.querySelectorAll('.lb-bulk-cb:checked')];
+        if(!checked.length){ showToast('Select punishments to revert.','warning'); return; }
+        if(!confirm('Revert '+checked.length+' punishment(s)?')) return;
+        Promise.all(checked.map(function(cb){ return update(ref(db,'users/'+uid+'/punishments/'+cb.dataset.pid),{reverted:true,revertedBy:ME,revertedAt:nowStr()}); })).then(function(){
+          checked.forEach(function(cb){ if(USERS[uid]&&USERS[uid].punishments&&USERS[uid].punishments[cb.dataset.pid]) USERS[uid].punishments[cb.dataset.pid].reverted=true; });
+          window._lbBulk=false; showToast('Reverted '+checked.length+' punishment(s).','success'); safeRender();
+        });
+      };
+    },50);
+    return `<div style="margin-bottom:12px;">${summaryHtml}${modBreakdown}${filterBar}<div style="font-size:12px;font-weight:700;color:var(--c-text);margin-bottom:8px;">New Punishment or Log</div><div class="punish-grid">${tileHtml}</div></div>
       <div><div style="font-size:12px;font-weight:700;color:var(--c-text);margin-bottom:8px;">Existing Logs <span style="font-size:11px;font-weight:400;color:var(--c-text2);">(${punishments.length})</span>
         <input type="text" id="log-search-input" placeholder="Search logs…" style="float:right;font-size:10px;width:140px;padding:2px 6px;" oninput="filterLogSearch(this.value)"/>
       </div>${logHtml}</div>`;
@@ -12688,6 +12756,8 @@ function monitorTerminateSingle(sid){
     var offItem=(panel.querySelector('#mterm-item').value||'').trim();
     // Remove staff record
     await remove(ref(db,'staff/'+sid));
+    delete STAFF[sid];
+    try{ var _smT={}; Object.entries(STAFF).forEach(function(e){ if(!e[1].terminated){ _smT[e[0]]={username:e[1].username,level:e[1].level,avatarUrl:e[1].avatarUrl||''}; } }); await set(ref(db,'meta/staffMirror'),_smT); }catch(eT){}
     // Log termination
     await push(ref(db,'logs/terminate'),{username:s.username,by:ME,date:nowStr(),reason,modNote,offensiveItem:offItem});
     auditLog('Monitor: Staff Terminated',s.username+' - '+reason);
@@ -17825,6 +17895,8 @@ function promptWipeStaff(sid){
       // Wipe the account
       await wipeStaffMember(sid,s.username,reason);
       machineLog('WIPE','Staff wiped: '+s.username,reason);
+      // Update staffMirror for landing page
+      try{ delete STAFF[sid]; var _smW={}; Object.entries(STAFF).forEach(function(e){ if(!e[1].terminated){ _smW[e[0]]={username:e[1].username,level:e[1].level,avatarUrl:e[1].avatarUrl||''}; } }); await set(ref(db,'meta/staffMirror'),_smW); }catch(eW){}
       auditLog('Staff Account Wiped',s.username+' wiped by '+ME+': '+reason);
       currentStaffId=null; nav('staff');
       showToast(s.username+' has been wiped.','success');
