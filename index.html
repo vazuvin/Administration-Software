@@ -6158,6 +6158,27 @@ function renderUA(c){
   // Action color map
   const ACTION_COLORS={'Verbal Warning':'#e3b341','Formal Warning':'#e3b341','Suspension':'#f85149','Ban':'#f85149','Permanent Ban':'#8b0000','Rank Lock':'#a371f7','Comment':'#58a6ff','Staff Warning':'#e3b341','Manager Note':'#a371f7'};
 
+
+  function timeAgo(dateStr){
+    // Parse the stored date string or timestamp
+    if(!dateStr) return '';
+    var d=new Date(dateStr);
+    if(isNaN(d.getTime())){
+      // Try parsing "M/D/YYYY, H:MM:SS AM" format
+      d=new Date(Date.parse(dateStr));
+    }
+    if(isNaN(d.getTime())) return dateStr;
+    var ms=Date.now()-d.getTime();
+    var mins=Math.floor(ms/60000);
+    if(mins<1) return 'Just now';
+    if(mins<60) return mins+'m ago';
+    var hrs=Math.floor(mins/60);
+    if(hrs<24) return hrs+'h ago';
+    var days=Math.floor(hrs/24);
+    if(days<365) return days+'d ago';
+    var yrs=Math.floor(days/365);
+    return yrs+'y ago';
+  }
   function getChipStyle(action, reverted){
     if(reverted) return 'background:rgba(88,166,255,0.1);color:#58a6ff;border:1px solid rgba(88,166,255,0.3);';
     const col=ACTION_COLORS[action]||'#888';
@@ -6201,17 +6222,17 @@ function renderUA(c){
             <div style="flex-shrink:0;">
               ${p.mod?tinyAvatarOnly(avatarUrlFor(p.mod),p.mod,24):'<div style="width:24px;height:24px;border-radius:50%;background:var(--c-border);flex-shrink:0;"></div>'}
             </div>
-            <div style="flex:1;min-width:0;">
-              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                ${isReverted?'<span class="up-action-chip" style="background:rgba(63,185,80,0.1);color:#3fb950;border:1px solid rgba(63,185,80,0.35);display:inline-flex;align-items:center;gap:3px;"><svg width="9" height="9" viewBox="0 0 12 12" fill="none"><path d="M2 6a4 4 0 1 0 1-2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><polyline points="1,2 2,6 6,5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>REVERTED</span>':''}
-                <span class="up-action-chip" style="${getChipStyle(p.action,false)}">${p.action||'Action'}</span>
-                ${isLocked?'<span class="up-action-chip" style="background:rgba(248,81,73,0.1);color:var(--c-ban);border:1px solid rgba(248,81,73,0.3);display:inline-flex;align-items:center;gap:3px;"><svg width="9" height="9" viewBox="0 0 12 12" fill="none"><rect x="2" y="5.5" width="8" height="5" rx="1" stroke="currentColor" stroke-width="1.1"/><path d="M4 5.5V3.5a2 2 0 0 1 4 0v2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>LOCKED</span>':''}
-                ${isClassified?'<span class="up-action-chip" style="background:rgba(163,113,247,0.1);color:#a371f7;border:1px solid rgba(163,113,247,0.3);display:inline-flex;align-items:center;gap:3px;"><svg width="9" height="9" viewBox="0 0 12 12" fill="none"><rect x="2" y="5.5" width="8" height="5" rx="1" stroke="currentColor" stroke-width="1.1"/><path d="M4 5.5V3.5a2 2 0 0 1 4 0v2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>CLASSIFIED</span>':''}
-              </div>
+            <div style="flex:1;min-width:0;display:flex;align-items:center;gap:5px;flex-wrap:nowrap;overflow:hidden;">
+              <span class="up-action-chip" style="${getChipStyle(p.action,false)};max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.action||'Action'}</span>
             </div>
-            <div style="font-size:9px;color:var(--c-text2);white-space:nowrap;">${p.created||''}</div>
-            ${p.expiresAt>0&&!p.reverted?`<div style="font-size:9px;color:${Date.now()<p.expiresAt?'var(--c-link)':'var(--c-text2)'};margin-top:1px;">${Date.now()<p.expiresAt?'Expires '+new Date(p.expiresAt).toLocaleString()+' ('+Math.floor((p.expiresAt-Date.now())/3600000)+'h '+Math.floor(((p.expiresAt-Date.now())%3600000)/60000)+'m left)':'Expired '+new Date(p.expiresAt).toLocaleString()}</div>`:''}
-            <div style="font-size:11px;color:var(--c-text2);margin-left:4px;">▾</div>
+            <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:6px;">
+              ${isReverted?`<span title="Reverted" style="display:inline-flex;align-items:center;gap:2px;font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(63,185,80,0.1);color:#3fb950;border:1px solid rgba(63,185,80,0.35);white-space:nowrap;"><svg width="9" height="9" viewBox="0 0 12 12" fill="none"><path d="M2 6a4 4 0 1 0 1-2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><polyline points="1,2 2,6 6,5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>REVERTED</span>`:''}
+              ${isLocked?`<span title="Locked" style="display:inline-flex;align-items:center;gap:2px;font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(248,81,73,0.1);color:var(--c-ban);border:1px solid rgba(248,81,73,0.3);white-space:nowrap;"><svg width="9" height="9" viewBox="0 0 12 12" fill="none"><rect x="2" y="5.5" width="8" height="5" rx="1" stroke="currentColor" stroke-width="1.1"/><path d="M4 5.5V3.5a2 2 0 0 1 4 0v2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>LOCKED</span>`:''}
+              ${isClassified?`<span title="Classified" style="display:inline-flex;align-items:center;gap:2px;font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(163,113,247,0.1);color:#a371f7;border:1px solid rgba(163,113,247,0.3);white-space:nowrap;"><svg width="9" height="9" viewBox="0 0 12 12" fill="none"><rect x="2" y="5.5" width="8" height="5" rx="1" stroke="currentColor" stroke-width="1.1"/><path d="M4 5.5V3.5a2 2 0 0 1 4 0v2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>CLASSIFIED</span>`:''}
+              ${p.expiresAt>0?`<span title="${Date.now()<p.expiresAt?'Expires '+new Date(p.expiresAt).toLocaleString():'Expired'}" style="display:inline-flex;align-items:center;gap:2px;font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(88,166,255,0.08);color:${Date.now()<p.expiresAt?'var(--c-link)':'var(--c-text2)'};border:1px solid ${Date.now()<p.expiresAt?'rgba(88,166,255,0.3)':'var(--c-border)'};white-space:nowrap;"><svg width="9" height="9" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.1"/><path d="M6 3.5V6l1.5 1.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>${Date.now()<p.expiresAt?Math.ceil((p.expiresAt-Date.now())/86400000)+'d left':'EXPIRED'}</span>`:''}
+              <span title="${p.created||''}" style="display:inline-flex;align-items:center;gap:2px;font-size:9px;padding:2px 6px;border-radius:8px;background:var(--bg-tbl-odd);color:var(--c-text2);border:1px solid var(--c-border);white-space:nowrap;"><svg width="9" height="9" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.1"/><path d="M6 3V6l2 1" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>${timeAgo(p.created)}</span>
+              <span style="font-size:11px;color:var(--c-text2);">▾</span>
+            </div>
           </div>
           <div class="up-log-body">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
@@ -9276,118 +9297,195 @@ function renderLeakIdentifier(c){
 // ── INFORMATION PAGE ──
 function renderInformation(c){
   const cfg={...SITE_CONFIG_DEFAULTS,...SITE_CONFIG};
-  const rankCaps=[
-    {rank:'TRIAL MODERATOR',badge:'intern',caps:['View User Admin (read-only)','View All Accounts','Access Dashboard & Information','Submit suggestions','View Reputation scores','Send & receive staff messages']},
-    {rank:'MODERATOR',badge:'moderator',caps:['Everything Trial Moderator can do','Moderate users (warn, ban, suspend, etc.)','View Moderation Log, Revoke Log','Submit & view Appeals','Alt Detection & Message Analyze','View own profile','Request moderation against protected users']},
-    {rank:'ADMINISTRATOR',badge:'administrator',caps:['Everything Moderator can do','View Suspension & Termination Logs','View Login Log & Staff Activity','Review appeals','View User Config','Manage Site Alerts','Suspend staff members','Run bulk mod actions','Access Requests channel']},
-    {rank:'SUPER ADMINISTRATOR',badge:'superadmin',caps:['Everything Administrator can do','Full Staff Registry access','Manage staff levels & passwords','Terminate staff accounts','View Audit Log & Admin panel','Manage permissions & custom fields','Staff Config & permission overrides','Wipe player accounts']},
-    {rank:'SOFTWARE MANAGER',badge:'softwaremanager',caps:['All permissions, bypasses all checks','Machine Management access','Set Site Status (OK/Updating/Paused)','Configure all panel text & variables','Edit Update Log, manage badges','View Status Log & Wipe Log','Execute Factory Reset','Cannot be suspended or terminated via panel']},
+
+  // ── Permission matrix ──
+  const RANKS=['CONTENT REVIEWER','CONTENT MODERATOR','CONTENT ADMINISTRATOR','SENIOR CONTENT ADMINISTRATOR','CONTENT MANAGER','SOFTWARE MANAGER'];
+  const RANK_SHORT={'CONTENT REVIEWER':'Reviewer','CONTENT MODERATOR':'Moderator','CONTENT ADMINISTRATOR':'Admin','SENIOR CONTENT ADMINISTRATOR':'Sr. Admin','CONTENT MANAGER':'C. Manager','SOFTWARE MANAGER':'SW Manager'};
+  const RANK_COLOR={'CONTENT REVIEWER':'#8b949e','CONTENT MODERATOR':'#3fb950','CONTENT ADMINISTRATOR':'#58a6ff','SENIOR CONTENT ADMINISTRATOR':'#a371f7','CONTENT MANAGER':'#d29922','SOFTWARE MANAGER':'#f85149'};
+
+  const PERMS=[
+    // ── Section: User Moderation ──
+    {section:'User Moderation'},
+    {perm:'View User Admin (read-only)',min:0},
+    {perm:'Moderate users (warn, ban, suspend, etc.)',min:1},
+    {perm:'Revert punishments',min:1},
+    {perm:'Delete punishment records (op code)',min:2},
+    {perm:'Bulk moderation actions',min:2},
+    {perm:'Mark logs as Classified',min:1},
+    {perm:'Manage custom player fields',min:3},
+    {perm:'Wipe player accounts',min:3},
+    // ── Section: Staff Management ──
+    {section:'Staff Management'},
+    {perm:'View Staff Registry',min:1},
+    {perm:'Warn staff members',min:3},
+    {perm:'Suspend staff members',min:2},
+    {perm:'Secure staff accounts',min:2},
+    {perm:'Force logout staff',min:2},
+    {perm:'Change staff avatar & notes',min:3},
+    {perm:'Change staff rank',min:3},
+    {perm:'Terminate staff accounts',min:3},
+    {perm:'Wipe staff accounts (op code)',min:5},
+    // ── Section: Logs & Data ──
+    {section:'Logs & Data'},
+    {perm:'View Moderation Log',min:1},
+    {perm:'View Revoke & Suspend Log',min:2},
+    {perm:'View Login Log',min:2},
+    {perm:'View Machine Log',min:5},
+    {perm:'View Discipline Status',min:5},
+    {perm:'Export logs & data',min:2},
+    // ── Section: Appeals & Requests ──
+    {section:'Appeals & Requests'},
+    {perm:'Submit appeals',min:1},
+    {perm:'Review & action appeals',min:2},
+    {perm:'Access Requests channel',min:2},
+    // ── Section: Site Configuration ──
+    {section:'Site Configuration'},
+    {perm:'Manage site alerts',min:2},
+    {perm:'Set site status',min:5},
+    {perm:'Edit landing page config',min:5},
+    {perm:'Configure Discord webhooks',min:4},
+    {perm:'Manage custom fields definitions',min:3},
+    {perm:'Staff Config & permission overrides',min:3},
+    {perm:'Machine Management access',min:5},
+    {perm:'Execute Factory Reset',min:5},
+    // ── Section: Tools & Analysis ──
+    {section:'Tools & Analysis'},
+    {perm:'Alt Detection & Message Analyze',min:1},
+    {perm:'Roblox Lookup',min:0},
+    {perm:'Ban Duration Calculator',min:0},
+    {perm:'Rep Score Calculator',min:0},
+    {perm:'Operator Terminal',min:5},
   ];
 
-  const modNoteKeywords=[
-    {kw:'[ESC]',desc:'Escalated - action was escalated from a lower rank via Requests channel'},
-    {kw:'[OVR]',desc:'Override - action was taken despite protected status, logged as override'},
-    {kw:'[BULK]',desc:'Bulk action - applied as part of a bulk moderation action'},
-    {kw:'[REV]',desc:'Reversed - this action was later reversed/revoked'},
-    {kw:'[TEMP]',desc:'Temporary - time-limited action, check expiry for details'},
-    {kw:'[ALT]',desc:'Alt account - punishment applied to a suspected alt account'},
-    {kw:'[AFK]',desc:'Away - staff member was marked AFK/offline when this was applied'},
-  ];
+  function buildPermMatrix(){
+    var rows='';
+    var curSection='';
+    PERMS.forEach(function(p){
+      if(p.section){
+        rows+='<tr><td colspan="'+(RANKS.length+1)+'" style="padding:6px 8px 3px;font-size:9px;font-weight:700;color:var(--c-text2);text-transform:uppercase;letter-spacing:0.8px;background:var(--bg-content);border-top:1px solid var(--c-border);">'+p.section+'</td></tr>';
+        return;
+      }
+      rows+='<tr>';
+      rows+='<td style="padding:4px 8px;font-size:10px;color:var(--c-text);white-space:nowrap;">'+p.perm+'</td>';
+      RANKS.forEach(function(r,i){
+        var has=i>=p.min;
+        rows+='<td style="text-align:center;padding:4px 0;">'+(has?'<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5l3 3 6-6" stroke="'+RANK_COLOR[r]+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>':'<span style="color:var(--c-border);font-size:10px;">·</span>')+'</td>';
+      });
+      rows+='</tr>';
+    });
+    return rows;
+  }
 
   const staffActions=[
-    {name:'Suspension',icon:'🟡',desc:'Temporarily locks a staff member out of the panel. Suspended staff cannot log in. Automatically triggers a force-logout on their next heartbeat. Requires Operator Code to lift.'},
-    {name:'Secure Account',icon:'🔴',desc:'Flags a staff account as potentially compromised. Blocks all logins until an administrator explicitly clears the security lock. Use when you suspect credentials were leaked.'},
-    {name:'Force Log Out',icon:'⚡',desc:'Sets a flag that forces the target staff member offline on their next heartbeat (within 30 seconds). They will see a session-expired message. Does not lock their account.'},
-    {name:'Terminate',icon:'🚫',desc:'Permanently removes the staff member\'s account from the system. Irreversible - requires Super Administrator rank and Operator Code. All their log entries are preserved under their username.'},
-    {name:'Emergency Log Out ALL',icon:'🆘',desc:'Mass-forces every active session except yours offline instantly. Software Manager only. For use when there is a suspected breach or unauthorized access event.'},
+    {name:'Verbal Warning',color:'#e3b341',desc:'An informal spoken warning logged in the moderation log. Lowest severity. Does not affect the player account directly.'},
+    {name:'Formal Warning',color:'#e3b341',desc:'A formal warning recorded on the player\'s permanent record. Carries more weight in escalation decisions.'},
+    {name:'Suspension',color:'#f85149',desc:'Temporarily removes the player\'s access for a specified duration. Can be set to expire automatically.'},
+    {name:'Ban',color:'#f85149',desc:'Removes player access. Can be temporary (with expiry) or permanent. Permanent bans require Content Administrator or above.'},
+    {name:'Rank Lock',color:'#a371f7',desc:'Prevents the player from advancing in rank. Custom fields cannot be modified for rank-locked players.'},
+    {name:'Comment',color:'#58a6ff',desc:'An internal moderator note. Not a punishment — used to flag context, warnings, or noteworthy events for future moderators.'},
+    {name:'Manager Note',color:'#a371f7',desc:'A senior-level note. Visible only to Content Administrator and above. Used for escalations, overrides, and sensitive context.'},
+  ];
+
+  const modKeywords=[
+    {kw:'[ESC]',desc:'Escalated via Requests channel'},
+    {kw:'[OVR]',desc:'Override of protected status'},
+    {kw:'[BULK]',desc:'Applied via bulk mod action'},
+    {kw:'[REV]',desc:'Later reversed/revoked'},
+    {kw:'[TEMP]',desc:'Temporary — check expiry'},
+    {kw:'[ALT]',desc:'Applied to alt account'},
+    {kw:'[AFK]',desc:'Staff was AFK when applied'},
   ];
 
   const customHTML=cfg.infoContent||'';
   c.innerHTML=`
   <div class="ptitle" style="background:linear-gradient(90deg,var(--c-link) 0%,#0550ae 100%);display:flex;align-items:center;gap:8px;">
     <span>Information &amp; Reference</span>
-    <span style="font-size:10px;font-weight:400;opacity:0.8;margin-left:4px;">Always up to date</span>
+    <span style="font-size:10px;font-weight:400;opacity:0.8;margin-left:4px;">v2 — Samaritan Systems</span>
   </div>
 
   ${customHTML?`<div class="sbox" style="border-color:var(--c-link);"><div class="stitle" style="display:flex;align-items:center;justify-content:space-between;"><span>Staff Notice Board</span><span style="font-size:10px;font-weight:500;color:var(--c-text);opacity:0.8;">${cfg.infoPostedBy?'Posted by '+cfg.infoPostedBy+' &bull; '+cfg.infoPostedAt:''}</span></div><div class="sbody"><div style="font-size:12px;color:var(--c-text);line-height:1.8;">${customHTML}</div></div></div>`:''}
 
-  <div class="sbox"><div class="stitle">Rank Capabilities</div><div class="sbody">
-    <div style="font-size:11px;color:var(--c-text2);margin-bottom:10px;">What each rank has access to. Higher ranks inherit all permissions from lower ranks unless overridden.</div>
-    <div style="display:flex;flex-direction:column;gap:8px;">
-      ${rankCaps.map(r=>`
-        <div style="border:1px solid var(--c-border);border-radius:6px;overflow:hidden;">
-          <div style="padding:7px 12px;background:var(--bg-topinfo);display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--c-border);">
-            ${levelBadge(r.rank)}
-          </div>
-          <div style="padding:8px 12px;display:flex;flex-wrap:wrap;gap:3px 16px;">
-            ${r.caps.map(cap=>`<div style="font-size:11px;color:var(--c-text);display:flex;align-items:flex-start;gap:5px;min-width:200px;flex:1;"><span style="color:var(--c-ok);flex-shrink:0;">✓</span>${cap}</div>`).join('')}
-          </div>
-        </div>`).join('')}
+  <!-- Permissions Matrix -->
+  <div class="sbox"><div class="stitle">Permission Matrix</div><div class="sbody" style="padding:0;overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:11px;">
+      <thead>
+        <tr style="background:var(--bg-topinfo);">
+          <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--c-text2);white-space:nowrap;min-width:180px;">Permission</th>
+          ${RANKS.map(r=>`<th style="padding:6px 4px;text-align:center;font-size:9px;font-weight:700;color:${RANK_COLOR[r]};white-space:nowrap;min-width:60px;">${RANK_SHORT[r]}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>${buildPermMatrix()}</tbody>
+    </table>
+  </div></div>
+
+  <!-- Rank Descriptions -->
+  <div class="sbox"><div class="stitle">Rank Descriptions</div><div class="sbody">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;">
+      ${RANKS.map((r,i)=>{
+        const descs={
+          'CONTENT REVIEWER':'Entry-level staff. Can view user admin and accounts in read-only mode, use tools, view reputation, and send staff messages.',
+          'CONTENT MODERATOR':'Can moderate users (warn, ban, suspend), view moderation and revoke logs, submit and view appeals, and use alt detection.',
+          'CONTENT ADMINISTRATOR':'Can review appeals, manage site alerts, suspend staff, run bulk actions, and view login logs and staff activity.',
+          'SENIOR CONTENT ADMINISTRATOR':'Full staff registry access. Can manage staff levels, change ranks, terminate accounts, manage permissions and custom fields.',
+          'CONTENT MANAGER':'Can configure Discord webhooks, manage landing page config, and oversee all moderation team operations.',
+          'SOFTWARE MANAGER':'All permissions. Machine Management, site status control, operator terminal, factory reset. Cannot be suspended via panel.',
+        };
+        return `<div style="border:1px solid ${RANK_COLOR[r]}33;border-radius:6px;padding:10px 12px;background:${RANK_COLOR[r]}08;">
+          <div style="margin-bottom:5px;">${levelBadge(r)}</div>
+          <div style="font-size:11px;color:var(--c-text2);line-height:1.55;">${descs[r]}</div>
+        </div>`;
+      }).join('')}
     </div>
   </div></div>
 
+  <!-- Punishment Types + Mod Keywords side by side -->
   <div style="display:flex;gap:6px;flex-wrap:wrap;">
-    <div style="flex:1;min-width:240px;">
+    <div style="flex:2;min-width:280px;">
+      <div class="sbox"><div class="stitle">Punishment Types</div><div class="sbody">
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          ${staffActions.map(a=>`
+            <div style="display:flex;gap:8px;align-items:flex-start;padding:7px 10px;background:var(--bg-tbl-odd);border:1px solid var(--c-border);border-left:3px solid ${a.color};border-radius:0 6px 6px 0;">
+              <div style="min-width:100px;font-size:11px;font-weight:700;color:${a.color};">${a.name}</div>
+              <div style="font-size:11px;color:var(--c-text2);line-height:1.5;">${a.desc}</div>
+            </div>`).join('')}
+        </div>
+      </div></div>
+    </div>
+    <div style="flex:1;min-width:200px;">
       <div class="sbox"><div class="stitle">Mod Note Keywords</div><div class="sbody">
-        <div style="font-size:11px;color:var(--c-text2);margin-bottom:8px;">Standard keywords used in moderation notes and what they mean.</div>
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          ${modNoteKeywords.map(k=>`
-            <div style="display:flex;align-items:flex-start;gap:8px;padding:5px 8px;background:var(--bg-tbl-odd);border:1px solid var(--c-border);border-radius:4px;">
-              <code style="background:var(--bg-topinfo);border:1px solid var(--c-border);padding:1px 5px;border-radius:3px;font-size:11px;font-weight:bold;color:var(--c-link);white-space:nowrap;flex-shrink:0;">${k.kw}</code>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          ${modKeywords.map(k=>`
+            <div style="display:flex;align-items:flex-start;gap:8px;padding:4px 6px;background:var(--bg-tbl-odd);border:1px solid var(--c-border);border-radius:4px;">
+              <code style="background:var(--bg-topinfo);border:1px solid var(--c-border);padding:1px 5px;border-radius:3px;font-size:10px;font-weight:bold;color:var(--c-link);white-space:nowrap;flex-shrink:0;">${k.kw}</code>
               <span style="font-size:11px;color:var(--c-text);">${k.desc}</span>
             </div>`).join('')}
         </div>
       </div></div>
-    </div>
-    <div style="flex:1;min-width:240px;">
-      <div class="sbox"><div class="stitle">Staff Actions Explained</div><div class="sbody">
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          ${staffActions.map(a=>`
-            <div style="padding:8px 10px;background:var(--bg-tbl-odd);border:1px solid var(--c-border);border-radius:6px;">
-              <div style="font-size:12px;font-weight:700;color:var(--c-text);margin-bottom:4px;">${a.icon} ${a.name}</div>
-              <div style="font-size:11px;color:var(--c-text2);line-height:1.6;">${a.desc}</div>
-            </div>`).join('')}
+
+      <div class="sbox" style="margin-top:6px;"><div class="stitle">Log Status Badges</div><div class="sbody">
+        <div style="display:flex;flex-direction:column;gap:5px;font-size:10px;">
+          <div style="display:flex;align-items:center;gap:6px;"><span style="padding:2px 7px;border-radius:8px;background:rgba(63,185,80,0.1);color:#3fb950;border:1px solid rgba(63,185,80,0.35);font-size:9px;font-weight:700;">REVERTED</span><span style="color:var(--c-text2);">Action was undone</span></div>
+          <div style="display:flex;align-items:center;gap:6px;"><span style="padding:2px 7px;border-radius:8px;background:rgba(248,81,73,0.1);color:var(--c-ban);border:1px solid rgba(248,81,73,0.3);font-size:9px;font-weight:700;">LOCKED</span><span style="color:var(--c-text2);">Cannot be reverted</span></div>
+          <div style="display:flex;align-items:center;gap:6px;"><span style="padding:2px 7px;border-radius:8px;background:rgba(163,113,247,0.1);color:#a371f7;border:1px solid rgba(163,113,247,0.3);font-size:9px;font-weight:700;">CLASSIFIED</span><span style="color:var(--c-text2);">Restricted visibility</span></div>
+          <div style="display:flex;align-items:center;gap:6px;"><span style="padding:2px 7px;border-radius:8px;background:rgba(88,166,255,0.08);color:var(--c-link);border:1px solid rgba(88,166,255,0.3);font-size:9px;font-weight:700;">Xd left</span><span style="color:var(--c-text2);">Time-limited action</span></div>
         </div>
       </div></div>
     </div>
   </div>
 
-  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:0;">
-    <div style="flex:1;min-width:200px;">
-      <div class="sbox"><div class="stitle">Keyboard Shortcuts</div><div class="sbody">
-        <div style="display:flex;flex-direction:column;gap:6px;font-size:11px;color:var(--c-text);">
-          <div style="display:flex;align-items:center;gap:6px;"><span class="kbd">Ctrl+K</span><span style="color:var(--c-text2);">or</span><span class="kbd">/</span><span>Global Search</span></div>
-          <div style="display:flex;align-items:center;gap:6px;"><span class="kbd">Esc</span><span>Close dialog/dropdown</span></div>
-          <div style="display:flex;align-items:center;gap:6px;"><span class="kbd">G</span><span style="color:var(--c-text2);">+</span><span class="kbd">H</span><span>Dashboard</span></div>
-          <div style="display:flex;align-items:center;gap:6px;"><span class="kbd">G</span><span style="color:var(--c-text2);">+</span><span class="kbd">U</span><span>User Admin</span></div>
-          <div style="display:flex;align-items:center;gap:6px;"><span class="kbd">G</span><span style="color:var(--c-text2);">+</span><span class="kbd">S</span><span>Staff Registry</span></div>
-          <div style="display:flex;align-items:center;gap:6px;"><span class="kbd">G</span><span style="color:var(--c-text2);">+</span><span class="kbd">M</span><span>Mod Log</span></div>
-        </div>
-      </div></div>
-      <div class="sbox"><div class="stitle">Quick Tips</div><div class="sbody">
-        <div style="font-size:11px;color:var(--c-text2);line-height:2;">
-          <div>> Templates support <code style="background:var(--bg-tbl-odd);padding:1px 4px;border-radius:3px;">{username}</code> & <code style="background:var(--bg-tbl-odd);padding:1px 4px;border-radius:3px;">{reason}</code></div>
-          <div>> Wiped accounts show as <span class="wiped">[WIPED #####]</span> in logs</div>
-          <div>> Operator code required for all deletions</div>
-          <div>> Force-logout uses a 30s heartbeat flag check</div>
-          <div>> Staff heartbeat updates <b>lastActive</b> every 30s</div>
-        </div>
-      </div></div>
+  <!-- Keyboard Shortcuts -->
+  <div class="sbox"><div class="stitle">Keyboard Shortcuts</div><div class="sbody">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;font-size:11px;color:var(--c-text);">
+      <div style="display:flex;align-items:center;gap:6px;"><span class="kbd">Ctrl+K</span><span style="color:var(--c-text2);">or</span><span class="kbd">/</span><span>Global Search</span></div>
+      <div style="display:flex;align-items:center;gap:6px;"><span class="kbd">Esc</span><span>Close dialog/dropdown</span></div>
+      <div style="display:flex;align-items:center;gap:6px;"><span class="kbd">G</span><span>then</span><span class="kbd">H</span><span>Go Home</span></div>
+      <div style="display:flex;align-items:center;gap:6px;"><span class="kbd">G</span><span>then</span><span class="kbd">U</span><span>User Admin</span></div>
+      <div style="display:flex;align-items:center;gap:6px;"><span class="kbd">G</span><span>then</span><span class="kbd">S</span><span>Staff Registry</span></div>
+      <div style="display:flex;align-items:center;gap:6px;"><span class="kbd">G</span><span>then</span><span class="kbd">M</span><span>Moderation Log</span></div>
+      <div style="display:flex;align-items:center;gap:6px;"><span class="kbd">G</span><span>then</span><span class="kbd">A</span><span>Appeals</span></div>
+      <div style="display:flex;align-items:center;gap:6px;"><span class="kbd">G</span><span>then</span><span class="kbd">L</span><span>Login Log</span></div>
     </div>
-    <div style="flex:1;min-width:200px;">
-      <div class="sbox"><div class="stitle">System Status</div><div class="sbody">
-        <div style="font-size:11px;line-height:1.8;color:var(--c-text);">
-          <div>Status: <span class="badge status-${(SITE_STATUS&&SITE_STATUS.status||'ok').toLowerCase()}">${SITE_STATUS&&SITE_STATUS.status||'OK'}</span></div>
-          ${SITE_STATUS&&SITE_STATUS.status!=='OK'?`<div style="color:var(--c-text2);">Reason: ${SITE_STATUS.reason||'-'}</div>`:''}
-          <div>Your Rank: ${levelBadge(MY_LEVEL)}</div>
-          <div>Logged in as: <b>${ME}</b></div>
-          <div>Panel Version: <b>${UPDATE_LOG&&UPDATE_LOG.length?'v'+UPDATE_LOG[0].version:'-'}</b></div>
-        </div>
-      </div></div>
-    </div>
-  </div>
-
-`;
+  </div></div>`;
 }
 
 
